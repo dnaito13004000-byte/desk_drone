@@ -244,13 +244,13 @@ button,.tab,.chip,.seg{touch-action:manipulation}
         <div class="fact">緯度・経度 <b id="latlon">–</b></div>
         <label class="fld">最低気温 <input type="number" id="tmin" step="0.5"></label>
         <label class="fld">最高気温 <input type="number" id="tmax" step="0.5"></label>
-        <button class="tog" id="ground-toggle" aria-pressed="true" hidden>航空写真を使う: 入</button>
+        <button class="tog" id="ground-toggle" aria-pressed="false">航空写真を使う: 切</button>
       </div>
       <div class="facts">
         <label class="fld">身長 <input type="range" id="eye" min="100" max="190" step="5" value="165"><b id="eye-v">165cm</b></label>
         <label class="fld">視野の広さ <input type="range" id="fov" min="50" max="100" step="2" value="72"><b id="fov-v">72°</b></label>
       </div>
-      <p class="note">出典: 国土地理院(基盤地図情報・地理院タイル・シームレス空中写真)。建物の配置と道路は地図データどおり、地面と屋根の色は航空写真から、建物の高さと屋根の形は面積からの仮定です。塀・電柱・庭木・土地の高低差は入っていません。気温は緯度からの概算で、手で直せます。</p>
+      <p class="note">出典: 国土地理院(基盤地図情報・地理院タイル・シームレス空中写真)。建物の配置と道路は地図データどおり、建物の高さと屋根の形は面積からの仮定です。「航空写真を使う」を入れると、地面と屋根の色を航空写真から取ります。塀・電柱・庭木・土地の高低差は入っていません。気温は緯度からの概算で、手で直せます。</p>
     </div>
   </div>
 </div>
@@ -949,7 +949,7 @@ button,.tab,.chip,.seg{touch-action:manipulation}
   // ── 街並み(国土地理院の地図データから、その場で組み立てる) ──
   if (/[?&]mock=1/.test(location.search)) TownData.setBase({ fgd: 'mock/fgd/', rdcl: 'mock/rdcl/', addr: 'mock/addr.json?q=', photo: 'mock/photo/' });
   var DEFAULT_PLACE = { lat: 33.2330, lon: 131.6066, title: '大分駅周辺' };   // 最初に表示する場所(家の位置は自動で決める)
-  var townPhoto = null, usePhoto = true;                           // 航空写真(地面と屋根の色に使う)
+  var townPhoto = null, usePhoto = false;                          // 航空写真(地面と屋根の色に使う)。ふだんは使わず、切り替えたときだけ読み込む
   var townData = null, townMask = null, placeTitle = '', site = { x: 0, y: 0, bearing: 270 }, picking = false;
   var DIRS = ['北', '北東', '東', '南東', '南', '南西', '西', '北西'];
   var V3 = function (x, y, h) { return [x, h, -y]; };            // 地図の座標(東, 北, 高さ) → 画面の座標
@@ -1144,10 +1144,10 @@ button,.tab,.chip,.seg{touch-action:manipulation}
   function loadPlace(p, quiet) {
     var msg = $('addr-msg');
     if (!quiet) msg.textContent = '地図データを読み込んでいます…';
-    return Promise.all([TownData.load(p.lat, p.lon, 100), TownData.photo(p.lat, p.lon, 90, 1024).catch(function () { return null; })]).then(function (res) {
+    return Promise.all([TownData.load(p.lat, p.lon, 100), usePhoto ? TownData.photo(p.lat, p.lon, 90, 1024).catch(function () { return null; }) : null]).then(function (res) {
       var d = res[0];
       if (!d.tiles) throw new Error('nodata');
-      townPhoto = res[1]; $('ground-toggle').hidden = !townPhoto;
+      townPhoto = res[1];
       townData = d; townMask = TownData.roadMask(d, 512, 90);
       buildTown(d, townMask);
       var s = p.site && isFinite(p.site.x) ? p.site : (p.exact ? null : TownData.autoSite(d, townMask)), found = !!s;
@@ -1192,11 +1192,21 @@ button,.tab,.chip,.seg{touch-action:manipulation}
     if (!coarse) $('addr').focus();
   });
 
+  var photoBusy = false;
   $('ground-toggle').addEventListener('click', function () {
-    usePhoto = !usePhoto;
-    this.setAttribute('aria-pressed', usePhoto ? 'true' : 'false');
-    this.textContent = usePhoto ? '航空写真を使う: 入' : '航空写真を使う: 切';
-    if (townData) { buildTown(townData, townMask); applySite(); }
+    var btn = this; if (photoBusy || !townData) return;
+    var apply = function () {
+      btn.setAttribute('aria-pressed', usePhoto ? 'true' : 'false');
+      btn.textContent = usePhoto ? '航空写真を使う: 入' : '航空写真を使う: 切';
+      buildTown(townData, townMask); applySite();
+    };
+    if (usePhoto) { usePhoto = false; apply(); return; }
+    if (townPhoto) { usePhoto = true; apply(); return; }
+    photoBusy = true; btn.textContent = '航空写真を読み込み中…';
+    TownData.photo(townData.lat, townData.lon, 90, 1024).catch(function () { return null; }).then(function (cv) {
+      photoBusy = false; townPhoto = cv; usePhoto = !!cv; apply();
+      if (!cv) btn.textContent = '航空写真を読み込めませんでした';
+    });
   });
 
   // 俯瞰で地図をタップして、家の場所を選ぶ
