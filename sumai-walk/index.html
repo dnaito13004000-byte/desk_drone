@@ -1,0 +1,1222 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>住まい体験ウォークスルー</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* レイアウト: 画面いっぱいの3Dの上に、上=視点切り替え、下=太陽と音の操作盤を重ねる一画面アプリ。常に暗い操作盤で統一 */
+:root{
+  color-scheme: dark;
+  --ground:#0f1316;            /* 3Dが出る前の地 */
+  --panel:rgba(17,22,25,.80);  /* 操作盤 */
+  --line:rgba(236,240,232,.14);
+  --ink:#eef1ea;
+  --mute:#a7b1a9;
+  --sun:#f3b63f;               /* 日なた */
+  --shade:#7fb2d6;             /* 日かげ・音 */
+  --s-none:#d95926;            /* グラフ: 断熱なし */
+  --s-std:#199e70;             /* グラフ: 一般的な断熱 */
+  --s-high:#3987e5;            /* グラフ: 高断熱 */
+  --s-out:#9aa39c;             /* グラフ: 外気温 */
+  --grid:rgba(236,240,232,.10);
+  --font-ui:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;
+  --font-num:"Space Grotesk","Zen Kaku Gothic New",system-ui,sans-serif;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.5;overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#stage{position:fixed;inset:0;display:block;width:100%;height:100%;touch-action:none;outline:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
+
+.top{position:fixed;inset:0 0 auto 0;display:flex;flex-direction:column;gap:8px;pointer-events:none;
+  padding-top:calc(10px + env(safe-area-inset-top,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:baseline;gap:10px;text-shadow:0 1px 6px rgba(0,0,0,.55)}
+.brand b{font-size:15px;font-weight:700;letter-spacing:.04em}
+.brand span{font-size:12px;color:var(--ink);opacity:.85}
+.views{display:flex;gap:6px;flex-wrap:wrap;pointer-events:auto}
+.chip{padding:7px 13px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:13px;font-weight:500;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.chip[aria-pressed="true"]{background:var(--ink);color:#12171a;border-color:transparent}
+
+.compass{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(12px + env(safe-area-inset-top,0px));width:44px;height:44px;border-radius:50%;
+  background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;pointer-events:none}
+.compass i{display:block;width:100%;height:100%;position:relative}
+.compass i::before{content:"";position:absolute;left:50%;top:7px;margin-left:-5px;border:5px solid transparent;border-bottom:13px solid var(--sun);border-top:0}
+.compass i::after{content:"北";position:absolute;left:0;right:0;bottom:5px;text-align:center;font-size:10px;color:var(--mute)}
+
+.panel{position:fixed;inset:auto 0 0 0;background:var(--panel);border-top:1px solid var(--line);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding-block:12px calc(12px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.panel-in{max-width:880px;margin:0 auto;display:grid;grid-template-columns:auto 1fr;gap:10px 18px;align-items:center}
+.clock{font-family:var(--font-num);font-size:34px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;min-width:3.1em}
+.clock small{display:block;font-family:var(--font-ui);font-size:11px;font-weight:500;color:var(--mute);margin-top:5px;letter-spacing:.04em}
+.sunrow{display:flex;flex-direction:column;gap:8px;min-width:0}
+.seasons{display:flex;gap:4px}
+.seg{flex:1;padding:6px 4px;border-radius:8px;border:1px solid var(--line);font-size:12px;font-weight:500;color:var(--mute);white-space:nowrap}
+.seg[aria-pressed="true"]{color:#1b1508;background:var(--sun);border-color:transparent;font-weight:700}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(90deg,#27324a,#e0914b 14%,#f7dc8a 32%,#fbf1c4 50%,#f7dc8a 68%,#e0914b 86%,#27324a)}
+input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:linear-gradient(90deg,#27324a,#e0914b 14%,#f7dc8a 32%,#fbf1c4 50%,#f7dc8a 68%,#e0914b 86%,#27324a)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--ink);border:3px solid #12171a;margin-top:-9px;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--ink);border:3px solid #12171a}
+.facts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center}
+.fact{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);font-size:12px;min-width:0}
+.fact b{font-family:var(--font-num);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.fact.sunlit b{color:var(--sun)}
+.meter{width:74px;height:6px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--shade);border-radius:3px;transition:width .12s linear}
+.tog{padding:6px 12px;border-radius:8px;border:1px solid var(--line);font-size:12px;font-weight:500}
+.tog[aria-pressed="true"]{background:var(--shade);color:#0d1820;border-color:transparent;font-weight:700}
+.note{grid-column:1/-1;font-size:11px;color:var(--mute);margin:0}
+
+.stick{position:fixed;left:max(22px,env(safe-area-inset-left,0px));bottom:calc(var(--panel-h,190px) + 18px);width:112px;height:112px;border-radius:50%;
+  background:rgba(17,22,25,.45);border:1px solid var(--line);touch-action:none}
+.stick i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(238,241,234,.85)}
+.hint{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(var(--panel-h,190px) + 14px);font-size:12px;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;pointer-events:none}
+@media (pointer:fine){.stick{display:none}}
+@media (pointer:coarse){.fine-only{display:none}
+  .hint{left:max(150px,env(safe-area-inset-left,0px));text-align:right;transition:opacity .6s}
+  .hint.gone{opacity:0}
+  .fld input,.fld select{font-size:16px}
+}
+html,body{overscroll-behavior:none}
+button,.tab,.chip,.seg{touch-action:manipulation}
+.panel{touch-action:pan-y}
+@media (max-width:700px){
+  .brand{min-height:44px;align-items:center;padding-right:54px}
+  .views{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+  .views::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto}
+  .panel{max-height:58vh}
+  .tab{padding:7px 9px}
+  .seg{padding:6px 2px}
+  #chart{height:112px}
+}
+.chip.tool{border-style:dashed}
+.chip.tool[aria-pressed="true"]{background:var(--sun);color:#1b1508;border-color:transparent;border-style:solid}
+
+.loading{position:fixed;inset:0;display:grid;place-items:center;background:var(--ground);z-index:5;text-align:center;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.loading p{margin:0 0 12px;font-size:14px}
+.bar{width:220px;max-width:100%;height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden;margin:0 auto}
+.bar i{display:block;height:100%;width:4%;background:var(--sun)}
+
+.panel{max-height:66vh;overflow-y:auto}
+.tabs{grid-column:1/-1;display:flex;gap:2px;border-bottom:1px solid var(--line)}
+.tab{padding:7px 12px;font-size:12px;font-weight:500;color:var(--mute);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tab[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--sun);font-weight:700}
+.pane{grid-column:1/-1;display:flex;flex-direction:column;gap:9px;min-width:0}
+.opt{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mute);min-width:0}
+.opt .seg{flex:0 0 auto;padding:6px 10px}
+.fld{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mute)}
+.fld input,.fld select{font:inherit;font-size:13px;color:var(--ink);background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:6px;padding:5px 7px;-webkit-user-select:text;user-select:text}
+.fld input[type=number]{width:5.4em;font-variant-numeric:tabular-nums}
+.fld input[type=text]{width:17em;max-width:100%}
+#addr-form .fld{flex:1 1 15em;min-width:0}
+#addr-form .fld input{flex:1;min-width:0}
+.fld input[type=range]{width:120px;border:0;padding:0;background:transparent}
+.fld b{font-family:var(--font-num);font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums;min-width:3.6em}
+.chartwrap{position:relative;min-width:0}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--mute);margin-bottom:4px}
+.lg{display:flex;align-items:center;gap:6px}
+.lg i{width:14px;height:0;border-top:3px solid var(--c)}
+.lg.out i{border-top:2px dashed var(--c)}
+.lg b{font-family:var(--font-num);color:var(--ink);font-variant-numeric:tabular-nums}
+.lg.sel{color:var(--ink);font-weight:700}
+#chart{display:block;width:100%;height:132px;touch-action:pan-y}
+.tip{position:absolute;top:22px;pointer-events:none;background:#0c1012;border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:11px;line-height:1.55;white-space:nowrap;color:var(--mute)}
+.tip b{color:var(--ink);font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.tip i{display:inline-block;width:10px;height:0;border-top:3px solid var(--c);vertical-align:middle;margin-right:5px}
+@media (max-width:520px){
+  .panel-in{gap:8px 12px}
+  .clock{font-size:28px}
+  .brand span{display:none}
+  .seg{font-size:11px}
+}
+@media (max-height:500px){
+  .note{display:none}
+  .panel{padding-block:8px calc(8px + env(safe-area-inset-bottom,0px))}
+  .clock{font-size:24px}
+  .clock small{margin-top:2px}
+  .stick{width:92px;height:92px}
+}
+@media (prefers-reduced-motion:reduce){.meter i{transition:none}}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+
+
+<canvas id="stage" tabindex="0" aria-label="家と周辺の街並みを歩いて見る3D画面"></canvas>
+
+<div class="top">
+  <div class="brand"><b>住まい体験ウォークスルー</b><span id="place-sub">試作</span></div>
+  <div class="views" role="group" aria-label="視点">
+    <button class="chip" id="v-road" aria-pressed="true">道路から</button>
+    <button class="chip" id="v-door" aria-pressed="false">玄関</button>
+    <button class="chip" id="v-living" aria-pressed="false">リビング</button>
+    <button class="chip" id="v-up" aria-pressed="false">2階</button>
+    <button class="chip" id="v-orbit" aria-pressed="false">俯瞰</button>
+    <button class="chip tool" id="pick" aria-pressed="false" hidden>家の場所を選ぶ</button>
+    <button class="chip tool" id="cut-0" aria-pressed="true" hidden>全体</button>
+    <button class="chip tool" id="cut-2" aria-pressed="false" hidden>2階の間取り</button>
+    <button class="chip tool" id="cut-1" aria-pressed="false" hidden>1階の間取り</button>
+    <button class="chip tool" id="top-view" aria-pressed="false" hidden>真上から</button>
+    <button class="chip tool fine-only" id="mouse-toggle" aria-pressed="false">マウスで見回す</button>
+    <button class="chip tool" id="go-place" aria-pressed="false">住所を入れる</button>
+    <button class="chip" id="panel-toggle" aria-pressed="true" aria-controls="panel">太陽と音</button>
+  </div>
+</div>
+<div class="compass" aria-hidden="true"><i id="needle"></i></div>
+
+<div class="stick" id="stick" aria-hidden="true"><i id="knob"></i></div>
+<div class="hint" id="hint"></div>
+
+<div class="panel" id="panel">
+  <div class="panel-in">
+    <div class="clock"><span id="clock">12:00</span><small id="season-label">冬至 12月21日</small></div>
+    <div class="sunrow">
+      <div class="seasons" role="group" aria-label="季節" id="seasons"></div>
+      <input type="range" id="time" min="300" max="1140" step="10" value="600" aria-label="時刻">
+    </div>
+    <div class="tabs" role="group" aria-label="操作の種類">
+      <button class="tab" id="tab-sun" aria-pressed="true">日当たりと音</button>
+      <button class="tab" id="tab-heat" aria-pressed="false">室温と断熱</button>
+      <button class="tab" id="tab-place" aria-pressed="false">場所と見え方</button>
+    </div>
+
+    <div class="pane" id="pane-sun">
+      <div class="facts">
+        <label class="fld">家の向き <input type="range" id="rot" min="0" max="359" step="1" value="270"><b id="rot-v" style="min-width:7em">西向き</b></label>
+        <button class="tog" id="rot-reset">道路に向ける</button>
+      </div>
+      <div class="facts">
+        <div class="fact">太陽高度 <b id="alt">0°</b></div>
+        <div class="fact sunlit">リビングの窓に当たる日 <b id="lit">0%</b></div>
+        <div class="fact">車の音 <span class="meter"><i id="level"></i></span></div>
+        <button class="tog" id="sound" aria-pressed="false">音を出す</button>
+        <button class="tog" id="window" aria-pressed="false">窓を開ける</button>
+      </div>
+      <p class="note">「家の向き」は正面とリビングの窓が向く方位。回すと駐車場や門も一緒に回ります。「道路に向ける」で、いちばん近い道路の方向に戻せます。音は距離と窓の開閉による聞こえ方のイメージで、測定値ではありません。</p>
+    </div>
+
+    <div class="pane" id="pane-heat" hidden>
+      <div class="facts">
+        <div class="opt" role="group" aria-label="断熱"><span>断熱</span>
+          <button class="seg" id="ins-0" aria-pressed="false">なし</button>
+          <button class="seg" id="ins-1" aria-pressed="true">一般的</button>
+          <button class="seg" id="ins-2" aria-pressed="false">高断熱</button>
+        </div>
+        <div class="opt" role="group" aria-label="リビングの窓の大きさ"><span>リビングの窓</span>
+          <button class="seg" id="win-S" aria-pressed="false">小</button>
+          <button class="seg" id="win-M" aria-pressed="true">標準</button>
+          <button class="seg" id="win-L" aria-pressed="false">大</button>
+        </div>
+      </div>
+      <div class="facts">
+        <div class="fact">外気温 <b id="t-out">–</b></div>
+        <div class="fact sunlit">室温 <b id="t-in">–</b></div>
+        <div class="fact">室内の湿度 <b id="rh-in">–</b></div>
+        <div class="fact">暖冷房の負荷 <b id="load">–</b></div>
+      </div>
+      <div class="chartwrap">
+        <div class="legend" id="legend"></div>
+        <canvas id="chart" role="img" aria-label="1日の外気温と、断熱の種類ごとの室温の変化"></canvas>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+      <p class="note">晴れた日に暖冷房を使わない場合の室温の目安(暑いときは窓を開ける想定)。負荷は20〜27℃に保つのに必要な1日の熱量。簡易計算で、設計用の計算ではありません。</p>
+    </div>
+
+    <div class="pane" id="pane-place" hidden>
+      <form class="facts" id="addr-form">
+        <label class="fld">住所 <input type="text" id="addr" placeholder="例: 大分県別府市北浜1丁目" autocomplete="off" enterkeyhint="search"></label>
+        <button class="tog" id="addr-go" type="submit">この住所の街並みを作る</button>
+      </form>
+      <p class="note" id="addr-msg" role="status">住所を入れると、そのまわりの建物と道路を地図データから作ります。家は道路に面した空きに自動で置きます。</p>
+      <div class="facts">
+        <div class="fact">場所 <b id="place-name">–</b></div>
+        <div class="fact">緯度・経度 <b id="latlon">–</b></div>
+        <label class="fld">最低気温 <input type="number" id="tmin" step="0.5"></label>
+        <label class="fld">最高気温 <input type="number" id="tmax" step="0.5"></label>
+      </div>
+      <div class="facts">
+        <label class="fld">身長 <input type="range" id="eye" min="100" max="190" step="5" value="165"><b id="eye-v">165cm</b></label>
+        <label class="fld">視野の広さ <input type="range" id="fov" min="50" max="100" step="2" value="72"><b id="fov-v">72°</b></label>
+      </div>
+      <p class="note">出典: 国土地理院(基盤地図情報・地理院タイル)。建物の配置と道路は地図データどおり、建物の高さと屋根の形は面積からの仮定です。塀・電柱・庭木・土地の高低差は入っていません。気温は緯度からの概算で、手で直せます。</p>
+    </div>
+  </div>
+</div>
+
+<div class="loading" id="loading"><div><p id="loadmsg">街並みを読み込んでいます</p><div class="bar"><i id="loadbar"></i></div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="town.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  if (!window.THREE || !THREE.GLTFLoader) { $('loadmsg').textContent = '3D表示の部品を読み込めませんでした。通信環境を確認して開き直してください。'; return; }
+
+  // ── 敷地の寸法(Blenderの値。three.jsでは X=東, Y=上, Z=南) ──
+  var W = 7.28, D = 6.37, FL = 0.55, EYE = 1.55;
+  var carPts = null;                                          // 車の走行ルート(家の前の道路。地図データから求める)
+  var LAT = 33.195 * Math.PI / 180, LON = 131.602;            // 場所を読み込むと、その緯度・経度に置き換わる
+  var NORTH = -Math.PI / 2;                                   // 真北の向き(画面上の奥方向から時計回り)
+  var town = null;                                            // 街並み。家は原点に固定し、街並みと方位のほうを動かす
+  var SEASONS = {
+    deepwinter: { n: 25, label: '真冬 1月25日', s: '真冬' }, equinox: { n: 80, label: '春分 3月21日', s: '春・秋' },
+    summer: { n: 172, label: '夏至 6月21日', s: '夏至' }, midsummer: { n: 217, label: '真夏 8月5日', s: '真夏' },
+    winter: { n: 355, label: '冬至 12月21日', s: '冬至' }
+  };
+  var fovBase = 72;
+  var WV = { S: [1.20, 2.89, 1.45, 2.55], M: [0.74, 3.34, 0.55, 2.55], L: [0.56, 3.54, 0.55, 2.80] }, winVar = 'M';   // リビングの窓(正面壁上の位置)
+
+  var canvas = $('stage');
+  var coarse = window.matchMedia('(pointer:coarse)').matches;
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.86;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(68, 1, 0.08, 600);
+  camera.rotation.order = 'YXZ';
+
+  // 空(頂点カラーのグラデーション)
+  var skyGeo = new THREE.SphereGeometry(450, 32, 16);
+  skyGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(skyGeo.attributes.position.count * 3), 3));
+  var sky = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false, toneMapped: false }));
+  sky.renderOrder = -1; sky.frustumCulled = false;
+  scene.add(sky);
+  var sunDisc = new THREE.Mesh(new THREE.SphereGeometry(9, 16, 12), new THREE.MeshBasicMaterial({ color: 0xfff4d6, fog: false, toneMapped: false }));
+  scene.add(sunDisc);
+
+  scene.fog = new THREE.Fog(0x9ec7ec, 70, 430);
+  var far = new THREE.Mesh(new THREE.CircleGeometry(600, 48), new THREE.MeshStandardMaterial({ color: 0x8d8674, roughness: 1 }));   // 遠くまで続く地面
+  far.rotation.x = -Math.PI / 2; far.position.y = -0.06; far.receiveShadow = false; scene.add(far);
+  var hemi = new THREE.HemisphereLight(0xcfe2f5, 0x6b6558, 0.9);
+  scene.add(hemi);
+  var sun = new THREE.DirectionalLight(0xffffff, 3);
+  sun.castShadow = true;
+  var S = coarse ? 2048 : 4096;
+  sun.shadow.mapSize.set(S, S);
+  sun.shadow.camera.left = -42; sun.shadow.camera.right = 42; sun.shadow.camera.top = 42; sun.shadow.camera.bottom = -42;
+  sun.shadow.camera.near = 1; sun.shadow.camera.far = 260;
+  sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.05;
+  scene.add(sun); scene.add(sun.target);
+  sun.target.position.set(0, 0, 4);
+  var room = new THREE.PointLight(0xfff1dc, 0.35, 11, 1.6);   // 室内がのっぺりしないための弱い補助光
+  room.position.set(-0.6, FL + 2.0, -0.4);
+  scene.add(room);
+
+  var colliders = [], floors = [], occluders = [], houseMats = {};
+  var baseCol = [], baseOcc = [], baseFloors = [], townCol = [], townOcc = [], townFloors = [], varMeshes = { S: [], M: [], L: [] };
+  function rebuildLists() {                                 // 選んでいる窓の大きさだけを当たり判定・日影計算に入れる
+    ['S', 'M', 'L'].forEach(function (k) { varMeshes[k].forEach(function (o) { o.visible = k === winVar; }); });
+    colliders = baseCol.concat(varMeshes[winVar], townCol);
+    occluders = baseOcc.concat(varMeshes[winVar].filter(function (o) { return o.material.name !== 'glass'; }), townOcc);
+    floors = baseFloors.concat(townFloors);
+    clickables = null;
+  }
+  renderer.localClippingEnabled = true;
+  var cutPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 2.6), cutMode = 0, CUT_H = { 1: 2.6, 2: 5.2 }, labels = [];
+  function setCut(mode) {                                   // 0: 全体 / 1: 1階の間取り / 2: 2階の間取り(その高さより上を切り取る)
+    mode = mode | 0;
+    cutMode = mode;
+    if (mode) cutPlane.constant = CUT_H[mode];
+    Object.keys(houseMats).forEach(function (k) {
+      var has = !!houseMats[k].clippingPlanes;
+      if (has !== !!mode) { houseMats[k].clippingPlanes = mode ? [cutPlane] : null; houseMats[k].needsUpdate = true; }
+    });
+    [0, 1, 2].forEach(function (k) { $('cut-' + k).setAttribute('aria-pressed', k === mode ? 'true' : 'false'); });
+    labels.forEach(function (l) { l.visible = orbit && l.userData.floor === mode; });
+  }
+  [0, 1, 2].forEach(function (k) { $('cut-' + k).addEventListener('click', function () { setCut(k); }); });
+  $('top-view').addEventListener('click', function () { orb.el = 1.52; orb.az = 0; orb.dist = 12; });
+  function addLabel(text, x, y, z, floor) {                  // 間取り表示のときの部屋名
+    var c = document.createElement('canvas'), g = c.getContext('2d'), font = '700 44px "Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif';
+    g.font = font; c.width = Math.ceil(g.measureText(text).width) + 44; c.height = 76;
+    g = c.getContext('2d'); g.font = font;
+    g.fillStyle = 'rgba(17,22,25,.84)';
+    var r = 16, w = c.width, h = c.height;
+    g.beginPath(); g.moveTo(r, 0); g.arcTo(w, 0, w, h, r); g.arcTo(w, h, 0, h, r); g.arcTo(0, h, 0, 0, r); g.arcTo(0, 0, w, 0, r); g.fill();
+    g.fillStyle = '#eef1ea'; g.textBaseline = 'middle'; g.textAlign = 'center'; g.fillText(text, w / 2, h / 2 + 2);
+    var tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, fog: false, toneMapped: false }));
+    sp.scale.set(0.44 * w / h, 0.44, 1); sp.position.set(x, y, z); sp.renderOrder = 10; sp.visible = false; sp.userData.floor = floor;
+    scene.add(sp); labels.push(sp);
+  }
+  [['LDK', -1.3, 1.3], ['キッチン', 2.35, -0.2], ['玄関', 2.2, 1.25], ['階段', -2.57, -1.6], ['トイレ', 0.05, -2.0], ['洗面', 1.3, -2.0], ['浴室', 2.75, -2.0]]
+    .forEach(function (a) { addLabel(a[0], a[1], 2.75, a[2], 1); });
+  [['子ども室', -1.5, 2.0], ['主寝室', 2.05, 1.2], ['書斎', 2.05, -2.0], ['ホール', -0.6, 0.3], ['フリースペース', -0.6, -1.8], ['階段', -2.57, -1.6]]
+    .forEach(function (a) { addLabel(a[0], a[1], 5.35, a[2], 2); });
+  var carProto = null, cars = [], carColors = [0xb9bcc2, 0x1c2433, 0x8c1f1c, 0xe8e6df, 0x3a4a3f, 0x24262b];
+  var sunDir = new THREE.Vector3(0, 1, 0);
+
+  function partName(o) { var n = ''; while (o) { if (/^(\d\d_|car_proto)/.test(o.name)) n = o.name; o = o.parent; } return n; }
+
+  // ── 読み込み ──
+  function onModel(gltf) {
+    var maxAniso = renderer.capabilities.getMaxAnisotropy();
+    gltf.scene.traverse(function (o) {
+      if (!o.isMesh) return;
+      var part = partName(o), m = o.material;
+      if (/^(0\d|10|30)_/.test(part)) { m = houseMats[m.name] || (houseMats[m.name] = m.clone()); o.material = m; }
+      ['map', 'normalMap', 'roughnessMap', 'metalnessMap'].forEach(function (k) { if (m[k]) m[k].anisotropy = Math.min(8, maxAniso); });
+      o.castShadow = true; o.receiveShadow = true;
+      if (m.name === 'glass') {                              // 自宅の窓は透けるガラスにする
+        m.transparent = true; m.opacity = 0.22; m.depthWrite = false; m.metalness = 0.9; m.roughness = 0.05; m.color.set(0xa9c0cc);
+        o.castShadow = false; o.receiveShadow = false; o.renderOrder = 2;
+      }
+      if (m.name === 'light') { o.castShadow = false; }
+      m.envMapIntensity = 0.55;
+      if (/roof/.test(m.name) || m.name === 'fascia') { m.metalness = 0.15; m.roughness = 0.6; }
+      if (m.name === 'nb_glass') { m.color.set(0x2b3a48); m.metalness = 0.6; m.roughness = 0.12; m.envMapIntensity = 1.0; }
+      if (part === 'car_proto') return;
+      if (part.indexOf('30_win') === 0) { varMeshes[part.slice(-1)].push(o); return; }
+      if (/^(02|04|05|07|08|09|10|22|23)_/.test(part)) baseCol.push(o);
+      if (/^(05|08|09)_/.test(part)) baseFloors.push(o);
+      if (/^(02|03|06|08|22)_/.test(part) && m.name !== 'glass') baseOcc.push(o);
+    });
+    rebuildLists();
+    scene.add(gltf.scene);
+    town = new THREE.Group(); scene.add(town);
+    carProto = gltf.scene.getObjectByName('car_proto');
+    if (carProto) { carProto.parent.remove(carProto); carProto.position.set(0, 0, 0); }
+    scene.updateMatrixWorld(true);
+    makeEnvironment();
+    setView('road');
+    updateSun();
+    resize();
+    last = performance.now();
+    requestAnimationFrame(tick);
+    $('loadmsg').textContent = '街並みを作っています';
+    $('loadbar').style.width = '85%';
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem('sumai-place') || 'null'); } catch (e) {}
+    if (!saved || !isFinite(saved.lat) || !isFinite(saved.lon)) saved = DEFAULT_PLACE;
+    loadPlace(saved, true).then(function () { $('loading').hidden = true; resize(); });
+  }
+  function loadFailed(why) {
+    $('loadmsg').textContent = '3Dデータを読み込めませんでした。ページを開き直してください。(' + why + ')';
+  }
+  new THREE.GLTFLoader().load('house.glb', onModel, function (e) {
+    if (e.total) $('loadbar').style.width = Math.max(4, Math.round(e.loaded / e.total * 80)) + '%';
+  }, function (e) { loadFailed(e && e.message ? e.message : '通信エラー'); });
+
+  function makeEnvironment() {                               // ガラスや金属の映り込み用(昼の空で固定)
+    paintSky(50);
+    var s2 = new THREE.Scene(); var sk = sky.clone(); s2.add(sk);
+    var pm = new THREE.PMREMGenerator(renderer);
+    scene.environment = pm.fromScene(s2, 0.04).texture;
+    pm.dispose();
+  }
+
+  // ── 太陽 ──
+  var season = 'winter', minutes = 600;
+  function smooth(a, b, x) { var t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+  function sunPosition(n, min) {
+    var decl = 23.44 * Math.PI / 180 * Math.sin(2 * Math.PI * (284 + n) / 365);
+    var B = 2 * Math.PI * (n - 81) / 364;
+    var eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+    var solar = min + 4 * (LON - 135) + eot;                 // 日本標準時 → 真太陽時(分)
+    var H = (solar / 60 - 12) * 15 * Math.PI / 180;
+    var sinAlt = Math.sin(LAT) * Math.sin(decl) + Math.cos(LAT) * Math.cos(decl) * Math.cos(H);
+    var alt = Math.asin(sinAlt);
+    var az = Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(LAT) - Math.tan(decl) * Math.cos(LAT)) + Math.PI;   // 北から時計回り
+    return { alt: alt, az: az + NORTH };
+  }
+  var cTop = new THREE.Color(), cHor = new THREE.Color(), tmpC = new THREE.Color();
+  function paintSky(altDeg) {
+    var day = smooth(-6, 12, altDeg);
+    var warm = smooth(20, 1, altDeg) * smooth(-9, -1, altDeg);
+    cTop.setRGB(0.012, 0.02, 0.05).lerp(tmpC.setRGB(0.17, 0.40, 0.80), day).lerp(tmpC.setRGB(0.22, 0.30, 0.52), warm * 0.6);
+    cHor.setRGB(0.03, 0.045, 0.09).lerp(tmpC.setRGB(0.62, 0.78, 0.93), day).lerp(tmpC.setRGB(0.97, 0.62, 0.36), warm * 0.85);
+    var pos = skyGeo.attributes.position, col = skyGeo.attributes.color;
+    for (var i = 0; i < pos.count; i++) {
+      var t = Math.pow(Math.min(1, Math.max(0, pos.getY(i) / 450)), 0.55);
+      tmpC.copy(cHor).lerp(cTop, t);
+      col.setXYZ(i, tmpC.r, tmpC.g, tmpC.b);
+    }
+    col.needsUpdate = true;
+    if (scene.fog) scene.fog.color.copy(cHor);
+  }
+  var ray = new THREE.Raycaster();
+  function windowSunlight(altDeg) {                           // リビングの掃き出し窓のうち、直射日光が当たる割合
+    if (altDeg <= 0.5 || sunDir.z <= 0.02) return 0;
+    var hit = 0, total = 0, o = new THREE.Vector3();
+    var r = WV[winVar], ww = r[1] - r[0] - 0.3, wh = r[3] - r[2] - 0.3;
+    for (var ix = 0; ix < 5; ix++) for (var iz = 0; iz < 4; iz++) {
+      o.set(r[0] - W / 2 + 0.15 + ix * ww / 4, r[2] + 0.15 + iz * wh / 3, D / 2 + 0.12);
+      ray.set(o, sunDir); ray.near = 0; ray.far = 200;
+      total++;
+      if (ray.intersectObjects(occluders, false).length === 0) hit++;
+    }
+    return hit / total;
+  }
+  function updateSun() {
+    var sp = sunPosition(SEASONS[season].n, minutes), altDeg = sp.alt * 180 / Math.PI;
+    sunDir.set(Math.cos(sp.alt) * Math.sin(sp.az), Math.sin(sp.alt), -Math.cos(sp.alt) * Math.cos(sp.az)).normalize();
+    var up = Math.max(sp.alt, 0.03);
+    var d = new THREE.Vector3(Math.cos(up) * Math.sin(sp.az), Math.sin(up), -Math.cos(up) * Math.cos(sp.az));
+    sun.position.copy(sun.target.position).addScaledVector(d, 130);
+    var k = smooth(0, 10, altDeg);
+    sun.intensity = 3.5 * k;
+    sun.color.setRGB(1, 0.72, 0.48).lerp(tmpC.setRGB(1, 0.97, 0.92), smooth(2, 28, altDeg));
+    var day = smooth(-6, 12, altDeg);
+    hemi.intensity = 0.14 + 0.56 * day;
+    room.intensity = 0.3 + 0.9 * (1 - day);
+    paintSky(altDeg);
+    sunDisc.visible = altDeg > -1;
+    var h = Math.floor(minutes / 60), m = minutes % 60;
+    $('clock').textContent = h + ':' + (m < 10 ? '0' : '') + m;
+    $('alt').textContent = (altDeg > 0 ? Math.round(altDeg) : 0) + '°';
+    $('lit').textContent = Math.round(windowSunlight(altDeg) * 100) + '%';
+    heatNow();
+  }
+  $('time').addEventListener('input', function (e) { minutes = +e.target.value; updateSun(); });
+  Object.keys(SEASONS).forEach(function (k) {
+    var b = document.createElement('button');
+    b.className = 'seg'; b.id = 's-' + k; b.textContent = SEASONS[k].s; b.setAttribute('aria-pressed', k === season ? 'true' : 'false');
+    b.addEventListener('click', function () {
+      season = k;
+      Object.keys(SEASONS).forEach(function (j) { $('s-' + j).setAttribute('aria-pressed', j === k ? 'true' : 'false'); });
+      $('season-label').textContent = SEASONS[k].label;
+      tOverride = null; fillTemps();
+      updateSun(); scheduleHeat();
+    });
+    $('seasons').appendChild(b);
+  });
+
+  // ── 視点と歩行 ──
+  var pos = new THREE.Vector3(), feet = 0, yaw = 0, pitch = 0, fly = false;
+  var orbit = false, orb = { az: -0.75, el: 0.6, dist: 30 }, OT = new THREE.Vector3(0, 2.2, 0.6), lastWalk = 'road';
+  var walkTarget = null, locked = false;
+  var marker = new THREE.Mesh(new THREE.RingGeometry(0.11, 0.17, 28), new THREE.MeshBasicMaterial({ color: 0xf3b63f, transparent: true, opacity: 0.95, fog: false, toneMapped: false }));
+  marker.rotation.x = -Math.PI / 2; marker.visible = false; scene.add(marker);
+  var VIEWS = {
+    road:   { p: [4.2, 13.4], look: [-0.2, 3.0, 0] },
+    door:   { p: [2.25, 7.4], look: [2.2, 1.7, 1.5] },
+    living: { p: [0.2, -0.9], look: [-1.8, 1.25, 3.2], from: 2.0 },
+    up:     { p: [-0.6, 0.3], look: [-0.9, 4.5, 3.0], from: 4.4 },
+    orbit:  { orbit: true }
+  };
+  function groundAt(x, z, from) {
+    ray.set(new THREE.Vector3(x, from, z), new THREE.Vector3(0, -1, 0)); ray.near = 0; ray.far = 6;
+    var h = ray.intersectObjects(floors, false);
+    return h.length ? h[0].point.y : 0;
+  }
+  var hintTimer = null;
+  function updateHint() {
+    var t;
+    if (picking && orbit) t = '家を置きたい場所を' + (coarse ? 'タップ' : 'クリック');
+    else if (coarse) t = orbit ? '1本指で回す ・ 2本指でつまんで寄り引き' : '左下の丸で歩く ・ 画面をなぞって見回す ・ 床をタップでそこへ歩く';
+    else t = orbit ? 'ドラッグで回す ・ ホイールで寄り引き'
+      : locked ? 'マウスで見回す ・ W A S D で歩く ・ Esc で解除'
+      : 'W A S D で歩く ・ ドラッグで見回す ・ 床をクリックでそこへ歩く';
+    $('hint').textContent = t;
+    if (coarse) {                                              // スマホでは数秒で消して画面を広く使う
+      $('hint').classList.remove('gone'); clearTimeout(hintTimer); hintTimer = null;
+    }
+  }
+  window.addEventListener('pointerdown', function () {         // 触りはじめたら数秒後に案内を消す
+    if (coarse && !hintTimer && !$('hint').classList.contains('gone')) hintTimer = setTimeout(function () { $('hint').classList.add('gone'); }, 6000);
+  }, true);
+  function setView(name) {
+    var v = VIEWS[name];
+    orbit = !!v.orbit; fly = orbit; walkTarget = null; marker.visible = false;
+    if (orbit) {
+      if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
+    } else {
+      lastWalk = name;
+      pos.set(v.p[0], 0, v.p[1]);
+      feet = groundAt(pos.x, pos.z, v.from || 1.2);
+      var dx = v.look[0] - pos.x, dy = v.look[1] - (feet + EYE), dz = v.look[2] - pos.z;
+      yaw = Math.atan2(-dx, -dz); pitch = Math.atan2(dy, Math.sqrt(dx * dx + dz * dz));
+    }
+    ['cut-0', 'cut-1', 'cut-2', 'top-view', 'pick'].forEach(function (id) { $(id).hidden = !orbit; });
+    if (!orbit) setPick(false);
+    setCut(orbit ? cutMode : 0);
+    Object.keys(VIEWS).forEach(function (k) { $('v-' + k).setAttribute('aria-pressed', k === name ? 'true' : 'false'); });
+    updateHint();
+  }
+  Object.keys(VIEWS).forEach(function (k) { $('v-' + k).addEventListener('click', function () { setView(k); canvas.focus(); }); });
+
+  // マウスモード(画面にマウスを固定して、動かすだけで見回す)
+  $('mouse-toggle').addEventListener('click', function () {
+    if (document.pointerLockElement) { document.exitPointerLock(); return; }
+    if (!canvas.requestPointerLock) { $('hint').textContent = 'この画面ではマウスモードを使えません'; return; }
+    if (orbit) setView(lastWalk);
+    canvas.focus();
+    try { var pr = canvas.requestPointerLock(); if (pr && pr.catch) pr.catch(function () { $('hint').textContent = 'この画面ではマウスモードを使えません'; }); } catch (e) {}
+  });
+  document.addEventListener('pointerlockchange', function () {
+    locked = document.pointerLockElement === canvas;
+    $('mouse-toggle').setAttribute('aria-pressed', locked ? 'true' : 'false');
+    $('mouse-toggle').textContent = locked ? 'マウスモード中(Escで解除)' : 'マウスで見回す';
+    updateHint();
+  });
+  document.addEventListener('pointerlockerror', function () { $('hint').textContent = 'この画面ではマウスモードを使えません'; });
+  document.addEventListener('mousemove', function (e) {
+    if (!locked || orbit) return;
+    yaw -= (e.movementX || 0) * 0.0023; pitch -= (e.movementY || 0) * 0.0023;
+    pitch = Math.max(-1.35, Math.min(1.35, pitch));
+  });
+
+  $('panel-toggle').addEventListener('click', function () {
+    var show = $('panel').hidden;
+    $('panel').hidden = !show;
+    this.setAttribute('aria-pressed', show ? 'true' : 'false');
+    resize();
+  });
+
+  var keys = {};
+  window.addEventListener('keydown', function (e) { keys[e.code] = true; if (/^Arrow/.test(e.code) && document.activeElement !== $('time')) e.preventDefault(); });
+  window.addEventListener('keyup', function (e) { keys[e.code] = false; });
+  window.addEventListener('blur', function () { keys = {}; });
+
+  var lookId = null, lx = 0, ly = 0, ptrs = {}, pinch0 = 0, downT = 0, moved = 0;
+  function ptrCount() { return Object.keys(ptrs).length; }
+  function pinchDist() { var k = Object.keys(ptrs), a = ptrs[k[0]], b = ptrs[k[1]]; return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)) || 1; }
+  canvas.addEventListener('pointerdown', function (e) {
+    if (locked) { if (!orbit) clickWalk(null); return; }
+    ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    if (ptrCount() === 1) { lookId = e.pointerId; lx = e.clientX; ly = e.clientY; downT = e.timeStamp; moved = 0; }
+    else if (ptrCount() === 2) { lookId = null; pinch0 = pinchDist(); }
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (!ptrs[e.pointerId]) return;
+    ptrs[e.pointerId].x = e.clientX; ptrs[e.pointerId].y = e.clientY;
+    if (ptrCount() === 2) {
+      if (orbit) { var d = pinchDist(); orb.dist = Math.max(5, Math.min(95, orb.dist * pinch0 / d)); pinch0 = d; }
+      return;
+    }
+    if (e.pointerId !== lookId) return;
+    var dx = e.clientX - lx, dy = e.clientY - ly;
+    moved += Math.abs(dx) + Math.abs(dy);
+    if (orbit) { orb.az -= dx * 0.006; orb.el = Math.max(0.06, Math.min(1.52, orb.el + dy * 0.006)); }
+    else { yaw -= dx * 0.0042; pitch = Math.max(-1.35, Math.min(1.35, pitch - dy * 0.0042)); }
+    lx = e.clientX; ly = e.clientY;
+  });
+  function endLook(e) {
+    if (!ptrs[e.pointerId]) return;
+    delete ptrs[e.pointerId];
+    if (e.pointerId === lookId) {
+      lookId = null;
+      if (e.type === 'pointerup' && moved < 10 && e.timeStamp - downT < 400) { if (!orbit) clickWalk(e); else if (picking) pickAt(e); }
+    }
+  }
+  canvas.addEventListener('pointerup', endLook); canvas.addEventListener('pointercancel', endLook);
+  canvas.addEventListener('wheel', function (e) {
+    if (!orbit) return;
+    e.preventDefault();
+    orb.dist = Math.max(5, Math.min(95, orb.dist * Math.exp(e.deltaY * 0.0012)));
+  }, { passive: false });
+
+  var mouse = new THREE.Vector2(), clickables = null;
+  function clickWalk(e) {                                   // クリックした床の位置まで歩く(マウスモード中は画面中央)
+    if (!clickables) clickables = colliders.concat(floors.filter(function (f) { return colliders.indexOf(f) < 0; }));
+    if (e) { var r = canvas.getBoundingClientRect(); mouse.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1)); }
+    else mouse.set(0, 0);
+    ray.setFromCamera(mouse, camera); ray.near = 0; ray.far = 45;
+    var hits = ray.intersectObjects(clickables, false), h = null;
+    for (var i = 0; i < hits.length; i++) { var mn = hits[i].object.material.name; if (mn !== 'glass' && mn !== 'rug') { h = hits[i]; break; } }   // ガラスとラグは素通しして床を拾う
+    window.__walk.dbg = h ? [partName(h.object), h.object.material.name, h.face ? +h.face.normal.y.toFixed(2) : null, +h.distance.toFixed(2)] : 'no hit';
+    if (!h || floors.indexOf(h.object) < 0 || !h.face || h.face.normal.y < 0.7) return;
+    walkTarget = h.point.clone();
+    marker.position.set(h.point.x, h.point.y + 0.025, h.point.z); marker.visible = true;
+  }
+
+  var stick = $('stick'), knob = $('knob'), sid = null, jx = 0, jy = 0;
+  function stickMove(e) {
+    var r = stick.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    var dx = (e.clientX - cx) / (r.width / 2), dy = (e.clientY - cy) / (r.height / 2);
+    var l = Math.sqrt(dx * dx + dy * dy); if (l > 1) { dx /= l; dy /= l; }
+    jx = dx; jy = dy;
+    knob.style.transform = 'translate(' + (dx * 33) + 'px,' + (dy * 33) + 'px)';
+  }
+  stick.addEventListener('pointerdown', function (e) { sid = e.pointerId; stick.setPointerCapture(e.pointerId); stickMove(e); e.preventDefault(); });
+  stick.addEventListener('pointermove', function (e) { if (e.pointerId === sid) stickMove(e); });
+  function endStick(e) { if (e.pointerId === sid) { sid = null; jx = jy = 0; knob.style.transform = ''; } }
+  stick.addEventListener('pointerup', endStick); stick.addEventListener('pointercancel', endStick);
+
+  var dirV = new THREE.Vector3(), orig = new THREE.Vector3();
+  function blocked(dx, dz) {
+    var len = Math.sqrt(dx * dx + dz * dz); if (len < 1e-6) return false;
+    dirV.set(dx / len, 0, dz / len);
+    for (var i = 0; i < 2; i++) {
+      orig.set(pos.x, feet + (i ? 1.2 : 0.45), pos.z);
+      ray.set(orig, dirV); ray.near = 0; ray.far = len + 0.26;
+      if (ray.intersectObjects(colliders, false).length) return true;
+    }
+    return false;
+  }
+  function tryMove(dx, dz) {
+    if (!blocked(dx, dz)) { pos.x += dx; pos.z += dz; return true; }
+    if (Math.abs(dx) > 1e-5 && !blocked(dx, 0)) { pos.x += dx; return true; }
+    if (Math.abs(dz) > 1e-5 && !blocked(0, dz)) { pos.z += dz; return true; }
+    return false;
+  }
+  function move(dt) {
+    if (fly) return;
+    var f = 0, s = 0;
+    if (keys.KeyW || keys.ArrowUp) f += 1; if (keys.KeyS || keys.ArrowDown) f -= 1;
+    if (keys.KeyD || keys.ArrowRight) s += 1; if (keys.KeyA || keys.ArrowLeft) s -= 1;
+    f -= jy; s += jx;
+    var l = Math.sqrt(f * f + s * s);
+    var sp = (isInside() ? 1.5 : 2.3) * ((keys.ShiftLeft || keys.ShiftRight) ? 1.8 : 1) * dt;   // 室内はゆっくり歩く
+    if (l >= 0.02) {
+      walkTarget = null; marker.visible = false;
+      if (l > 1) { f /= l; s /= l; }
+      tryMove((-Math.sin(yaw) * f + Math.cos(yaw) * s) * sp, (-Math.cos(yaw) * f - Math.sin(yaw) * s) * sp);
+    } else if (walkTarget) {
+      var tx = walkTarget.x - pos.x, tz = walkTarget.z - pos.z, d = Math.sqrt(tx * tx + tz * tz);
+      var step = Math.min(d, sp * 1.15);
+      if (d < 0.1 || !tryMove(tx / d * step, tz / d * step)) { walkTarget = null; marker.visible = false; }
+    }
+    pos.x = Math.max(-70, Math.min(70, pos.x)); pos.z = Math.max(-70, Math.min(70, pos.z));
+  }
+
+  // ── 車と音 ──
+  var laneT = [1.5, 4.0];
+  var pathLen = [0], PATH_TOTAL = 0, tmpV = new THREE.Vector3();
+  function setCarPath(pts) {                                 // pts: 街並みの座標 [x, z] の並び
+    cars.forEach(function (c) { if (c.g.parent) c.g.parent.remove(c.g); if (c.src) { try { c.src.stop(); } catch (e) {} c.gn.disconnect(); } });
+    cars = []; carPts = pts && pts.length > 1 ? pts : null; pathLen = [0]; PATH_TOTAL = 0;
+    if (!carPts) return;
+    for (var i = 1; i < carPts.length; i++) pathLen.push(pathLen[i - 1] + Math.hypot(carPts[i][0] - carPts[i - 1][0], carPts[i][1] - carPts[i - 1][1]));
+    PATH_TOTAL = pathLen[pathLen.length - 1];
+    if (PATH_TOTAL < 20) carPts = null;
+  }
+  function placeCar(c) {
+    var i = 1; while (i < pathLen.length - 1 && pathLen[i] < c.s) i++;
+    var a = carPts[i - 1], b = carPts[i], t = (c.s - pathLen[i - 1]) / ((pathLen[i] - pathLen[i - 1]) || 1);
+    var dx = (b[0] - a[0]) * c.dir, dz = (b[1] - a[1]) * c.dir, l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+    c.g.position.set(a[0] + (b[0] - a[0]) * t + dz * 0.55, 0, a[1] + (b[1] - a[1]) * t - dx * 0.55);   // 左側通行で少し左に寄せる
+    c.g.rotation.y = Math.atan2(-dz, dx);
+  }
+  function spawnCar(lane) {
+    if (!carProto || !carPts || !town) return;
+    var g = carProto.clone(true), col = carColors[Math.floor(Math.random() * carColors.length)];
+    g.traverse(function (o) { if (o.isMesh && o.material.name === 'paint1') { o.material = o.material.clone(); o.material.color.setHex(col); } });
+    var dir = lane === 0 ? 1 : -1;
+    town.add(g);
+    var c = { g: g, dir: dir, s: dir === 1 ? 0 : PATH_TOTAL, v: 5.5 + Math.random() * 2.5, gain: 0 };
+    placeCar(c);
+    if (audio) attachSound(c);
+    cars.push(c);
+  }
+  var audio = null, master = null, indoor = null, noiseBuf = null, soundOn = false, windowOpen = false;
+  function initAudio() {
+    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
+    audio = new AC();
+    var n = audio.sampleRate * 2; noiseBuf = audio.createBuffer(1, n, audio.sampleRate);
+    var d = noiseBuf.getChannelData(0), b = 0;
+    for (var i = 0; i < n; i++) { b = (b + 0.03 * (Math.random() * 2 - 1)) / 1.03; d[i] = b * 3.2; }
+    for (var j = 0; j < 2000; j++) { var t = j / 2000; d[j] = d[j] * t + d[n - 2000 + j] * (1 - t); }   // つなぎ目をならす
+    indoor = audio.createBiquadFilter(); indoor.type = 'lowpass'; indoor.frequency.value = 16000;
+    master = audio.createGain(); master.gain.value = 0;
+    indoor.connect(master); master.connect(audio.destination);
+    cars.forEach(attachSound);
+    return true;
+  }
+  function attachSound(c) {
+    var src = audio.createBufferSource(); src.buffer = noiseBuf; src.loop = true; src.playbackRate.value = 0.8 + c.v / 20;
+    var lp = audio.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1100;
+    var g = audio.createGain(); g.gain.value = 0;
+    var pan = audio.createStereoPanner ? audio.createStereoPanner() : null;
+    src.connect(lp); lp.connect(g);
+    if (pan) { g.connect(pan); pan.connect(indoor); } else g.connect(indoor);
+    src.start(0, Math.random() * 1.5);
+    c.src = src; c.gn = g; c.pan = pan;
+  }
+  $('sound').addEventListener('click', function () {
+    if (!audio && !initAudio()) { this.textContent = 'この端末では音を出せません'; return; }
+    soundOn = !soundOn;
+    if (soundOn && audio.state === 'suspended') audio.resume();
+    this.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+    this.textContent = soundOn ? '音を止める' : '音を出す';
+  });
+  $('window').addEventListener('click', function () {
+    windowOpen = !windowOpen;
+    this.setAttribute('aria-pressed', windowOpen ? 'true' : 'false');
+    this.textContent = windowOpen ? '窓を閉める' : '窓を開ける';
+  });
+  function isInside() {
+    if (fly) return false;
+    var x = pos.x, z = pos.z;
+    if (Math.abs(x) > W / 2 - 0.16 || Math.abs(z) > D / 2 - 0.16) return false;
+    if (x > 1.18 && z > D / 2 - 1.32) return false;             // 玄関ポーチの凹みは屋外
+    return feet > 0.5;
+  }
+  function updateCars(dt) {
+    for (var l = 0; l < 2; l++) { laneT[l] -= dt; if (laneT[l] <= 0) { spawnCar(l); laneT[l] = 9 + Math.random() * 14; } }
+    var inside = isInside();
+    var k = inside ? (windowOpen ? 0.55 : 0.13) : 1.0, cut = inside ? (windowOpen ? 2600 : 420) : 16000;
+    var total = 0, rx = Math.cos(yaw), rz = -Math.sin(yaw), ey = feet + (fly ? 0 : EYE);
+    for (var i = cars.length - 1; i >= 0; i--) {
+      var c = cars[i];
+      c.s += c.dir * c.v * dt;
+      if (c.s >= 0 && c.s <= PATH_TOTAL) placeCar(c);
+      if (c.s < 0 || c.s > PATH_TOTAL) { if (c.g.parent) c.g.parent.remove(c.g); if (c.src) { try { c.src.stop(); } catch (e) {} c.gn.disconnect(); } cars.splice(i, 1); continue; }
+      tmpV.copy(c.g.position).applyMatrix4(town.matrixWorld);     // 画面上の位置
+      var dx = tmpV.x - pos.x, dz = tmpV.z - pos.z, dy = ey - 0.5;
+      var dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      var g = Math.pow(Math.min(1, 4.5 / dist), 1.35);
+      total += g;
+      if (c.gn) {
+        c.gn.gain.setTargetAtTime(g * 0.9, audio.currentTime, 0.08);
+        if (c.pan) c.pan.pan.setTargetAtTime(Math.max(-1, Math.min(1, (dx * rx + dz * rz) / dist)) * (inside ? 0.4 : 0.9), audio.currentTime, 0.08);
+      }
+    }
+    if (audio) {
+      master.gain.setTargetAtTime(soundOn ? k : 0, audio.currentTime, 0.15);
+      indoor.frequency.setTargetAtTime(cut, audio.currentTime, 0.15);
+    }
+    $('level').style.width = Math.round(Math.min(1, Math.sqrt(total * k)) * 100) + '%';
+  }
+
+  // ── 室温と断熱(簡易計算) ──
+  // 窓の一覧 [壁, 開始, 終了, 下端, 上端]  壁: f=南(正面) r=東 b=北 l=西。リビングの窓は選んだ大きさを足す
+  var WINDOWS = [['f', 1.195, 2.885, 4.30, 5.40], ['f', 5.33, 5.70, 4.00, 5.40], ['f', 6.00, 6.37, 4.00, 5.40],
+    ['r', 3.20, 4.40, 1.55, 2.25], ['r', 2.30, 3.99, 4.30, 5.40],
+    ['b', 1.00, 1.60, 1.85, 2.35], ['b', 4.20, 5.89, 1.30, 2.40], ['b', 1.00, 2.69, 4.30, 5.40], ['b', 4.60, 6.29, 4.30, 5.40],
+    ['l', 1.00, 1.50, 1.80, 2.35], ['l', 3.30, 4.99, 1.25, 2.40], ['l', 2.30, 3.99, 4.30, 5.40]];
+  var WALLN = { f: [0, 1], r: [1, 0], b: [0, -1], l: [-1, 0] };
+  function winPoint(wl, u, y, out, v) {
+    if (wl === 'f') v.set(u - W / 2, y, D / 2 + out); else if (wl === 'r') v.set(W / 2 + out, y, D / 2 - u);
+    else if (wl === 'b') v.set(W / 2 - u, y, -D / 2 - out); else v.set(-W / 2 - out, y, u - D / 2);
+    return v;
+  }
+  // 熱の逃げやすさの目安 [W/m2K]、換気回数、ガラスの日射取得率
+  var INS = [
+    { key: 'none', name: '断熱なし', css: '--s-none', wall: 2.4, roof: 2.5, floor: 1.8, win: 6.0, ach: 1.5, shgc: 0.80 },
+    { key: 'std', name: '一般的な断熱', css: '--s-std', wall: 0.53, roof: 0.24, floor: 0.48, win: 3.5, ach: 0.5, shgc: 0.70 },
+    { key: 'high', name: '高断熱', css: '--s-high', wall: 0.30, roof: 0.17, floor: 0.30, win: 1.6, ach: 0.5, shgc: 0.50 }];
+  var insSel = 1, heat = null, heatTimer = null, climate = { mean: null, amp: null }, tOverride = null, hoverI = -1;
+  function latDeg() { return LAT * 180 / Math.PI; }
+  function climateNow() {
+    if (tOverride) return tOverride;
+    var mean = climate.mean != null ? climate.mean : 39.4 - 0.68 * latDeg();
+    var amp = climate.amp != null ? climate.amp : Math.max(4, 10.5 + 0.28 * (latDeg() - 33));
+    var d = mean + amp * Math.cos(2 * Math.PI * (SEASONS[season].n - 215) / 365);
+    return { min: d - 4, max: d + 4 };
+  }
+  function fillTemps() { var c = climateNow(); $('tmin').value = c.min.toFixed(1); $('tmax').value = c.max.toFixed(1); }
+  function tOutAt(min, c) { return (c.min + c.max) / 2 + (c.max - c.min) / 2 * Math.cos(2 * Math.PI * (min / 60 - 14.5) / 24); }
+  function satVap(T) { return 6.112 * Math.exp(17.62 * T / (243.12 + T)); }
+  function computeHeat() {
+    if (!occluders.length) return;
+    var n = SEASONS[season].n, c = climateNow(), wins = WINDOWS.concat([['f'].concat(WV[winVar])]), area = 0;
+    wins.forEach(function (a) { area += (a[2] - a[1]) * (a[4] - a[3]); });
+    var q = new Float32Array(96), o = new THREE.Vector3(), sd = new THREE.Vector3();
+    for (var k = 0; k < 48; k++) {                            // 30分ごとに、窓から入る日射[W](ガラスの性能を掛ける前)
+      var sp = sunPosition(n, k * 30 + 15); if (sp.alt <= 0.02) continue;
+      sd.set(Math.cos(sp.alt) * Math.sin(sp.az), Math.sin(sp.alt), -Math.cos(sp.alt) * Math.cos(sp.az));
+      var sinA = Math.sin(sp.alt), dni = 950 * Math.exp(-0.16 / sinA), dhi = 110 * Math.sqrt(sinA);
+      var dif = 0.5 * dhi + 0.1 * (dni * sinA + dhi), tot = 0;
+      for (var i = 0; i < wins.length; i++) {
+        var a = wins[i], nn = WALLN[a[0]], A = (a[2] - a[1]) * (a[4] - a[3]), cosi = sd.x * nn[0] + sd.z * nn[1], dir = 0;
+        if (cosi > 0.03) {
+          var big = i === wins.length - 1, free = 0, cnt = 0;
+          var us = big ? [a[1] + (a[2] - a[1]) * 0.25, a[1] + (a[2] - a[1]) * 0.75] : [(a[1] + a[2]) / 2];
+          var ys = big ? [a[3] + (a[4] - a[3]) * 0.25, a[3] + (a[4] - a[3]) * 0.75] : [(a[3] + a[4]) / 2];
+          us.forEach(function (u) { ys.forEach(function (y) {
+            ray.set(winPoint(a[0], u, y, 0.15, o), sd); ray.near = 0; ray.far = 200; cnt++;
+            if (ray.intersectObjects(occluders, false).length === 0) free++;
+          }); });
+          dir = dni * cosi * free / cnt;
+        }
+        tot += A * (dir + dif);
+      }
+      q[2 * k] = q[2 * k + 1] = tot;
+    }
+    var Aw = 27.3 * 5.52 - area, Ar = 46.4, V = 232, C = 8.3e6, out = [], mean = (c.min + c.max) / 2;
+    for (var j = 0; j < 96; j++) out.push(tOutAt(j * 15 + 7.5, c));
+    var res = INS.map(function (L) {
+      var UA = Aw * L.wall + Ar * L.roof + Ar * L.floor + area * L.win + 0.33 * L.ach * V, T = mean + 3, t = [], T2 = 22, kwh = 0;
+      for (var day = 0; day < 6; day++) for (var j = 0; j < 96; j++) {
+        var ua = UA; if (T > 26 && T > out[j]) ua += 0.33 * 6 * V;            // 暑いときは窓を開けて風を通す
+        T += (ua * (out[j] - T) + q[j] * L.shgc + 450) * 900 / C;
+        if (day === 5) t.push(T);
+        T2 += (UA * (out[j] - T2) + q[j] * L.shgc + 450) * 900 / C;           // 20〜27℃に保つ場合の熱量
+        var e = 0; if (T2 < 20) { e = (20 - T2) * C; T2 = 20; } else if (T2 > 27) { e = (T2 - 27) * C; T2 = 27; }
+        if (day === 5) kwh += e / 3.6e6;
+      }
+      return { t: t, kwh: kwh };
+    });
+    var rhOut = 66 + 10 * Math.cos(2 * Math.PI * (n - 200) / 365);
+    heat = { out: out, res: res, vap: rhOut / 100 * satVap(mean) };
+    heatNow();
+  }
+  function scheduleHeat() { clearTimeout(heatTimer); heatTimer = setTimeout(computeHeat, 120); }
+  function fmtT(v) { return v.toFixed(1) + '℃'; }
+  function heatNow() {
+    if (!heat) return;
+    var i = Math.max(0, Math.min(95, Math.floor(minutes / 15))), ti = heat.res[insSel].t[i];
+    $('t-out').textContent = fmtT(heat.out[i]);
+    $('t-in').textContent = fmtT(ti);
+    $('rh-in').textContent = Math.round(Math.max(15, Math.min(100, heat.vap / satVap(ti) * 100 + 5))) + '%';
+    $('load').textContent = '約' + (heat.res[insSel].kwh < 10 ? heat.res[insSel].kwh.toFixed(1) : Math.round(heat.res[insSel].kwh)) + 'kWh/日';
+    $('lg-out').textContent = fmtT(heat.out[i]);
+    INS.forEach(function (L, k) { $('lg-' + L.key).textContent = fmtT(heat.res[k].t[i]); });
+    drawChart();
+  }
+  // 凡例
+  (function () {
+    var h = '<span class="lg out" style="--c:var(--s-out)"><i></i>外気温 <b id="lg-out">–</b></span>';
+    INS.forEach(function (L) { h += '<span class="lg" id="lgw-' + L.key + '" style="--c:var(' + L.css + ')"><i></i>' + L.name + ' <b id="lg-' + L.key + '">–</b></span>'; });
+    $('legend').innerHTML = h;
+  })();
+  var chart = $('chart'), cssVar = function (n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); };
+  var CH = { l: 34, r: 8, t: 6, b: 18 };
+  function drawChart() {
+    if (!heat || $('pane-heat').hidden) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2), w = chart.clientWidth, h = chart.clientHeight;
+    if (!w) return;
+    if (chart.width !== Math.round(w * dpr)) { chart.width = Math.round(w * dpr); chart.height = Math.round(h * dpr); }
+    var g = chart.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    var lo = Infinity, hi = -Infinity;
+    [heat.out].concat(heat.res.map(function (r) { return r.t; })).forEach(function (a) { a.forEach(function (v) { if (v < lo) lo = v; if (v > hi) hi = v; }); });
+    lo = Math.floor((lo - 0.5) / 5) * 5; hi = Math.ceil((hi + 0.5) / 5) * 5;
+    var X = function (i) { return CH.l + (w - CH.l - CH.r) * (i + 0.5) / 96; }, Y = function (v) { return CH.t + (h - CH.t - CH.b) * (1 - (v - lo) / (hi - lo)); };
+    g.font = '11px ' + getComputedStyle(document.body).fontFamily; g.fillStyle = cssVar('--mute'); g.strokeStyle = cssVar('--grid'); g.lineWidth = 1;
+    g.textAlign = 'right'; g.textBaseline = 'middle';
+    for (var v = lo; v <= hi; v += 5) { g.beginPath(); g.moveTo(CH.l, Y(v)); g.lineTo(w - CH.r, Y(v)); g.stroke(); g.fillText(v + '℃', CH.l - 5, Y(v)); }
+    g.textAlign = 'center'; g.textBaseline = 'top';
+    [0, 6, 12, 18, 24].forEach(function (hr) { var x = CH.l + (w - CH.l - CH.r) * hr / 24; g.fillText(hr + '時', Math.min(w - 14, Math.max(CH.l + 8, x)), h - CH.b + 4); });
+    function line(a, col, lw, dash, alpha) {
+      g.beginPath(); a.forEach(function (v, i) { if (i) g.lineTo(X(i), Y(v)); else g.moveTo(X(i), Y(v)); });
+      g.strokeStyle = col; g.lineWidth = lw; g.setLineDash(dash || []); g.globalAlpha = alpha || 1; g.lineJoin = 'round'; g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
+    }
+    line(heat.out, cssVar('--s-out'), 1.5, [4, 4]);
+    INS.forEach(function (L, k) { if (k !== insSel) line(heat.res[k].t, cssVar(L.css), 2, null, 0.6); });
+    line(heat.res[insSel].t, cssVar(INS[insSel].css), 3);
+    var now = Math.max(0, Math.min(95, Math.floor(minutes / 15))), mark = hoverI >= 0 ? hoverI : now;
+    g.strokeStyle = cssVar('--ink'); g.globalAlpha = hoverI >= 0 ? 0.5 : 0.3; g.lineWidth = 1; g.beginPath(); g.moveTo(X(mark), CH.t); g.lineTo(X(mark), h - CH.b); g.stroke(); g.globalAlpha = 1;
+    g.fillStyle = cssVar(INS[insSel].css); g.strokeStyle = '#11161a'; g.lineWidth = 2;
+    g.beginPath(); g.arc(X(mark), Y(heat.res[insSel].t[mark]), 4.5, 0, Math.PI * 2); g.fill(); g.stroke();
+    INS.forEach(function (L, k) { $('lgw-' + L.key).className = 'lg' + (k === insSel ? ' sel' : ''); });
+  }
+  function chartHover(e) {
+    if (!heat) return;
+    var r = chart.getBoundingClientRect(), i = Math.round((e.clientX - r.left - CH.l) / (r.width - CH.l - CH.r) * 96 - 0.5);
+    hoverI = Math.max(0, Math.min(95, i));
+    var mm = hoverI * 15, tip = $('tip'), h = '<b>' + Math.floor(mm / 60) + ':' + (mm % 60 < 10 ? '0' : '') + (mm % 60) + '</b><br><i style="--c:var(--s-out)"></i>外気温 <b>' + fmtT(heat.out[hoverI]) + '</b>';
+    INS.forEach(function (L, k) { h += '<br><i style="--c:var(' + L.css + ')"></i>' + L.name + ' <b>' + fmtT(heat.res[k].t[hoverI]) + '</b>'; });
+    tip.innerHTML = h; tip.hidden = false;
+    var x = e.clientX - r.left; tip.style.left = (x > r.width / 2 ? x - tip.offsetWidth - 12 : x + 12) + 'px';
+    drawChart();
+  }
+  chart.addEventListener('pointermove', chartHover); chart.addEventListener('pointerdown', chartHover);
+  chart.addEventListener('pointerleave', function () { hoverI = -1; $('tip').hidden = true; drawChart(); });
+
+  [0, 1, 2].forEach(function (k) {
+    $('ins-' + k).addEventListener('click', function () {
+      insSel = k; [0, 1, 2].forEach(function (j) { $('ins-' + j).setAttribute('aria-pressed', j === k ? 'true' : 'false'); });
+      heatNow();
+    });
+  });
+  function setWin(k) {
+    winVar = k; ['S', 'M', 'L'].forEach(function (j) { $('win-' + j).setAttribute('aria-pressed', j === k ? 'true' : 'false'); });
+    rebuildLists(); updateSun(); scheduleHeat();
+  }
+  ['S', 'M', 'L'].forEach(function (k) { $('win-' + k).addEventListener('click', function () { setWin(k); }); });
+
+  // タブ(開いているタブをもう一度押すと畳む。狭い画面では最初は畳んで3Dを広く見せる)
+  var openTab = 'sun';
+  function showTab(k) {
+    openTab = k;
+    ['sun', 'heat', 'place'].forEach(function (j) { $('tab-' + j).setAttribute('aria-pressed', j === k ? 'true' : 'false'); $('pane-' + j).hidden = j !== k; });
+    resize(); drawChart();
+  }
+  ['sun', 'heat', 'place'].forEach(function (k) { $('tab-' + k).addEventListener('click', function () { showTab(openTab === k ? null : k); }); });
+  if (window.innerWidth < 700 || window.innerHeight < 560) showTab(null);
+
+  // ── 街並み(国土地理院の地図データから、その場で組み立てる) ──
+  if (/[?&]mock=1/.test(location.search)) TownData.setBase({ fgd: 'mock/fgd/', rdcl: 'mock/rdcl/', addr: 'mock/addr.json?q=' });
+  var DEFAULT_PLACE = { lat: 33.2330, lon: 131.6066, title: '大分駅周辺' };   // 最初に表示する場所(家の位置は自動で決める)
+  var townData = null, townMask = null, placeTitle = '', site = { x: 0, y: 0, bearing: 270 }, picking = false;
+  var DIRS = ['北', '北東', '東', '南東', '南', '南西', '西', '北西'];
+  var V3 = function (x, y, h) { return [x, h, -y]; };            // 地図の座標(東, 北, 高さ) → 画面の座標
+  var BOXF = [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]];
+  function tmat(r, g, b, rough, metal) { var m = new THREE.MeshStandardMaterial({ roughness: rough, metalness: metal || 0 }); m.color.setRGB(r, g, b); m.envMapIntensity = 0.55; return m; }
+  var TM = {
+    walls: [tmat(0.62, 0.55, 0.42, 0.85), tmat(0.74, 0.72, 0.65, 0.85), tmat(0.42, 0.44, 0.46, 0.85), tmat(0.56, 0.60, 0.58, 0.85), tmat(0.30, 0.22, 0.17, 0.85)],
+    roofs: [tmat(0.05, 0.052, 0.058, 0.6, 0.15), tmat(0.14, 0.075, 0.05, 0.6, 0.15)],
+    cap: tmat(0.45, 0.45, 0.43, 0.9), sash: tmat(0.02, 0.02, 0.022, 0.5, 0.4), post: tmat(0.2, 0.2, 0.21, 0.6, 0.3)
+  };
+  TM.glass = new THREE.MeshStandardMaterial({ color: 0x2b3a48, roughness: 0.12, metalness: 0.6 });
+  TM.shed = TM.roofs[0].clone(); TM.shed.side = THREE.DoubleSide;        // 屋根だけの建物は下からも見える
+
+  function GeoB() { this.p = []; }
+  GeoB.prototype.tri = function (a, b, c) { this.p.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]); };
+  GeoB.prototype.quad = function (a, b, c, d) { this.tri(a, b, c); this.tri(a, c, d); };
+  GeoB.prototype.solid = function (v, faces) {                     // 凸な立体。面が外を向くように並べ直す
+    var c = [0, 0, 0], i, self = this;
+    for (i = 0; i < v.length; i++) { c[0] += v[i][0] / v.length; c[1] += v[i][1] / v.length; c[2] += v[i][2] / v.length; }
+    faces.forEach(function (f) {
+      var a = v[f[0]], b = v[f[1]], d = v[f[2]], ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], wx = d[0] - a[0], wy = d[1] - a[1], wz = d[2] - a[2];
+      var nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx, mx = 0, my = 0, mz = 0;
+      f.forEach(function (k) { mx += v[k][0] / f.length; my += v[k][1] / f.length; mz += v[k][2] / f.length; });
+      var g = (nx * (mx - c[0]) + ny * (my - c[1]) + nz * (mz - c[2])) < 0 ? f.slice().reverse() : f;
+      for (var k = 1; k < g.length - 1; k++) self.tri(v[g[0]], v[g[k]], v[g[k + 1]]);
+    });
+  };
+  GeoB.prototype.mesh = function (mat) {
+    if (!this.p.length) return null;
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3)); g.computeVertexNormals();
+    var m = new THREE.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true; return m;
+  };
+  function capTris(G, r, h, s, cx, cy) {                          // 輪郭の上面(へこんだ形にも対応)
+    var pts = r.map(function (q) { return new THREE.Vector2(cx + (q[0] - cx) * s, cy + (q[1] - cy) * s); });
+    THREE.ShapeUtils.triangulateShape(pts, []).forEach(function (t) {
+      var A = pts[t[0]], B = pts[t[1]], C = pts[t[2]];
+      if ((B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x) < 0) { var w = B; B = C; C = w; }
+      G.tri(V3(A.x, A.y, h), V3(B.x, B.y, h), V3(C.x, C.y, h));
+    });
+  }
+  function sideQuads(G, r, z0, z1, s, cx, cy) {
+    for (var i = 0, n = r.length; i < n; i++) {
+      var a = r[i], c = r[(i + 1) % n], ax = cx + (a[0] - cx) * s, ay = cy + (a[1] - cy) * s, bx = cx + (c[0] - cx) * s, by = cy + (c[1] - cy) * s;
+      G.quad(V3(ax, ay, z0), V3(bx, by, z0), V3(bx, by, z1), V3(ax, ay, z1));
+    }
+  }
+
+  function buildGround(d, m) {
+    var S2 = coarse ? 1024 : 2048, cv = document.createElement('canvas'); cv.width = cv.height = S2;
+    var g = cv.getContext('2d'), E = m.EXT, k = S2 / (2 * E), X = function (x) { return (x + E) * k; }, Y = function (y) { return (E - y) * k; };
+    g.fillStyle = '#857f73'; g.fillRect(0, 0, S2, S2);
+    var seed = (Math.round(d.lat * 1e5) * 31 + Math.round(d.lon * 1e5)) >>> 0, rnd = function () { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    for (var i = 0; i < 420; i++) {                                // 地面の色むら
+      var bx = rnd() * S2, by = rnd() * S2, br = (0.02 + rnd() * 0.07) * S2, gr = g.createRadialGradient(bx, by, 0, bx, by, br), dark = rnd() < 0.5;
+      gr.addColorStop(0, dark ? 'rgba(70,64,54,.16)' : 'rgba(190,184,168,.16)'); gr.addColorStop(1, 'rgba(128,122,110,0)');
+      g.fillStyle = gr; g.fillRect(bx - br, by - br, br * 2, br * 2);
+    }
+    var sm = document.createElement('canvas'); sm.width = sm.height = m.N;
+    var sg = sm.getContext('2d'), im = sg.createImageData(m.N, m.N), px = im.data;
+    for (i = 0; i < m.N * m.N; i++) if (m.road[i]) { px[i * 4] = 70 + (i * 7 % 5); px[i * 4 + 1] = 71 + (i * 3 % 5); px[i * 4 + 2] = 75; px[i * 4 + 3] = 255; }
+    sg.putImageData(im, 0, 0);
+    g.imageSmoothingEnabled = true; g.drawImage(sm, 0, 0, S2, S2);
+    var stroke = function (ls, color, w) {
+      g.strokeStyle = color; g.lineWidth = w * k; g.lineJoin = 'round'; g.lineCap = 'round';
+      ls.forEach(function (l) { g.beginPath(); l.forEach(function (p, j) { if (j) g.lineTo(X(p[0]), Y(p[1])); else g.moveTo(X(p[0]), Y(p[1])); }); g.stroke(); });
+    };
+    stroke(d.edges, '#96968f', 0.3);
+    stroke(d.water, '#4e6876', 1.2);
+    var tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding; tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute([-E, 0, E, E, 0, E, E, 0, -E, -E, 0, E, E, 0, -E, -E, 0, -E], 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], 2));
+    geo.computeVertexNormals();
+    var mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
+    mesh.receiveShadow = true; mesh.userData.ground = true;
+    return mesh;
+  }
+
+  function buildTown(d, m) {
+    setCarPath(null);
+    town.children.slice().forEach(function (o) { town.remove(o); if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map) { o.material.map.dispose(); o.material.dispose(); } });
+    townCol = []; townOcc = []; townFloors = [];
+    var ground = buildGround(d, m); town.add(ground); townFloors.push(ground);
+    var sash = new GeoB(), glass = new GeoB(), posts = new GeoB(), lim = m.EXT - 3;
+    d.buildings.forEach(function (b, idx) {
+      if (Math.max(Math.abs(b.cx), Math.abs(b.cy)) > lim) return;
+      var r = b.r, n = r.length, e = b.eave, walls = new GeoB(), roof = new GeoB(), roofMat;
+      if (b.t === 's') {                                           // 無壁舎(カーポート・物置など): 柱と屋根だけ
+        sideQuads(roof, r, 2.30, 2.42, 1, b.cx, b.cy); capTris(roof, r, 2.42, 1, b.cx, b.cy);
+        r.slice(0, 6).forEach(function (q) {
+          var x = q[0] + (b.cx - q[0]) * 0.07, y = q[1] + (b.cy - q[1]) * 0.07, h = 0.05, v = [];
+          [0, 2.30].forEach(function (z) { [[-h, -h], [h, -h], [h, h], [-h, h]].forEach(function (o) { v.push(V3(x + o[0], y + o[1], z)); }); });
+          posts.solid(v, BOXF);
+        });
+        var sm = roof.mesh(TM.shed); if (sm) { town.add(sm); townOcc.push(sm); }
+        return;
+      }
+      sideQuads(walls, r, 0, e, 1, b.cx, b.cy);
+      var o = b.obb;
+      if (o && b.floors < 3 && b.area / o.area > 0.8) {            // ほぼ長方形の家には切妻屋根
+        var a = o.a, uc = o.uc, vc = o.vc, w = o.w, dd = o.d, t0;
+        if (dd > w) { a += Math.PI / 2; t0 = uc; uc = vc; vc = -t0; t0 = w; w = dd; dd = t0; }
+        var c = Math.cos(a), s = Math.sin(a), G = function (u, v, z) { return V3(u * c - v * s, u * s + v * c, z); };
+        var half = dd / 2, pitch = 0.42, ov = 0.45, th = 0.14, zr = e + pitch * half;
+        walls.solid([G(uc - w / 2, vc - half, e), G(uc - w / 2, vc + half, e), G(uc - w / 2, vc, zr), G(uc + w / 2, vc - half, e), G(uc + w / 2, vc + half, e), G(uc + w / 2, vc, zr)],
+          [[0, 1, 2], [3, 4, 5], [0, 1, 4, 3], [1, 2, 5, 4], [2, 0, 3, 5]]);
+        [1, -1].forEach(function (sg) {
+          var ee = vc + sg * (half + ov), ze = e - pitch * ov, q = [];
+          [uc - w / 2 - 0.4, uc + w / 2 + 0.4].forEach(function (uu) { [[vc, zr], [ee, ze], [ee, ze + th], [vc, zr + th]].forEach(function (p) { q.push(G(uu, p[0], p[1])); }); });
+          roof.solid(q, BOXF);
+        });
+        roofMat = TM.roofs[idx % 2];
+      } else {                                                     // 形が複雑な建物・大きい建物は陸屋根
+        sideQuads(roof, r, e, e + 0.3, 1.02, b.cx, b.cy); capTris(roof, r, e + 0.3, 1.02, b.cx, b.cy);
+        roofMat = TM.cap;
+      }
+      var wm = walls.mesh(TM.walls[idx % 5]), rm = roof.mesh(roofMat);
+      town.add(wm); townCol.push(wm); townOcc.push(wm);
+      if (rm) { town.add(rm); townOcc.push(rm); }
+      for (var i = 0; i < n; i++) {                                // 窓
+        var p0 = r[i], p1 = r[(i + 1) % n], L = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+        if (L < 3.6) continue;
+        var ux = (p1[0] - p0[0]) / L, uy = (p1[1] - p0[1]) / L, nx = uy, ny = -ux, cnt = Math.max(1, Math.floor(L / 3.6));
+        var box = function (u0, u1, z0, z1, n0, n1) {
+          var v = [];
+          [z0, z1].forEach(function (z) { [[u0, n0], [u1, n0], [u1, n1], [u0, n1]].forEach(function (q) { v.push(V3(p0[0] + ux * q[0] + nx * q[1], p0[1] + uy * q[0] + ny * q[1], z)); }); });
+          return v;
+        };
+        for (var j = 0; j < cnt; j++) for (var fl = 0; fl < b.floors; fl++) {
+          var u = L * (j + 0.5) / cnt, z = 1.0 + fl * 2.9;
+          sash.solid(box(u - 0.80, u + 0.80, z, z + 1.1, 0, 0.03), BOXF);
+          glass.solid(box(u - 0.74, u + 0.74, z + 0.06, z + 1.04, 0.03, 0.045), BOXF);
+        }
+      }
+    });
+    [[sash, TM.sash], [glass, TM.glass], [posts, TM.post]].forEach(function (a) { var ms = a[0].mesh(a[1]); if (ms) { ms.castShadow = false; town.add(ms); } });
+    rebuildLists();
+  }
+
+  // 家の位置と向きを反映する。家は動かさず、街並みを逆向きに動かす
+  function applySite() {
+    var B = site.bearing * Math.PI / 180, a = B - Math.PI, sx = site.x, sz = -site.y;
+    town.rotation.y = a;
+    town.position.set(-(sx * Math.cos(a) + sz * Math.sin(a)), 0, -(-sx * Math.sin(a) + sz * Math.cos(a)));
+    NORTH = Math.PI - B;
+    scene.updateMatrixWorld(true);
+    if (townData) {
+      LAT = (townData.lat + site.y / townData.my) * Math.PI / 180; LON = townData.lon + site.x / townData.mx;
+      $('latlon').textContent = (LAT * 180 / Math.PI).toFixed(4) + ', ' + LON.toFixed(4);
+      var cp = TownData.carPath(townData, site.x, site.y);
+      setCarPath(cp ? cp.map(function (p) { return [p[0], -p[1]]; }) : null);
+    }
+    var deg = Math.round(site.bearing) % 360;
+    $('rot').value = deg;
+    $('rot-v').textContent = DIRS[Math.round(deg / 45) % 8] + '向き' + (deg % 45 ? '(' + deg + '°)' : '');
+    walkTarget = null; marker.visible = false;
+    updateSun(); scheduleHeat();
+    try { localStorage.setItem('sumai-place', JSON.stringify({ lat: townData ? townData.lat : DEFAULT_PLACE.lat, lon: townData ? townData.lon : DEFAULT_PLACE.lon, title: placeTitle, site: site })); } catch (e) {}
+  }
+  function setBearing(deg) { site.bearing = ((deg % 360) + 360) % 360; applySite(); }
+  $('rot').addEventListener('input', function () { setBearing(+this.value); });
+  $('rot-reset').addEventListener('click', function () {
+    var f = townData && TownData.faceRoad(townData, site.x, site.y);
+    if (f) setBearing(f.bearing);
+  });
+
+  // 場所を読み込んで街並みを作る。p: { lat, lon, title, site? }
+  function loadPlace(p, quiet) {
+    var msg = $('addr-msg');
+    if (!quiet) msg.textContent = '地図データを読み込んでいます…';
+    return TownData.load(p.lat, p.lon, 100).then(function (d) {
+      if (!d.tiles) throw new Error('nodata');
+      townData = d; townMask = TownData.roadMask(d, 512, 90);
+      buildTown(d, townMask);
+      var s = p.site && isFinite(p.site.x) ? p.site : TownData.autoSite(d, townMask), found = !!s;
+      if (!s) { var f = TownData.faceRoad(d, 0, 0); s = { x: 0, y: 0, bearing: f ? f.bearing : 180 }; }
+      site = { x: +s.x, y: +s.y, bearing: +s.bearing };
+      placeTitle = String(p.title || '指定の場所').slice(0, 40);
+      $('place-name').textContent = placeTitle; $('place-sub').textContent = '試作・' + placeTitle;
+      tOverride = null; climate = { mean: null, amp: null };
+      applySite(); fillTemps();
+      var nb = d.buildings.filter(function (b) { return b.t === 'b'; }).length;
+      msg.textContent = placeTitle + ' のまわりに建物' + nb + '棟を作りました。' + (found ? '家は道路に面した空きに置いています。' : 'この近くに道路に面した空きが見つからなかったので、指定の地点に置いています。') + '俯瞰の「家の場所を選ぶ」で置き直せます。';
+      return true;
+    }).catch(function () {
+      msg.textContent = '地図データを読み込めませんでした。通信環境を確認して、もう一度試してください。';
+      return false;
+    });
+  }
+  var searching = false;
+  $('addr-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var q = $('addr').value.trim(); if (!q || searching) return;
+    searching = true; $('addr-msg').textContent = '住所を探しています…';
+    TownData.geocode(q).then(function (list) {
+      if (!list.length) { $('addr-msg').textContent = 'その住所が見つかりませんでした。都道府県から入れるか、町名までにして試してください。'; return false; }
+      return loadPlace(list[0]).then(function (ok) { if (ok) { setView('orbit'); orb.el = 1.05; orb.az = 0.5; orb.dist = 55; } return ok; });
+    }).catch(function () { $('addr-msg').textContent = '住所を探せませんでした。通信環境を確認して、もう一度試してください。'; })
+      .then(function () { searching = false; });
+  });
+  $('go-place').addEventListener('click', function () {
+    if ($('panel').hidden) $('panel-toggle').click();
+    showTab('place');
+    if (!coarse) $('addr').focus();
+  });
+
+  // 俯瞰で地図をタップして、家の場所を選ぶ
+  function setPick(on) {
+    picking = !!on; $('pick').setAttribute('aria-pressed', picking ? 'true' : 'false');
+    $('pick').textContent = picking ? '場所選びを終える' : '家の場所を選ぶ';
+    updateHint();
+  }
+  $('pick').addEventListener('click', function () { setPick(!picking); if (picking) { orb.el = 1.52; orb.dist = Math.max(orb.dist, 60); } });
+  var groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  function pickAt(e) {
+    if (!townData) return;
+    var r = canvas.getBoundingClientRect(), v = new THREE.Vector3();
+    mouse.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1));
+    ray.setFromCamera(mouse, camera);
+    if (!ray.ray.intersectPlane(groundPlane, v)) return;
+    town.worldToLocal(v);
+    var x = Math.max(-78, Math.min(78, v.x)), y = Math.max(-78, Math.min(78, -v.z)), f = TownData.faceRoad(townData, x, y);
+    site = { x: x, y: y, bearing: f && f.dist < 45 ? f.bearing : site.bearing };
+    applySite();
+  }
+
+  // ── 気温・見え方 ──
+  ['tmin', 'tmax'].forEach(function (id) {
+    $(id).addEventListener('change', function () {
+      var a = parseFloat($('tmin').value), b = parseFloat($('tmax').value);
+      if (isFinite(a) && isFinite(b) && b > a) { tOverride = { min: a, max: b }; scheduleHeat(); } else fillTemps();
+    });
+  });
+  $('eye').addEventListener('input', function () { EYE = this.value / 100 - 0.10; $('eye-v').textContent = this.value + 'cm'; });
+  $('fov').addEventListener('input', function () { fovBase = +this.value; $('fov-v').textContent = this.value + '°'; resize(); });
+  fillTemps();
+
+  // ── 描画ループ ──
+  var last = 0;
+  function resize() {
+    var w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.fov = fovBase + (w < h ? 10 : 0); camera.updateProjectionMatrix();
+    document.documentElement.style.setProperty('--panel-h', ($('panel').hidden ? 0 : $('panel').offsetHeight) + 'px');
+  }
+  window.addEventListener('resize', resize);
+  function tick(now) {
+    var dt = Math.min(0.05, (now - last) / 1000); last = now;
+    move(dt);
+    if (orbit) {
+      var ce = Math.cos(orb.el);
+      camera.position.set(OT.x + orb.dist * ce * Math.sin(orb.az), OT.y + orb.dist * Math.sin(orb.el), OT.z + orb.dist * ce * Math.cos(orb.az));
+      camera.lookAt(OT);
+      pos.set(camera.position.x, 0, camera.position.z); feet = camera.position.y; yaw = orb.az;
+    } else {
+      var gy = groundAt(pos.x, pos.z, feet + 0.7); feet += (gy - feet) * Math.min(1, dt * 12);
+      camera.position.set(pos.x, feet + EYE, pos.z);
+      camera.rotation.set(pitch, yaw, 0);
+    }
+    sky.position.copy(camera.position);
+    sunDisc.position.copy(camera.position).addScaledVector(sunDir, 420);
+    updateCars(dt);
+    $('needle').style.transform = 'rotate(' + (yaw + NORTH) + 'rad)';
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  window.__walk = { setView: setView, teleport: function (x, z, y) { pos.set(x, 0, z); feet = groundAt(x, z, 1.2); yaw = y || 0; pitch = 0; }, face: function (y) { yaw = y; }, sim: function (n) { keys.KeyW = true; for (var i = 0; i < n; i++) { move(0.05); feet += (groundAt(pos.x, pos.z, feet + 0.7) - feet) * 0.6; } keys.KeyW = false; }, setWin: setWin, setBearing: setBearing, loadPlace: loadPlace, town: function () { return { n: townData ? townData.buildings.length : 0, meshes: town ? town.children.length : 0, site: site, car: carPts ? Math.round(PATH_TOTAL) : 0, title: placeTitle, north: NORTH }; }, heat: function () { return heat && { out: heat.out, res: heat.res.map(function (r) { return { kwh: r.kwh, min: Math.min.apply(null, r.t), max: Math.max.apply(null, r.t) }; }) }; }, cut: setCut, state: function () { return { x: pos.x, z: pos.z, feet: feet, inside: isInside(), cars: cars.length, orbit: orbit, target: !!walkTarget }; } };
+})();
+</script>
+
+</body>
+</html>
