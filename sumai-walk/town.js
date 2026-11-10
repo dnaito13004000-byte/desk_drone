@@ -5,7 +5,8 @@ window.TownData = (function () {
   var BASE = {
     fgd: 'https://cyberjapandata.gsi.go.jp/xyz/experimental_fgd/18/',      // 基盤地図情報(建物の外周線・道路縁・水涯線)
     rdcl: 'https://cyberjapandata.gsi.go.jp/xyz/experimental_rdcl/16/',    // 道路中心線
-    addr: 'https://msearch.gsi.go.jp/address-search/AddressSearch?q='      // 住所検索
+    addr: 'https://msearch.gsi.go.jp/address-search/AddressSearch?q=',     // 住所検索
+    photo: 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/18/'        // 航空写真(シームレス空中写真)
   };
   var ROAD_W = { '3m未満': 2.6, '3m-5.5m未満': 4.2, '5.5m-13m未満': 7.5, '13m-19.5m未満': 15, '19.5m以上': 22 };
   function setBase(o) { for (var k in o) BASE[k] = o[k]; }
@@ -20,6 +21,32 @@ window.TownData = (function () {
       return (j || []).filter(function (f) { return f && f.geometry && f.geometry.coordinates; }).slice(0, 5).map(function (f) {
         return { title: String((f.properties || {}).title || q), lon: +f.geometry.coordinates[0], lat: +f.geometry.coordinates[1] };
       });
+    });
+  }
+
+  // 基準点のまわり EXT メートルの航空写真を、北を上にした1枚の画像にまとめる。取れなければ null
+  function tileNW(x, y, z) { var n = Math.pow(2, z); return [x / n * 360 - 180, Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * 180 / Math.PI]; }
+  function photo(lat, lon, EXT, S) {
+    EXT = EXT || 90; S = S || 1024;
+    var mx = 111320 * Math.cos(lat * Math.PI / 180), my = 110950, z = 18, k = S / (2 * EXT), jobs = [], x, y;
+    var a = tile(lat + EXT / my, lon - EXT / mx, z), b = tile(lat - EXT / my, lon + EXT / mx, z);
+    var cv = document.createElement('canvas'); cv.width = cv.height = S;
+    var g = cv.getContext('2d'); g.fillStyle = '#857f73'; g.fillRect(0, 0, S, S);
+    var get = function (tx, ty) {
+      return new Promise(function (ok) { var im = new Image(); im.crossOrigin = 'anonymous'; im.onload = function () { ok({ im: im, x: tx, y: ty }); }; im.onerror = function () { ok(null); }; im.src = BASE.photo + tx + '/' + ty + '.jpg'; });
+    };
+    for (x = a[0]; x <= b[0]; x++) for (y = a[1]; y <= b[1]; y++) jobs.push(get(x, y));
+    return Promise.all(jobs).then(function (res) {
+      var n = 0;
+      res.forEach(function (t) {
+        if (!t) return; n++;
+        var nw = tileNW(t.x, t.y, z), se = tileNW(t.x + 1, t.y + 1, z);
+        var x0 = ((nw[0] - lon) * mx + EXT) * k, x1 = ((se[0] - lon) * mx + EXT) * k, y0 = (EXT - (nw[1] - lat) * my) * k, y1 = (EXT - (se[1] - lat) * my) * k;
+        g.drawImage(t.im, x0, y0, x1 - x0 + 0.6, y1 - y0 + 0.6);
+      });
+      if (n < res.length * 0.6) return null;
+      try { g.getImageData(0, 0, 1, 1); } catch (e) { return null; }
+      return cv;
     });
   }
 
@@ -254,5 +281,5 @@ window.TownData = (function () {
     return out.length >= 2 ? out : null;
   }
 
-  return { setBase: setBase, geocode: geocode, load: load, roadMask: roadMask, autoSite: autoSite, faceRoad: faceRoad, carPath: carPath, inRing: inRing };
+  return { setBase: setBase, geocode: geocode, load: load, photo: photo, roadMask: roadMask, autoSite: autoSite, faceRoad: faceRoad, carPath: carPath, inRing: inRing };
 })();

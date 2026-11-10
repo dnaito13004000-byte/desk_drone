@@ -235,21 +235,22 @@ button,.tab,.chip,.seg{touch-action:manipulation}
 
     <div class="pane" id="pane-place" hidden>
       <form class="facts" id="addr-form">
-        <label class="fld">住所 <input type="text" id="addr" placeholder="例: 大分県別府市北浜1丁目" autocomplete="off" enterkeyhint="search"></label>
-        <button class="tog" id="addr-go" type="submit">この住所の街並みを作る</button>
+        <label class="fld">住所か緯度,経度 <input type="text" id="addr" placeholder="例: 大分県別府市北浜1丁目 / 33.2786, 131.5048" autocomplete="off" enterkeyhint="search"></label>
+        <button class="tog" id="addr-go" type="submit">この場所の街並みを作る</button>
       </form>
-      <p class="note" id="addr-msg" role="status">住所を入れると、そのまわりの建物と道路を地図データから作ります。家は道路に面した空きに自動で置きます。</p>
+      <p class="note" id="addr-msg" role="status">住所を入れると、まわりの建物と道路を地図データから作り、家を道路に面した空きに置きます。「緯度, 経度」を入れると、その地点に家を置きます(地図アプリの座標をそのまま貼れます)。</p>
       <div class="facts">
         <div class="fact">場所 <b id="place-name">–</b></div>
         <div class="fact">緯度・経度 <b id="latlon">–</b></div>
         <label class="fld">最低気温 <input type="number" id="tmin" step="0.5"></label>
         <label class="fld">最高気温 <input type="number" id="tmax" step="0.5"></label>
+        <button class="tog" id="ground-toggle" aria-pressed="true" hidden>航空写真を使う: 入</button>
       </div>
       <div class="facts">
         <label class="fld">身長 <input type="range" id="eye" min="100" max="190" step="5" value="165"><b id="eye-v">165cm</b></label>
         <label class="fld">視野の広さ <input type="range" id="fov" min="50" max="100" step="2" value="72"><b id="fov-v">72°</b></label>
       </div>
-      <p class="note">出典: 国土地理院(基盤地図情報・地理院タイル)。建物の配置と道路は地図データどおり、建物の高さと屋根の形は面積からの仮定です。塀・電柱・庭木・土地の高低差は入っていません。気温は緯度からの概算で、手で直せます。</p>
+      <p class="note">出典: 国土地理院(基盤地図情報・地理院タイル・シームレス空中写真)。建物の配置と道路は地図データどおり、地面と屋根の色は航空写真から、建物の高さと屋根の形は面積からの仮定です。塀・電柱・庭木・土地の高低差は入っていません。気温は緯度からの概算で、手で直せます。</p>
     </div>
   </div>
 </div>
@@ -946,8 +947,9 @@ button,.tab,.chip,.seg{touch-action:manipulation}
   if (window.innerWidth < 700 || window.innerHeight < 560) showTab(null);
 
   // ── 街並み(国土地理院の地図データから、その場で組み立てる) ──
-  if (/[?&]mock=1/.test(location.search)) TownData.setBase({ fgd: 'mock/fgd/', rdcl: 'mock/rdcl/', addr: 'mock/addr.json?q=' });
+  if (/[?&]mock=1/.test(location.search)) TownData.setBase({ fgd: 'mock/fgd/', rdcl: 'mock/rdcl/', addr: 'mock/addr.json?q=', photo: 'mock/photo/' });
   var DEFAULT_PLACE = { lat: 33.2330, lon: 131.6066, title: '大分駅周辺' };   // 最初に表示する場所(家の位置は自動で決める)
+  var townPhoto = null, usePhoto = true;                           // 航空写真(地面と屋根の色に使う)
   var townData = null, townMask = null, placeTitle = '', site = { x: 0, y: 0, bearing: 270 }, picking = false;
   var DIRS = ['北', '北東', '東', '南東', '南', '南西', '西', '北西'];
   var V3 = function (x, y, h) { return [x, h, -y]; };            // 地図の座標(東, 北, 高さ) → 画面の座標
@@ -998,6 +1000,7 @@ button,.tab,.chip,.seg{touch-action:manipulation}
   function buildGround(d, m) {
     var S2 = coarse ? 1024 : 2048, cv = document.createElement('canvas'); cv.width = cv.height = S2;
     var g = cv.getContext('2d'), E = m.EXT, k = S2 / (2 * E), X = function (x) { return (x + E) * k; }, Y = function (y) { return (E - y) * k; };
+    if (townPhoto && usePhoto) return groundMesh(townPhoto, E);   // 航空写真があれば、そのまま地面に貼る
     g.fillStyle = '#857f73'; g.fillRect(0, 0, S2, S2);
     var seed = (Math.round(d.lat * 1e5) * 31 + Math.round(d.lon * 1e5)) >>> 0, rnd = function () { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
     for (var i = 0; i < 420; i++) {                                // 地面の色むら
@@ -1016,6 +1019,9 @@ button,.tab,.chip,.seg{touch-action:manipulation}
     };
     stroke(d.edges, '#96968f', 0.3);
     stroke(d.water, '#4e6876', 1.2);
+    return groundMesh(cv, E);
+  }
+  function groundMesh(cv, E) {
     var tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding; tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
     var geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute([-E, 0, E, E, 0, E, E, 0, -E, -E, 0, E, E, 0, -E, -E, 0, -E], 3));
@@ -1025,13 +1031,32 @@ button,.tab,.chip,.seg{touch-action:manipulation}
     mesh.receiveShadow = true; mesh.userData.ground = true;
     return mesh;
   }
+  // 航空写真から、建物の屋根の色を拾う(輪郭の内側の数点を平均する)
+  function roofColorFn(m) {
+    if (!townPhoto || !usePhoto) return null;
+    var S2 = townPhoto.width, px;
+    try { px = townPhoto.getContext('2d').getImageData(0, 0, S2, S2).data; } catch (e) { return null; }
+    var k = S2 / (2 * m.EXT);
+    return function (b) {
+      var r = 0, g = 0, bl = 0, n = 0;
+      [[b.cx, b.cy]].concat(b.r.map(function (q) { return [b.cx + (q[0] - b.cx) * 0.5, b.cy + (q[1] - b.cy) * 0.5]; })).forEach(function (p) {
+        if (!TownData.inRing(p, b.r)) return;
+        var x = Math.floor((p[0] + m.EXT) * k), y = Math.floor((m.EXT - p[1]) * k); if (x < 0 || y < 0 || x >= S2 || y >= S2) return;
+        var i = (y * S2 + x) * 4; r += px[i]; g += px[i + 1]; bl += px[i + 2]; n++;
+      });
+      if (!n) return null;
+      var mat = new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: 0.05 });
+      mat.color.setRGB(r / n / 255, g / n / 255, bl / n / 255).convertSRGBToLinear(); mat.envMapIntensity = 0.4; mat.userData.own = true;
+      return mat;
+    };
+  }
 
   function buildTown(d, m) {
     setCarPath(null);
-    town.children.slice().forEach(function (o) { town.remove(o); if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map) { o.material.map.dispose(); o.material.dispose(); } });
+    town.children.slice().forEach(function (o) { town.remove(o); if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map) { if (o.material.map.image !== townPhoto) o.material.map.dispose(); o.material.dispose(); } else if (o.material && o.material.userData.own) o.material.dispose(); });
     townCol = []; townOcc = []; townFloors = [];
     var ground = buildGround(d, m); town.add(ground); townFloors.push(ground);
-    var sash = new GeoB(), glass = new GeoB(), posts = new GeoB(), lim = m.EXT - 3;
+    var sash = new GeoB(), glass = new GeoB(), posts = new GeoB(), lim = m.EXT - 3, roofColor = roofColorFn(m);
     d.buildings.forEach(function (b, idx) {
       if (Math.max(Math.abs(b.cx), Math.abs(b.cy)) > lim) return;
       var r = b.r, n = r.length, e = b.eave, walls = new GeoB(), roof = new GeoB(), roofMat;
@@ -1042,7 +1067,8 @@ button,.tab,.chip,.seg{touch-action:manipulation}
           [0, 2.30].forEach(function (z) { [[-h, -h], [h, -h], [h, h], [-h, h]].forEach(function (o) { v.push(V3(x + o[0], y + o[1], z)); }); });
           posts.solid(v, BOXF);
         });
-        var sm = roof.mesh(TM.shed); if (sm) { town.add(sm); townOcc.push(sm); }
+        var sc = roofColor && roofColor(b); if (sc) sc.side = THREE.DoubleSide;
+        var sm = roof.mesh(sc || TM.shed); if (sm) { town.add(sm); townOcc.push(sm); }
         return;
       }
       sideQuads(walls, r, 0, e, 1, b.cx, b.cy);
@@ -1064,7 +1090,7 @@ button,.tab,.chip,.seg{touch-action:manipulation}
         sideQuads(roof, r, e, e + 0.3, 1.02, b.cx, b.cy); capTris(roof, r, e + 0.3, 1.02, b.cx, b.cy);
         roofMat = TM.cap;
       }
-      var wm = walls.mesh(TM.walls[idx % 5]), rm = roof.mesh(roofMat);
+      var wm = walls.mesh(TM.walls[idx % 5]), rm = roof.mesh((roofColor && roofColor(b)) || roofMat);
       town.add(wm); townCol.push(wm); townOcc.push(wm);
       if (rm) { town.add(rm); townOcc.push(rm); }
       for (var i = 0; i < n; i++) {                                // 窓
@@ -1118,11 +1144,13 @@ button,.tab,.chip,.seg{touch-action:manipulation}
   function loadPlace(p, quiet) {
     var msg = $('addr-msg');
     if (!quiet) msg.textContent = '地図データを読み込んでいます…';
-    return TownData.load(p.lat, p.lon, 100).then(function (d) {
+    return Promise.all([TownData.load(p.lat, p.lon, 100), TownData.photo(p.lat, p.lon, 90, 1024).catch(function () { return null; })]).then(function (res) {
+      var d = res[0];
       if (!d.tiles) throw new Error('nodata');
+      townPhoto = res[1]; $('ground-toggle').hidden = !townPhoto;
       townData = d; townMask = TownData.roadMask(d, 512, 90);
       buildTown(d, townMask);
-      var s = p.site && isFinite(p.site.x) ? p.site : TownData.autoSite(d, townMask), found = !!s;
+      var s = p.site && isFinite(p.site.x) ? p.site : (p.exact ? null : TownData.autoSite(d, townMask)), found = !!s;
       if (!s) { var f = TownData.faceRoad(d, 0, 0); s = { x: 0, y: 0, bearing: f ? f.bearing : 180 }; }
       site = { x: +s.x, y: +s.y, bearing: +s.bearing };
       placeTitle = String(p.title || '指定の場所').slice(0, 40);
@@ -1130,7 +1158,7 @@ button,.tab,.chip,.seg{touch-action:manipulation}
       tOverride = null; climate = { mean: null, amp: null };
       applySite(); fillTemps();
       var nb = d.buildings.filter(function (b) { return b.t === 'b'; }).length;
-      msg.textContent = placeTitle + ' のまわりに建物' + nb + '棟を作りました。' + (found ? '家は道路に面した空きに置いています。' : 'この近くに道路に面した空きが見つからなかったので、指定の地点に置いています。') + '俯瞰の「家の場所を選ぶ」で置き直せます。';
+      msg.textContent = placeTitle + ' のまわりに建物' + nb + '棟を作りました。' + (p.exact ? '家は指定の地点に置いています。' : found ? '家は道路に面した空きに置いています。' : 'この近くに道路に面した空きが見つからなかったので、指定の地点に置いています。') + '俯瞰の「家の場所を選ぶ」で置き直せます。';
       return true;
     }).catch(function () {
       msg.textContent = '地図データを読み込めませんでした。通信環境を確認して、もう一度試してください。';
@@ -1141,10 +1169,20 @@ button,.tab,.chip,.seg{touch-action:manipulation}
   $('addr-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var q = $('addr').value.trim(); if (!q || searching) return;
+    var done = function (ok) { if (ok) { setView('orbit'); orb.el = 1.05; orb.az = 0.5; orb.dist = 55; } return ok; };
+    var ll = q.replace(/[，、]/g, ',').match(/^\(?\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*\)?$/);
+    if (ll) {                                                      // 「緯度, 経度」で指定(地図アプリの座標をそのまま貼れる)
+      var la = +ll[1], lo = +ll[2], t;
+      if (la > 100 && lo < 60) { t = la; la = lo; lo = t; }
+      if (la < 20 || la > 46 || lo < 122 || lo > 154) { $('addr-msg').textContent = '日本国内の緯度・経度を「33.2786, 131.5048」のように入れてください。'; return; }
+      searching = true;
+      loadPlace({ lat: la, lon: lo, title: la.toFixed(5) + ', ' + lo.toFixed(5), exact: true }).then(done).then(function () { searching = false; });
+      return;
+    }
     searching = true; $('addr-msg').textContent = '住所を探しています…';
     TownData.geocode(q).then(function (list) {
       if (!list.length) { $('addr-msg').textContent = 'その住所が見つかりませんでした。都道府県から入れるか、町名までにして試してください。'; return false; }
-      return loadPlace(list[0]).then(function (ok) { if (ok) { setView('orbit'); orb.el = 1.05; orb.az = 0.5; orb.dist = 55; } return ok; });
+      return loadPlace(list[0]).then(done);
     }).catch(function () { $('addr-msg').textContent = '住所を探せませんでした。通信環境を確認して、もう一度試してください。'; })
       .then(function () { searching = false; });
   });
@@ -1152,6 +1190,13 @@ button,.tab,.chip,.seg{touch-action:manipulation}
     if ($('panel').hidden) $('panel-toggle').click();
     showTab('place');
     if (!coarse) $('addr').focus();
+  });
+
+  $('ground-toggle').addEventListener('click', function () {
+    usePhoto = !usePhoto;
+    this.setAttribute('aria-pressed', usePhoto ? 'true' : 'false');
+    this.textContent = usePhoto ? '航空写真を使う: 入' : '航空写真を使う: 切';
+    if (townData) { buildTown(townData, townMask); applySite(); }
   });
 
   // 俯瞰で地図をタップして、家の場所を選ぶ
