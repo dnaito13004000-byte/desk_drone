@@ -117,19 +117,6 @@ button,.tab,.chip,.seg{touch-action:manipulation}
 .fld{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mute)}
 .fld input,.fld select{font:inherit;font-size:13px;color:var(--ink);background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:6px;padding:5px 7px;-webkit-user-select:text;user-select:text}
 .fld input[type=number]{width:5.4em;font-variant-numeric:tabular-nums}
-.tour{position:fixed;inset:0;z-index:20;background:#0b0e10}
-#tour-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
-.tour-top{position:absolute;inset:0 0 auto 0;display:flex;align-items:center;gap:10px;pointer-events:none;text-shadow:0 1px 6px rgba(0,0,0,.65);
-  padding-top:calc(10px + env(safe-area-inset-top,0px));padding-bottom:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.tour-top b{font-size:15px;font-weight:700;letter-spacing:.04em}
-.tour-top span{font-size:13px;flex:1;min-width:0}
-.tour-top button{pointer-events:auto;text-shadow:none}
-.tour-bottom{position:absolute;inset:auto 0 0 0;background:var(--panel);border-top:1px solid var(--line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;flex-direction:column;gap:6px;
-  padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.tour-bottom .views{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:0;padding-inline:0;pointer-events:auto}
-.tour-bottom .views::-webkit-scrollbar{display:none}
-.tour-bottom .chip{flex:0 0 auto}
-.tour-msg{position:absolute;left:50%;top:44%;transform:translateX(-50%);margin:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;max-width:86%;text-align:center}
 .fld input[type=text]{width:17em;max-width:100%}
 #addr-form .fld{flex:1 1 15em;min-width:0}
 #addr-form .fld input{flex:1;min-width:0}
@@ -182,7 +169,6 @@ button,.tab,.chip,.seg{touch-action:manipulation}
     <button class="chip tool" id="cut-1" aria-pressed="false" hidden>1階の間取り</button>
     <button class="chip tool" id="top-view" aria-pressed="false" hidden>真上から</button>
     <button class="chip tool fine-only" id="mouse-toggle" aria-pressed="false">マウスで見回す</button>
-    <button class="chip tool" id="v-tour">内覧(高画質)</button>
     <button class="chip tool" id="go-place" aria-pressed="false">住所を入れる</button>
     <button class="chip" id="panel-toggle" aria-pressed="true" aria-controls="panel">太陽と音</button>
   </div>
@@ -266,16 +252,6 @@ button,.tab,.chip,.seg{touch-action:manipulation}
       </div>
       <p class="note">出典: 国土地理院(基盤地図情報・地理院タイル・シームレス空中写真)。建物の配置と道路は地図データどおり、建物の高さと屋根の形は面積からの仮定です。「航空写真を使う」を入れると、地面と屋根の色を航空写真から取ります。塀・電柱・庭木・土地の高低差は入っていません。気温は緯度からの概算で、手で直せます。</p>
     </div>
-  </div>
-</div>
-
-<div class="tour" id="tour" hidden>
-  <canvas id="tour-canvas" aria-label="360度の内覧画像"></canvas>
-  <div class="tour-top"><b>内覧</b><span id="tour-name"></span><button class="chip" id="tour-close">歩く画面に戻る</button></div>
-  <p class="tour-msg" id="tour-msg" role="status" hidden></p>
-  <div class="tour-bottom">
-    <div class="views" id="tour-rooms" role="group" aria-label="部屋"></div>
-    <p class="note">画面をなぞって見回せます。床の丸印か部屋名で移動します。家具と内装は見本で、窓の外の街並みは入っていません。</p>
   </div>
 </div>
 
@@ -416,6 +392,7 @@ button,.tab,.chip,.seg{touch-action:manipulation}
     });
     rebuildLists();
     scene.add(gltf.scene);
+    loadInterior(gltf.scene);
     town = new THREE.Group(); scene.add(town);
     carProto = gltf.scene.getObjectByName('car_proto');
     if (carProto) { carProto.parent.remove(carProto); carProto.position.set(0, 0, 0); }
@@ -534,7 +511,7 @@ button,.tab,.chip,.seg{touch-action:manipulation}
     road:   { p: [4.2, 13.4], look: [-0.2, 3.0, 0] },
     door:   { p: [2.25, 7.4], look: [2.2, 1.7, 1.5] },
     living: { p: [0.2, -0.9], look: [-1.8, 1.25, 3.2], from: 2.0 },
-    up:     { p: [-0.6, 0.3], look: [-0.9, 4.5, 3.0], from: 4.4 },
+    up:     { p: [1.9, 0.5], look: [3.0, 4.1, 2.6], from: 4.4 },
     orbit:  { orbit: true }
   };
   function groundAt(x, z, from) {
@@ -1264,130 +1241,93 @@ button,.tab,.chip,.seg{touch-action:manipulation}
   $('fov').addEventListener('input', function () { fovBase = +this.value; $('fov-v').textContent = this.value + '°'; resize(); });
   fillTemps();
 
-  // ── 内覧(あらかじめ描いた360度画像を見回す) ──
-  // 位置は家の座標(x: 右, y: 奥, z: 高さ)。look は最初に向く方位(奥方向から時計回り、度)
-  var TOUR = {
-    living:  { name: 'リビング', p: [-1.15, -2.0, 2.05], look: -75, to: ['dining', 'genkan'] },
-    dining:  { name: 'ダイニング', p: [0.5, 0.98, 2.05], look: -150, to: ['living', 'kitchen', 'genkan', 'hall2'] },
-    kitchen: { name: 'キッチン', p: [2.35, 0.15, 2.05], look: 95, to: ['dining'] },
-    genkan:  { name: '玄関', p: [2.1, -1.25, 2.05], look: -80, to: ['living', 'dining', 'outside'] },
-    hall2:   { name: '2階ホール', p: [-0.6, 0.6, 4.65], look: 200, to: ['dining', 'master', 'kids', 'study'] },
-    master:  { name: '主寝室', p: [2.0, -0.3, 4.65], look: 165, to: ['hall2'] },
-    kids:    { name: '子ども室', p: [-1.9, -1.8, 4.65], look: 120, to: ['hall2'] },
-    study:   { name: '書斎', p: [1.7, 1.45, 4.65], look: 25, to: ['hall2'] },
-    outside: { name: '外観', p: [-1.8, -7.8, 1.6], look: 13, to: ['genkan'] }
-  };
-  // 階をまたぐ移動は、階段の位置に目印を置く
-  var TOUR_MARK = { 'dining>hall2': [-2.1, 0.75, 0.95], 'hall2>dining': [-3.0, 1.1, 2.9] };
-  var tourOpen = false, tour = null;
-  function tourInit() {
-    var cv = $('tour-canvas'), r = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
-    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); r.outputEncoding = THREE.sRGBEncoding;
-    var sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(72, 1, 0.05, 100); cam.rotation.order = 'YXZ';
-    // 球の内側に画像を貼る。画像の中央が奥方向、右へ行くほど時計回り
-    var NU = 72, NV = 36, pos = [], uv = [], idx = [], i, j;
-    for (j = 0; j <= NV; j++) for (i = 0; i <= NU; i++) {
-      var az = (i / NU - 0.5) * 2 * Math.PI, el = (j / NV - 0.5) * Math.PI, c = Math.cos(el);
-      pos.push(40 * Math.sin(az) * c, 40 * Math.sin(el), -40 * Math.cos(az) * c); uv.push(i / NU, j / NV);
-    }
-    for (j = 0; j < NV; j++) for (i = 0; i < NU; i++) { var a = j * (NU + 1) + i, b = a + 1, d = a + NU + 1, e = d + 1; idx.push(a, b, d, b, e, d); }
-    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
-    var mat = new THREE.MeshBasicMaterial({ color: 0x222222, side: THREE.DoubleSide, toneMapped: false });
-    sc.add(new THREE.Mesh(g, mat));
-    var marks = new THREE.Group(); sc.add(marks);
-    tour = { r: r, sc: sc, cam: cam, mat: mat, marks: marks, yaw: 0, pitch: 0, fov: 72, cur: null, tex: {}, hits: [], ray: new THREE.Raycaster(), loading: null };
-    var id = null, lx = 0, ly = 0, moved = 0, t0 = 0, ptr = {}, pinch = 0;
-    var cnt = function () { return Object.keys(ptr).length; }, dist = function () { var k = Object.keys(ptr), p = ptr[k[0]], q = ptr[k[1]]; return Math.hypot(p.x - q.x, p.y - q.y) || 1; };
-    cv.addEventListener('pointerdown', function (e) {
-      ptr[e.pointerId] = { x: e.clientX, y: e.clientY }; try { cv.setPointerCapture(e.pointerId); } catch (err) {}
-      if (cnt() === 1) { id = e.pointerId; lx = e.clientX; ly = e.clientY; moved = 0; t0 = e.timeStamp; } else if (cnt() === 2) { id = null; pinch = dist(); }
-    });
-    cv.addEventListener('pointermove', function (e) {
-      if (!ptr[e.pointerId]) return; ptr[e.pointerId].x = e.clientX; ptr[e.pointerId].y = e.clientY;
-      if (cnt() === 2) { var d2 = dist(); tour.fov = Math.max(35, Math.min(95, tour.fov * pinch / d2)); pinch = d2; tourDraw(); return; }
-      if (e.pointerId !== id) return;
-      var k = tour.fov / 72 * 0.0045, dx = e.clientX - lx, dy = e.clientY - ly; moved += Math.abs(dx) + Math.abs(dy);
-      tour.yaw += dx * k; tour.pitch = Math.max(-1.3, Math.min(1.3, tour.pitch + dy * k)); lx = e.clientX; ly = e.clientY; tourDraw();
-    });
-    var up = function (e) {
-      if (!ptr[e.pointerId]) return; delete ptr[e.pointerId];
-      if (e.pointerId === id) { id = null; if (e.type === 'pointerup' && moved < 10 && e.timeStamp - t0 < 450) tourTap(e); }
-    };
-    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-    cv.addEventListener('wheel', function (e) { e.preventDefault(); tour.fov = Math.max(35, Math.min(95, tour.fov * Math.exp(e.deltaY * 0.001))); tourDraw(); }, { passive: false });
-    Object.keys(TOUR).forEach(function (k) {
-      var b = document.createElement('button'); b.className = 'chip'; b.id = 'tour-' + k; b.textContent = TOUR[k].name; b.setAttribute('aria-pressed', 'false');
-      b.addEventListener('click', function () { tourGo(k); }); $('tour-rooms').appendChild(b);
-    });
-    window.addEventListener('resize', function () { if (tourOpen) tourDraw(); });
-  }
-  function tourLabel(text) {
-    var c = document.createElement('canvas'), g = c.getContext('2d'), font = '700 40px "Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif';
-    g.font = font; c.width = Math.ceil(g.measureText(text).width) + 40; c.height = 68; g = c.getContext('2d'); g.font = font;
-    g.fillStyle = 'rgba(17,22,25,.82)'; var r = 14, w = c.width, h = c.height;
-    g.beginPath(); g.moveTo(r, 0); g.arcTo(w, 0, w, h, r); g.arcTo(w, h, 0, h, r); g.arcTo(0, h, 0, 0, r); g.arcTo(0, 0, w, 0, r); g.fill();
-    g.fillStyle = '#eef1ea'; g.textBaseline = 'middle'; g.textAlign = 'center'; g.fillText(text, w / 2, h / 2 + 2);
-    var t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding;
-    var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, toneMapped: false })); s.userData.aspect = w / h; s.renderOrder = 5; return s;
-  }
-  function tourMarks(k) {
-    var T = tour, here = TOUR[k].p;
-    T.marks.children.slice().forEach(function (o) { T.marks.remove(o); if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
-    T.hits = [];
-    TOUR[k].to.forEach(function (n) {
-      var q = TOUR_MARK[k + '>' + n] || [TOUR[n].p[0], TOUR[n].p[1], TOUR[n].p[2] - 1.45];
-      var v = new THREE.Vector3(q[0] - here[0], q[2] - here[2], -(q[1] - here[1])), d = v.length(), s = Math.max(0.6, Math.min(1.6, d / 3.2));
-      var ring = new THREE.Mesh(new THREE.RingGeometry(0.17 * s, 0.26 * s, 40), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthTest: false, side: THREE.DoubleSide, toneMapped: false }));
-      ring.rotation.x = -Math.PI / 2; ring.position.copy(v); ring.renderOrder = 4; T.marks.add(ring);
-      var dot = new THREE.Mesh(new THREE.CircleGeometry(0.10 * s, 32), new THREE.MeshBasicMaterial({ color: 0xf3b63f, transparent: true, opacity: 0.95, depthTest: false, side: THREE.DoubleSide, toneMapped: false }));
-      dot.rotation.x = -Math.PI / 2; dot.position.copy(v); dot.renderOrder = 4; T.marks.add(dot);
-      var lab = tourLabel(TOUR[n].name), ls = 0.075 * d; lab.scale.set(ls * lab.userData.aspect, ls, 1); lab.position.set(v.x, v.y + 0.42 * s + ls * 0.6, v.z); T.marks.add(lab);
-      var hit = new THREE.Mesh(new THREE.SphereGeometry(Math.max(0.5 * s, 0.14 * d), 12, 8), new THREE.MeshBasicMaterial({ visible: false })); hit.position.set(v.x, v.y + 0.25 * s, v.z); hit.userData.to = n; T.marks.add(hit); T.hits.push(hit);
-    });
-  }
-  function tourGo(k, keepView) {
-    var T = tour; if (!TOUR[k] || T.loading === k) return;
-    var show = function (tex) {
-      T.loading = null; T.cur = k; T.mat.map = tex; T.mat.color.set(0xffffff); T.mat.needsUpdate = true;
-      if (!keepView) { T.yaw = TOUR[k].look * Math.PI / 180; T.pitch = 0; T.fov = 72; }
-      tourMarks(k);
-      Object.keys(TOUR).forEach(function (n) { $('tour-' + n).setAttribute('aria-pressed', n === k ? 'true' : 'false'); });
-      $('tour-name').textContent = TOUR[k].name; $('tour-msg').hidden = true;
-      var el = $('tour-' + k); if (el.scrollIntoView) { try { el.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) {} }
-      tourDraw();
-    };
-    if (T.tex[k]) { show(T.tex[k]); return; }
-    T.loading = k; $('tour-msg').hidden = false; $('tour-msg').textContent = TOUR[k].name + ' を読み込んでいます';
-    new THREE.TextureLoader().load('pano/' + k + '.jpg', function (tex) {
-      tex.encoding = THREE.sRGBEncoding; tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false; T.tex[k] = tex;
-      if (T.loading === k) show(tex);
-    }, undefined, function () { if (T.loading === k) { T.loading = null; $('tour-msg').textContent = TOUR[k].name + ' の画像を読み込めませんでした。通信環境を確認して、もう一度選んでください。'; } });
-  }
-  function tourTap(e) {
-    var T = tour, r = $('tour-canvas').getBoundingClientRect(), m = new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1));
-    T.ray.setFromCamera(m, T.cam); var h = T.ray.intersectObjects(T.hits, false);
-    if (h.length) tourGo(h[0].object.userData.to);
-  }
-  function tourDraw() {
-    var T = tour; if (!T || !tourOpen) return;
-    var cv = $('tour-canvas'), w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) return;
-    T.r.setSize(w, h, false); T.cam.aspect = w / h; T.cam.fov = T.fov + (w < h ? 12 : 0); T.cam.updateProjectionMatrix();
-    T.cam.rotation.set(-T.pitch, -T.yaw, 0);
-    T.r.render(T.sc, T.cam);
-  }
-  function tourShow(on) {
-    tourOpen = !!on; $('tour').hidden = !tourOpen;
-    if (tourOpen) {
-      if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
-      if (!tour) tourInit();
-      tourGo(tour.cur || 'living', !!tour.cur);
-      tourDraw();
-    } else { last = performance.now(); }
-  }
-  $('v-tour').addEventListener('click', function () { tourShow(true); });
-  $('tour-close').addEventListener('click', function () { tourShow(false); });
-  window.addEventListener('keydown', function (e) { if (tourOpen && e.code === 'Escape') tourShow(false); });
 
+  // ── 作り込んだ内装(家具は1点ずつの3D。光はその場で計算し、部屋ごとの明るさの分布だけ事前計算を使う) ──
+  (function () {                                            // 明るさの分布は平方根で保存してあるので、読むときに2乗して戻す
+    var c = THREE.ShaderChunk.aomap_fragment;
+    if (c) THREE.ShaderChunk.aomap_fragment = c.replace('texture2D( aoMap, vUv2 ).r', 'pow( texture2D( aoMap, vUv2 ).r, 2.0 )');
+  })();
+  var hqMats = [], hqReady = false, hqAmt = 1, EXPO_OUT = 0.86, EXPO_IN = 2.1, expoNow = EXPO_OUT;
+  function canvasTex(size, draw, rx, ry) {
+    var c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size);
+    var t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); t.encoding = THREE.sRGBEncoding;
+    t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); return t;
+  }
+  function rnd(i) { var x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+  function makeWoodTex() {                                  // 木目(横方向に流れる)。色は素材の色に掛け合わせる
+    return canvasTex(512, function (g, s) {
+      g.fillStyle = '#f2f2f2'; g.fillRect(0, 0, s, s);
+      for (var i = 0; i < 420; i++) {
+        var y = rnd(i) * s, a = 0.05 + rnd(i + 900) * 0.16, w = 0.6 + rnd(i + 50) * 2.2, ph = rnd(i + 7) * 6.28, amp = 1 + rnd(i + 3) * 5;
+        g.strokeStyle = 'rgba(70,45,20,' + a.toFixed(3) + ')'; g.lineWidth = w; g.beginPath();
+        for (var x = 0; x <= s; x += 16) { var yy = y + Math.sin(x / s * 6.2832 + ph) * amp; if (x) g.lineTo(x, yy); else g.moveTo(x, yy); }
+        g.stroke();
+      }
+    }, 0.55, 2.6);
+  }
+  function makeClothTex() {                                 // 布の織り目(凹凸用)
+    return canvasTex(256, function (g, s) {
+      g.fillStyle = '#808080'; g.fillRect(0, 0, s, s);
+      for (var y = 0; y < s; y += 4) for (var x = 0; x < s; x += 4) {
+        var v = 96 + Math.floor(rnd(x * 13 + y * 7) * 90) + (((x + y) / 4) % 2 ? 22 : -22);
+        g.fillStyle = 'rgb(' + v + ',' + v + ',' + v + ')'; g.fillRect(x, y, 4, 4);
+      }
+    }, 9, 9);
+  }
+  function dress(m, woodTex, clothTex) {                     // 素材名ごとの質感づけ
+    var n = m.name;
+    m.envMapIntensity = 0.45;
+    if (/^(oak|walnut)/.test(n)) { m.map = woodTex; m.bumpMap = woodTex; m.bumpScale = 0.0012; m.color.multiplyScalar(1.22); m.roughness = 0.5; }
+    else if (/fabric|cushion|rug|seat_pad|duvet|mattress|pillow/.test(n)) { m.bumpMap = clothTex; m.bumpScale = /rug/.test(n) ? 0.006 : 0.0025; m.roughness = 1; m.envMapIntensity = 0.15; }
+    else if (n === 'curtain') { m.transparent = true; m.opacity = 0.62; m.side = THREE.DoubleSide; m.depthWrite = false; m.roughness = 1; }
+    else if (/^leaf/.test(n)) { m.side = THREE.DoubleSide; m.roughness = 0.6; m.color.multiplyScalar(1.6); }
+    else if (n === 'mirror') { m.metalness = 1; m.roughness = 0.05; m.color.setRGB(0.9, 0.92, 0.93); m.envMapIntensity = 1; }
+    else if (n === 'chrome' || n === 'stainless') { m.envMapIntensity = 1; }
+    else if (n === 'black_glass' || n === 'screen') { m.roughness = 0.08; m.envMapIntensity = 0.9; }
+    else if (n === 'bulb' || n === 'downlight') { m.emissiveIntensity = 1.6; }
+    return m;
+  }
+  function loadInterior(houseRoot) {
+    var tl = new THREE.TextureLoader(), ao = {};
+    ['floor', 'wall', 'furn'].forEach(function (k) { var t = tl.load('ao_' + k + '.jpg'); t.flipY = false; ao[k] = t; });
+    new THREE.GLTFLoader().load('interior.glb', function (g) {
+      var woodTex = makeWoodTex(), clothTex = makeClothTex(), fm = {}, old = [];
+      houseRoot.traverse(function (o) { if (o.isMesh && /^(09|10)_/.test(partName(o))) old.push(o); });
+      old.forEach(function (o) {                             // 箱の家具と、明るさの分布を持たない内装を外す
+        o.parent.remove(o);
+        [baseCol, baseFloors, baseOcc].forEach(function (L) { var i = L.indexOf(o); if (i >= 0) L.splice(i, 1); });
+      });
+      g.scene.traverse(function (o) {
+        if (!o.isMesh) return;
+        var part = partName(o), nm = o.material.name, m;
+        if (part === '09_floor' || part === '09_wall') {
+          m = fm['s_' + nm];
+          if (!m) { m = (houseMats[nm] || o.material).clone(); m.name = nm + '_lit'; m.aoMap = ao[part === '09_floor' ? 'floor' : 'wall']; fm['s_' + nm] = m; hqMats.push(m); }
+          baseCol.push(o); baseFloors.push(o);
+        } else {
+          m = fm[nm];
+          if (!m) { m = dress(o.material, woodTex, clothTex); m.name = 'hq_' + nm; if (part === '10_furniture') { m.aoMap = ao.furn; hqMats.push(m); } fm[nm] = m; }
+          if (part === '10_furniture' && nm !== 'curtain' && !/^leaf/.test(nm)) baseCol.push(o);
+        }
+        houseMats[m.name] = m;
+        if (cutMode) m.clippingPlanes = [cutPlane];
+        o.material = m;
+        o.castShadow = nm !== 'curtain' && nm !== 'bulb' && nm !== 'downlight'; o.receiveShadow = true;
+      });
+      houseRoot.add(g.scene);
+      scene.updateMatrixWorld(true);
+      rebuildLists();
+      hqReady = true;
+    }, undefined, function () {});
+  }
+  function hqTick(dt) {                                      // 家の中では目が慣れるように露出を上げる。俯瞰では明るさの分布を弱める
+    if (!hqReady) return;
+    var p = camera.position, inside = !orbit && Math.abs(p.x) < 3.6 && Math.abs(p.z) < 3.15 && p.y < 6.4;
+    var te = inside ? EXPO_IN : EXPO_OUT, k = Math.min(1, dt * 2.5);
+    expoNow += (te - expoNow) * k; renderer.toneMappingExposure = expoNow;
+    var ta = orbit ? 0.35 : 1;
+    if (Math.abs(ta - hqAmt) > 0.002) { hqAmt += (ta - hqAmt) * k; hqMats.forEach(function (m) { m.aoMapIntensity = hqAmt; }); }
+  }
   // ── 描画ループ ──
   var last = 0;
   function resize() {
@@ -1399,7 +1339,7 @@ button,.tab,.chip,.seg{touch-action:manipulation}
   window.addEventListener('resize', resize);
   function tick(now) {
     var dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (tourOpen) { requestAnimationFrame(tick); return; }   // 内覧を開いているあいだは、歩く画面の描画を止める
+    hqTick(dt);
     move(dt);
     if (orbit) {
       var ce = Math.cos(orb.el);
@@ -1418,7 +1358,7 @@ button,.tab,.chip,.seg{touch-action:manipulation}
     renderer.render(scene, camera);
     requestAnimationFrame(tick);
   }
-  window.__walk = { setView: setView, teleport: function (x, z, y) { pos.set(x, 0, z); feet = groundAt(x, z, 1.2); yaw = y || 0; pitch = 0; }, face: function (y) { yaw = y; }, sim: function (n) { keys.KeyW = true; for (var i = 0; i < n; i++) { move(0.05); feet += (groundAt(pos.x, pos.z, feet + 0.7) - feet) * 0.6; } keys.KeyW = false; }, setWin: setWin, tourShow: tourShow, tourGo: function (k) { tourGo(k); }, tourState: function () { return tour ? { cur: tour.cur, loading: tour.loading, marks: tour.hits.length, yaw: tour.yaw } : null; }, setBearing: setBearing, loadPlace: loadPlace, town: function () { return { n: townData ? townData.buildings.length : 0, meshes: town ? town.children.length : 0, site: site, car: carPts ? Math.round(PATH_TOTAL) : 0, title: placeTitle, north: NORTH }; }, heat: function () { return heat && { out: heat.out, res: heat.res.map(function (r) { return { kwh: r.kwh, min: Math.min.apply(null, r.t), max: Math.max.apply(null, r.t) }; }) }; }, cut: setCut, state: function () { return { x: pos.x, z: pos.z, feet: feet, inside: isInside(), cars: cars.length, orbit: orbit, target: !!walkTarget }; } };
+  window.__walk = { setView: setView, teleport: function (x, z, y) { pos.set(x, 0, z); feet = groundAt(x, z, 1.2); yaw = y || 0; pitch = 0; }, face: function (y) { yaw = y; }, sim: function (n) { keys.KeyW = true; for (var i = 0; i < n; i++) { move(0.05); feet += (groundAt(pos.x, pos.z, feet + 0.7) - feet) * 0.6; } keys.KeyW = false; }, setWin: setWin, hq: function () { return { ready: hqReady, mats: hqMats.length, expo: expoNow }; }, setBearing: setBearing, heat: function () { return heat && { out: heat.out, res: heat.res.map(function (r) { return { kwh: r.kwh, min: Math.min.apply(null, r.t), max: Math.max.apply(null, r.t) }; }) }; }, cut: setCut, state: function () { return { x: pos.x, z: pos.z, feet: feet, inside: isInside(), cars: cars.length, orbit: orbit, target: !!walkTarget }; } };
 })();
 </script>
 
