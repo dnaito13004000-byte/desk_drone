@@ -92,6 +92,9 @@ body.director #main{padding-bottom:calc(190px + var(--sb))}
 .cdc .at{font-size:15px;color:var(--sub)}
 .cdc .at b{color:var(--tx);font-size:18px}
 .cdc .v{font-size:min(22vw,110px);font-weight:800;line-height:1;margin-top:8px;text-align:center;letter-spacing:-.01em}
+.cdc .rt{text-align:right;font-size:15px;color:var(--sub);margin-top:4px}
+.cdc .rt b{color:var(--tx);font-size:17px;font-weight:700}
+.cdc.done .rt{display:none}
 .cdc.nx{border-color:var(--amber)}
 .cdc.soon{background:#2a1d05}.cdc.soon .v{color:var(--amber)}
 .cdc.done{opacity:.4}.cdc.done .v{font-size:40px}
@@ -383,12 +386,13 @@ function tick(){
   wm.textContent = me.director ? 'ステージ開始の合図で「▶ ステージ開始」を押してください' : 'Q出し役がステージ開始を押すと、カウントダウンが始まります';
 
   const upcoming = running ? items.filter(it => start + it.rel * 1000 > now - 400).sort((a, b) => a.rel - b.rel)[0] : null;
+  const rt = `<div class="rt num">現在 <b>${hms(now)}</b></div>`;
   $('cds').innerHTML = items.map(it => {
     const at = start + it.rel * 1000, left = (at - now) / 1000;
-    if (!running) return `<div class="cdc wait"><div class="hd"><span class="nm">${it.name}まで</span><span class="at num">開始から</span></div><div class="v num">${fmtT(it.rel)}</div></div>`;
+    if (!running) return `<div class="cdc wait"><div class="hd"><span class="nm">${it.name}まで</span><span class="at num">開始から</span></div><div class="v num">${fmtT(it.rel)}</div>${rt}</div>`;
     if (left <= -0.4) return `<div class="cdc done"><div class="hd"><span class="nm">${it.name}</span><span class="at num"><b>${hms(at)}</b></span></div><div class="v num">✓ 済み</div></div>`;
     const cls = ['cdc', it === upcoming ? 'nx' : '', left <= 10 ? 'soon' : ''].join(' ');
-    return `<div class="${cls}"><div class="hd"><span class="nm">${it.name}まで</span><span class="at num"><b>${hms(at)}</b> ちょうど</span></div><div class="v num">${fmtT(Math.ceil(Math.max(0, left)))}</div></div>`;
+    return `<div class="${cls}"><div class="hd"><span class="nm">${it.name}まで</span><span class="at num"><b>${hms(at)}</b> ちょうど</span></div><div class="v num">${fmtT(Math.ceil(Math.max(0, left)))}</div>${rt}</div>`;
   }).join('');
   if (!running) return;
 
