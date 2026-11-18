@@ -692,7 +692,7 @@ function editItem(id){
 }
 
 function menu(){
-  openSheet(`<h3>メニュー <small style="font-size:12px;color:var(--sub);font-weight:400">ver.3</small><button data-x>×</button></h3><div class="menu">
+  openSheet(`<h3>メニュー <small style="font-size:12px;color:var(--sub);font-weight:400">ver.4</small><button data-x>×</button></h3><div class="menu">
     <button class="it" data-m="bulk">📝 まとめて入力<small>テキストを貼り付けて一気に登録</small></button>
     <button class="it" data-m="preview">⏱ 時刻を指定してプレビュー<small>本番当日の様子を今のうちに確認</small></button>
     <button class="it" data-m="wake">🔆 画面をつけっぱなしにする<small>現場で置いておくとき用</small></button>
@@ -821,18 +821,32 @@ async function packData(){
   return b64u.enc(new Uint8Array(await new Response(st).arrayBuffer()));
 }
 function loadPako(){return new Promise((ok,ng)=>{if(window.pako)return ok(window.pako);const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js';sc.onload=()=>ok(window.pako);sc.onerror=ng;document.head.appendChild(sc)})}
-async function unpackData(str){
-  const bytes=b64u.dec(str);let txt;
+async function unpackData(str){return parseShared(await inflateBytes(b64u.dec(str)))}
+async function inflateBytes(bytes){
+  let txt;
   if(window.DecompressionStream){
     try{txt=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()}catch(e){}
   }
   if(txt==null){const pk=await loadPako();txt=pk.inflateRaw(bytes,{to:'string'})}
+  return txt;
+}
+function parseShared(txt){
   const j=JSON.parse(txt);
   return {name:j.name||'',sub:j.sub||'',days:j.days||{},items:(j.items||[]).map((r,i)=>({id:'l'+i,d:r[0],s:r[1],e:r[2]||'',k:r[3],t:r[4],n:r[5]||''}))};
 }
 async function shareSheet(){
   if(!S.items.length){toast('先に予定を入れてください');return}
   let url;
+  if(eventLink()&&S.src===eventLink().e){
+    url=location.href;
+    openSheet(`<h3>仲間に共有するリンク<button data-x>×</button></h3>
+    <p class="hint">「${esc(S.name)}」専用のリンクです。LINEなどで送ると、タップするだけで同じ予定が入ります。予定が更新されたら、開くたびに自動で最新になります。</p>
+    <div class="fld"><textarea id="shTx" readonly style="min-height:70px;font-size:13px">${esc(url)}</textarea></div>
+    <div class="acts"><button class="pri" id="shCopy">リンクをコピー</button></div>
+    <p class="hint" style="margin-top:12px">Safariの共有ボタン →「ホーム画面に追加」で、アプリのように全画面で使えます。</p>`);
+    $('shCopy').onclick=async()=>{try{await navigator.clipboard.writeText(url);toast('コピーしました')}catch(e){$('shTx').select();toast('選択しました。長押しでコピー')}};
+    return;
+  }
   try{url=location.origin+location.pathname+'?v='+Date.now().toString(36)+'#data='+await packData()}catch(e){toast('この端末では作れません（iOS 16.4以降が必要）');return}
   openSheet(`<h3>仲間に共有するリンク<button data-x>×</button></h3>
   <p class="hint">このリンクをLINEなどで送ると、受け取った人がタップするだけで「${esc(S.name)}」の予定（${S.items.length}件）が入ります。<br>
@@ -857,8 +871,34 @@ async function checkShareLink(){
 }
 addEventListener('hashchange',checkShareLink);
 
+const sameItems=(a,b)=>JSON.stringify(a.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n]))===JSON.stringify(b.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n]));
+function eventLink(){
+  const q=new URLSearchParams(location.search),e=q.get('e');
+  const k=(/[#&]k=([0-9a-f]{32})/i.exec(location.hash)||[])[1]||q.get('k');
+  return e&&k&&/^[a-z0-9]+$/i.test(e)?{e,k}:null;
+}
+async function loadEvent(){
+  const L=eventLink();if(!L)return;
+  let j;
+  try{
+    const r=await fetch('events/'+L.e+'.bin?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw new Error('notfound');
+    const buf=new Uint8Array(await r.arrayBuffer());
+    const key=await crypto.subtle.importKey('raw',Uint8Array.from(L.k.match(/../g),h=>parseInt(h,16)),'AES-GCM',false,['decrypt']);
+    const plain=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},key,buf.slice(12)));
+    j=parseShared(await inflateBytes(plain));
+  }catch(e){
+    if(S.src===L.e&&S.items.length){toast('電波がないため、保存済みの予定を表示しています');return}
+    openSheet(`<h3>予定を読み込めませんでした<button data-x>×</button></h3><p class="hint" style="font-size:14px">電波の良いところで開き直してください。それでもだめなときは、リンクが途中で切れていないか確認してください。</p><div class="acts"><button data-x class="pri">閉じる</button></div>`);return}
+  if(sameItems(S.items,j.items)&&S.src===L.e)return;
+  const apply=()=>{S={...S,name:j.name,sub:j.sub,days:j.days,items:j.items,src:L.e};save()};
+  if(!S.items.length||S.src===L.e||sameItems(S.items,j.items)){const upd=S.src===L.e;apply();selDay=null;renderAll(false);toast(upd?'予定が更新されました':'「'+j.name+'」の予定を読み込みました');return}
+  confirmSheet('共有された予定を読み込む',`「${esc(j.name)}」の予定（${j.items.length}件）に入れ替えます。今この端末に入っている予定は消えます。`,()=>{apply();toast('読み込みました')});
+}
+
 renderAll(false);
 checkShareLink();
+loadEvent();
 setInterval(tick,250); // 切り替わりの瞬間を逃さないよう短い間隔で確認（表示が変わったときだけ描き直す）
 </script>
 </body>
