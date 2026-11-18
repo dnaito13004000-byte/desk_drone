@@ -692,7 +692,7 @@ function editItem(id){
 }
 
 function menu(){
-  openSheet(`<h3>メニュー<button data-x>×</button></h3><div class="menu">
+  openSheet(`<h3>メニュー <small style="font-size:12px;color:var(--sub);font-weight:400">ver.3</small><button data-x>×</button></h3><div class="menu">
     <button class="it" data-m="bulk">📝 まとめて入力<small>テキストを貼り付けて一気に登録</small></button>
     <button class="it" data-m="preview">⏱ 時刻を指定してプレビュー<small>本番当日の様子を今のうちに確認</small></button>
     <button class="it" data-m="wake">🔆 画面をつけっぱなしにする<small>現場で置いておくとき用</small></button>
@@ -820,15 +820,20 @@ async function packData(){
   const st=new Blob([js]).stream().pipeThrough(new CompressionStream('deflate-raw'));
   return b64u.enc(new Uint8Array(await new Response(st).arrayBuffer()));
 }
+function loadPako(){return new Promise((ok,ng)=>{if(window.pako)return ok(window.pako);const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js';sc.onload=()=>ok(window.pako);sc.onerror=ng;document.head.appendChild(sc)})}
 async function unpackData(str){
-  const st=new Blob([b64u.dec(str)]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-  const j=JSON.parse(await new Response(st).text());
+  const bytes=b64u.dec(str);let txt;
+  if(window.DecompressionStream){
+    try{txt=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()}catch(e){}
+  }
+  if(txt==null){const pk=await loadPako();txt=pk.inflateRaw(bytes,{to:'string'})}
+  const j=JSON.parse(txt);
   return {name:j.name||'',sub:j.sub||'',days:j.days||{},items:(j.items||[]).map((r,i)=>({id:'l'+i,d:r[0],s:r[1],e:r[2]||'',k:r[3],t:r[4],n:r[5]||''}))};
 }
 async function shareSheet(){
   if(!S.items.length){toast('先に予定を入れてください');return}
   let url;
-  try{url=location.origin+location.pathname+'#data='+await packData()}catch(e){toast('この端末では作れません（iOS 16.4以降が必要）');return}
+  try{url=location.origin+location.pathname+'?v='+Date.now().toString(36)+'#data='+await packData()}catch(e){toast('この端末では作れません（iOS 16.4以降が必要）');return}
   openSheet(`<h3>仲間に共有するリンク<button data-x>×</button></h3>
   <p class="hint">このリンクをLINEなどで送ると、受け取った人がタップするだけで「${esc(S.name)}」の予定（${S.items.length}件）が入ります。<br>
   予定はリンクの中だけに入っていて、GitHubには保存されません。リンクを知っている人だけが見られます。</p>
@@ -840,8 +845,10 @@ async function shareSheet(){
 async function checkShareLink(){
   const h=location.hash;if(!h.startsWith('#data='))return;
   let j;
-  try{j=await unpackData(h.slice(6))}catch(e){toast('共有リンクを読み込めませんでした');return}
+  try{j=await unpackData(h.slice(6))}catch(e){
+    openSheet(`<h3>共有リンクを読み込めませんでした<button data-x>×</button></h3><p class="hint" style="font-size:14px">リンクが途中で切れているか、この端末のブラウザが対応していない可能性があります。リンクを最後まで全部コピーして、Safariで開き直してください。</p><div class="acts"><button data-x class="pri">閉じる</button></div>`);return}
   try{history.replaceState(null,'',location.pathname)}catch(e){}
+  if(!j.items.length){toast('共有リンクに予定が入っていませんでした');return}
   const apply=()=>{S={...S,name:j.name,sub:j.sub,days:j.days,items:j.items,filter:'all'};save()};
   const same=JSON.stringify(S.items.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n]))===JSON.stringify(j.items.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n]));
   if(same){toast('最新の予定です');return}
