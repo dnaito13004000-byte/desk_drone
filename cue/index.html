@@ -42,7 +42,7 @@ input:focus{border-color:var(--blue)}
 .note{font-size:12px;color:var(--sub);text-align:center;margin-top:18px;line-height:1.6}
 
 #main{min-height:100vh;padding:calc(10px + var(--st)) 14px calc(24px + var(--sb));max-width:640px;margin:0 auto}
-body.director #main{padding-bottom:calc(190px + var(--sb))}
+body.director #main{padding-bottom:calc(250px + var(--sb))}
 .top{display:flex;align-items:flex-start;gap:10px;padding:4px 2px 12px}
 .top .ev{font-weight:700;font-size:15px}
 .top .me{font-size:12px;color:var(--sub)}
@@ -114,6 +114,8 @@ body.director #main{padding-bottom:calc(190px + var(--sb))}
 #runCtrl{display:grid;grid-template-columns:1fr 1fr 1.6fr;gap:8px}
 #runCtrl button{height:64px;border-radius:16px;background:var(--card2);font-weight:700;font-size:15px}
 #bResync{background:#13304f!important;color:#6cb6ff}
+#bReset{width:100%;height:56px;margin-top:8px;border-radius:16px;background:transparent;border:2px solid var(--red);color:var(--red);font-size:17px;font-weight:800}
+#bReset.arm{background:var(--red);color:#fff}
 
 .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:#121216;width:100%;max-width:640px;max-height:92vh;border-radius:20px 20px 0 0;display:flex;flex-direction:column}
@@ -173,7 +175,6 @@ body.director #main{padding-bottom:calc(190px + var(--sb))}
 <div id="ctrl" class="hidden"><div class="in">
   <div class="tools">
     <button class="chipbtn" id="bEdit">✏️ 時間と段取りを設定</button>
-    <button class="chipbtn" id="bReset">⟲ 開始前に戻す</button>
     <button class="chipbtn" id="bPeople2">👥 <span id="pCount2">0</span></button>
   </div>
   <button id="bStart">▶ ステージ開始</button>
@@ -182,6 +183,7 @@ body.director #main{padding-bottom:calc(190px + var(--sb))}
     <button id="bPlus">＋1秒</button>
     <button id="bResync">⏱ 今を開始に合わせる</button>
   </div>
+  <button id="bReset" class="hidden">⟲ 最初に戻す</button>
 </div></div>
 
 <div id="flash"></div>
@@ -380,6 +382,7 @@ function tick(){
   if (me.director) {
     $('bStart').classList.toggle('hidden', running);
     $('runCtrl').classList.toggle('hidden', !running);
+    $('bReset').classList.toggle('hidden', !running);
   }
   const wm = $('waitMsg');
   wm.classList.toggle('hidden', running);
@@ -437,7 +440,17 @@ $('bStart').onclick = () => { unlockAudio(); fired.clear(); store.setState({ sta
 $('bResync').onclick = () => { if (confirmLite('いまの瞬間を「ステージ開始」に合わせ直しますか？')) store.setState({ startAt: serverNow(), by: me.name, adjusted: true }); };
 $('bMinus').onclick = () => store.setState({ ...room.state, startAt: room.state.startAt - 1000, adjusted: true }).then(() => toast('全体を1秒早めました'));
 $('bPlus').onclick  = () => store.setState({ ...room.state, startAt: room.state.startAt + 1000, adjusted: true }).then(() => toast('全体を1秒遅らせました'));
-$('bReset').onclick = () => { if (confirmLite('開始前に戻しますか？')) store.setState({ startAt: 0 }); };
+let resetTimer = null;
+$('bReset').onclick = () => {
+  const b = $('bReset');
+  if (!b.classList.contains('arm')) {
+    b.classList.add('arm'); b.textContent = 'もう一度押すと最初に戻ります';
+    clearTimeout(resetTimer); resetTimer = setTimeout(() => { b.classList.remove('arm'); b.textContent = '⟲ 最初に戻す'; }, 3000);
+    return;
+  }
+  clearTimeout(resetTimer); b.classList.remove('arm'); b.textContent = '⟲ 最初に戻す';
+  store.setState({ startAt: 0 }); toast('最初（ステージ開始前）に戻しました');
+};
 
 let pending = null;
 function confirmLite(msg){
