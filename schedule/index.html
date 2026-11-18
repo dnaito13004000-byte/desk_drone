@@ -285,6 +285,12 @@ body:not(.stagebig) .thead{position:static}
 body:not(.stagebig) .row,body:not(.stagebig) .nowline{scroll-margin-top:calc(34svh + 24px)}
 .mini{display:none!important}
 
+.i-dr{margin:2px 0 10px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px}
+.i-dr-l{font-size:13px;color:var(--i-l2);margin-right:2px}
+.i-chip{font-size:15px;font-weight:700;color:var(--i-l1);background:var(--i-fill);border-radius:999px;padding:4px 12px}
+.i-ndr{font-size:13px;color:var(--i-l2);margin-top:3px}
+body:not(.stagebig) .row .bd .ydr{color:var(--i-l1);font-weight:600}
+
 /* 大画面モード */
 body.stagebig .chips,body.stagebig .days,body.stagebig .tl,body.stagebig .dock .sec{display:none}
 body.stagebig .ttl{font-size:clamp(44px,9vw,110px)}
@@ -424,12 +430,15 @@ function phoneState(t){
     if(!onToday(pool)&&onToday(all)) pool=all;
   }
   // いま：進行中のうち一番あとに始まったもの（同時開始なら短いほう＝より具体的な演目）
-  const cur=pool.filter(i=>live(i,t)).sort((x,y)=>y.a-x.a||(x.b-x.a)-(y.b-y.a));
+  // いま：中に別の演目を含む「枠」（第一部・小休憩など）より、具体的な演目を優先。その中では一番あとに始まったもの
+  const isParent=i=>i.b!=null&&pool.some(o=>o!==i&&o.a>=i.a&&(o.b??o.a)<=i.b&&!(o.a===i.a&&o.b===i.b));
+  const liveAll=pool.filter(i=>live(i,t)),liveLeaf=liveAll.filter(i=>!isParent(i));
+  const cur=(liveLeaf.length?liveLeaf:liveAll).sort((x,y)=>y.a-x.a||(x.b-x.a)-(y.b-y.a));
   // つぎ：開始が早い順（同時開始なら長いほう＝親の予定）
   const len=i=>(i.b??i.a)-i.a;
-  const fut=pool.filter(i=>i.a>t).sort((x,y)=>x.a-y.a||len(y)-len(x));
+  const fut=pool.filter(i=>i.a>t).sort((x,y)=>x.a-y.a||isParent(x)-isParent(y)||len(x)-len(y));
   const after=m=>fut.find(i=>i.a>m.a);
-  if(cur.length) return {mode:'now',main:cur[0],next:fut[0]};
+  if(cur.length){const c=cur[0];return {mode:'now',main:c,next:fut.find(i=>!(i.a<c.b&&isParent(i)))}}
   const todayFut=fut.filter(i=>todayKey(i.a)===tk);
   const todayHad=pool.some(i=>todayKey(i.a)===tk&&i.a<=t);
   if(todayFut.length){const m=todayFut[0];return {mode:todayHad?'gap':'soon',main:m,next:after(m)}}
@@ -437,6 +446,7 @@ function phoneState(t){
   if(fut.length){const m=fut[0];return {mode:'later',main:m,next:after(m)}}
   return {mode:'end'};
 }
+const drHTML=d=>`<span class="i-dr-l">ドローン</span>`+String(d).split(/\s*[＆&、,・+＋]\s*/).filter(Boolean).map(x=>`<span class="i-chip">${esc(x)}</span>`).join('');
 const sizeCls=s=>{const n=[...s].length;return n<=7?'xl':n<=14?'l':n<=24?'m':'s'};
 const whenTxt=(i,t)=>(todayKey(i.a)!==todayKey(t)?dayLabel(i.d)+' ':'')+hm(i.a);
 const WDL=['日曜日','月曜日','火曜日','水曜日','木曜日','金曜日','土曜日'];
@@ -455,6 +465,7 @@ function heroHTML(t){
   if(st.mode==='now'){
     h+=`<div class="i-live"><span class="i-dot" aria-hidden="true"></span>いま進行中</div>
       <h1 class="i-ttl ${sizeCls(m.t)}">${esc(m.t)}</h1>
+      ${m.dr?`<p class="i-dr">${drHTML(m.dr)}</p>`:''}
       <p class="i-meta">${iosTime(m.a)} – ${iosTime(m.b)}<span>·</span>${esc(trk(m.k).l)}</p>`;
     sr='いま進行中、'+m.t;
   }else if(m){
@@ -462,6 +473,7 @@ function heroHTML(t){
     h+=`<div class="i-live mut">${lab}</div>
       <p class="i-when">${iosWhen(m,t)}<small>から</small></p>
       <h1 class="i-ttl ${sizeCls(m.t)}">${esc(m.t)}</h1>
+      ${m.dr?`<p class="i-dr">${drHTML(m.dr)}</p>`:''}
       <p class="i-meta">${esc(trk(m.k).l)}</p>`;
     sr=lab+'、'+iosWhen(m,t)+'から、'+m.t;
   }else{
@@ -473,7 +485,7 @@ function heroHTML(t){
   if(n){
     const lab=(st.mode==='now'||st.mode==='done')?'つぎ':'そのあと';
     const od=todayKey(n.a)!==todayKey(t);
-    h+=`<div class="i-cell"><div class="i-cl"><div class="i-lab">${lab}${od?'　'+dayLabel(n.d):''}</div><div class="i-nt">${esc(n.t)}</div></div><div class="i-nr">${iosTime(n.a)}<small>から</small></div></div>`;
+    h+=`<div class="i-cell"><div class="i-cl"><div class="i-lab">${lab}${od?'　'+dayLabel(n.d):''}</div><div class="i-nt">${esc(n.t)}</div>${n.dr?`<div class="i-ndr">ドローン：${esc(n.dr)}</div>`:''}</div><div class="i-nr">${iosTime(n.a)}<small>から</small></div></div>`;
   }
   h+=`<button class="i-cell i-link" data-go><span>${todayKey(t)===pickDay()?'今日の':''}進行表</span><svg width="9" height="15" viewBox="0 0 9 15" aria-hidden="true"><path d="M1.5 1.5l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
   if(sr!==lastSR){lastSR=sr;const el=document.getElementById('sr');if(el)el.textContent=sr}
@@ -518,6 +530,18 @@ addEventListener('scroll',updateMini,{passive:true});
 function fitHero(){
   document.querySelectorAll('#stick .i-ttl').forEach(el=>fitText(el,Math.min(96,innerWidth*.24),[[1,24],[2,24],[3,20]]));
   document.querySelectorAll('#hero .i-nt').forEach(el=>fitText(el,22,[[1,16],[2,16],[3,15]]));
+  layoutHero();
+}
+/* 開いた画面の配置：中身の高さに合わせて、時刻＋いまを真ん中寄りに、つぎを下のボタンの上にぴったり置く */
+function layoutHero(){
+  if(document.body.classList.contains('stagebig'))return;
+  const st=$('stick'),rs=$('hero'),dock=document.querySelector('.dock'),pv=$('pvBar');
+  const avail=innerHeight-dock.offsetHeight-(pv.classList.contains('on')?pv.offsetHeight+10:0);
+  rs.style.minHeight='0';
+  const free=avail-st.offsetHeight-rs.offsetHeight-14;
+  const top=Math.max(8,free*.62);
+  st.style.marginTop=top+'px';
+  rs.style.minHeight=Math.max(rs.offsetHeight,avail-st.offsetHeight-top)+'px';
 }
 addEventListener('resize',()=>{lastHero='';lastMini=''});
 document.addEventListener('click',e=>{if(e.target.closest('#mini'))window.scrollTo({top:0,behavior:'smooth'})});
@@ -565,7 +589,7 @@ function renderCards(t){
     nc.innerHTML=`<div class="card now">
       <div class="lbl"><span class="dot"></span>いま進行中</div>
       <div class="ttl">${esc(m.t)}</div>
-      <div class="meta"><span class="num" style="font-size:16px">${hm(m.a)} 〜 ${hm(m.b)}</span>${tagHTML(m.k)}</div>
+      <div class="meta"><span class="num" style="font-size:16px">${hm(m.a)} 〜 ${hm(m.b)}</span>${tagHTML(m.k)}${m.dr?`<span class="tag">ドローン：${esc(m.dr)}</span>`:''}</div>
       <div class="big"><span class="k">終了まで あと</span><span class="v num">${dur(m.b-t,true)}</span></div>
       <div class="bar"><div style="width:${p.toFixed(1)}%"></div></div>
       ${m.n?`<div class="note">${esc(m.n)}</div>`:''}
@@ -594,7 +618,7 @@ function renderCards(t){
     xc.innerHTML=`<div class="card next">
       <div class="lbl">▶ つぎ</div>
       <div class="ttl">${n.b==null?'★ ':''}${esc(n.t)}</div>
-      <div class="meta"><span class="num" style="font-size:16px">${sameDay?'':dayLabel(n.d)+' '}${hm(n.a)}${n.b!=null?' 〜 '+hm(n.b):''}</span>${tagHTML(n.k)}</div>
+      <div class="meta"><span class="num" style="font-size:16px">${sameDay?'':dayLabel(n.d)+' '}${hm(n.a)}${n.b!=null?' 〜 '+hm(n.b):''}</span>${tagHTML(n.k)}${n.dr?`<span class="tag">ドローン：${esc(n.dr)}</span>`:''}</div>
       <div class="big"><span class="k">開始まで あと</span><span class="v num">${dur(n.a-t,true)}</span></div>
       ${n.n?`<div class="note">${esc(n.n)}</div>`:''}
       ${same.length?`<div class="also"><h4>同じ時刻に</h4>${same.map(o=>`<div><span>${o.b==null?'★ ':''}${esc(o.t)}</span><span class="num">${hm(o.a)}</span></div>`).join('')}</div>`:''}
@@ -641,7 +665,7 @@ function renderTimeline(scroll){
     html+=`<button class="${cls}" data-id="${i.id}">
       <div class="tm num"><b>${esc(i.s)}</b><span>${i.b!=null?'〜'+hm(i.b):''}</span></div>
       <div class="cb" style="background:${trk(i.k).c}"></div>
-      <div class="bd"><div class="x">${esc(i.t)}</div>${i.n?`<div class="y">${esc(i.n)}</div>`:''}${S.filter==='all'?`<div class="y" style="color:${trk(i.k).c}">${esc(trk(i.k).l)}</div>`:''}</div>
+      <div class="bd"><div class="x">${esc(i.t)}</div>${i.dr?`<div class="y ydr">ドローン：${esc(i.dr)}</div>`:''}${i.n?`<div class="y">${esc(i.n)}</div>`:''}${S.filter==='all'?`<div class="y" style="color:${trk(i.k).c}">${esc(trk(i.k).l)}</div>`:''}</div>
       ${st?`<span class="st">${st}</span>`:''}
     </button>`;
   });
@@ -675,12 +699,13 @@ function editItem(id){
     </div>
     <p class="hint">終了なし＝「★ 現場IN」のような、その時刻だけの出来事。終了が開始より前なら翌日扱い。</p>
     <div class="fld"><label>区分</label><select name="k">${trackOpts(it.k)}</select></div>
+    <div class="fld"><label>飛ぶドローン（なければ空欄）</label><input name="dr" value="${esc(it.dr||'')}" placeholder="例：FPV ＆ マビック"></div>
     <div class="fld"><label>メモ</label><textarea name="n" style="min-height:70px" placeholder="人数・担当など">${esc(it.n)}</textarea></div>
     <div class="acts">${id?'<button type="button" class="del" id="bDel">削除</button>':''}<button type="submit" class="pri">保存</button></div>
   </form>`);
   $('fItem').onsubmit=e=>{
     e.preventDefault();const f=new FormData(e.target);
-    const o={d:f.get('d'),s:f.get('s'),e:f.get('e')||'',k:f.get('k'),t:f.get('t').trim(),n:f.get('n').trim()};
+    const o={d:f.get('d'),s:f.get('s'),e:f.get('e')||'',k:f.get('k'),t:f.get('t').trim(),n:f.get('n').trim(),dr:(f.get('dr')||'').trim()};
     if(id) Object.assign(it,o); else S.items.push({id:'u'+Date.now(),...o});
     selDay=o.d;save();closeSheet();renderAll();toast('保存しました');
   };
@@ -692,7 +717,7 @@ function editItem(id){
 }
 
 function menu(){
-  openSheet(`<h3>メニュー <small style="font-size:12px;color:var(--sub);font-weight:400">ver.4</small><button data-x>×</button></h3><div class="menu">
+  openSheet(`<h3>メニュー <small style="font-size:12px;color:var(--sub);font-weight:400">ver.5</small><button data-x>×</button></h3><div class="menu">
     <button class="it" data-m="bulk">📝 まとめて入力<small>テキストを貼り付けて一気に登録</small></button>
     <button class="it" data-m="preview">⏱ 時刻を指定してプレビュー<small>本番当日の様子を今のうちに確認</small></button>
     <button class="it" data-m="wake">🔆 画面をつけっぱなしにする<small>現場で置いておくとき用</small></button>
@@ -816,7 +841,7 @@ const b64u={
   dec:s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0))
 };
 async function packData(){
-  const js=JSON.stringify({v:1,name:S.name,sub:S.sub,days:S.days,items:S.items.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n])});
+  const js=JSON.stringify({v:1,name:S.name,sub:S.sub,days:S.days,items:S.items.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n,i.dr||''])});
   const st=new Blob([js]).stream().pipeThrough(new CompressionStream('deflate-raw'));
   return b64u.enc(new Uint8Array(await new Response(st).arrayBuffer()));
 }
@@ -832,7 +857,7 @@ async function inflateBytes(bytes){
 }
 function parseShared(txt){
   const j=JSON.parse(txt);
-  return {name:j.name||'',sub:j.sub||'',days:j.days||{},items:(j.items||[]).map((r,i)=>({id:'l'+i,d:r[0],s:r[1],e:r[2]||'',k:r[3],t:r[4],n:r[5]||''}))};
+  return {name:j.name||'',sub:j.sub||'',days:j.days||{},items:(j.items||[]).map((r,i)=>({id:'l'+i,d:r[0],s:r[1],e:r[2]||'',k:r[3],t:r[4],n:r[5]||'',dr:r[6]||''}))};
 }
 async function shareSheet(){
   if(!S.items.length){toast('先に予定を入れてください');return}
@@ -864,14 +889,14 @@ async function checkShareLink(){
   try{history.replaceState(null,'',location.pathname)}catch(e){}
   if(!j.items.length){toast('共有リンクに予定が入っていませんでした');return}
   const apply=()=>{S={...S,name:j.name,sub:j.sub,days:j.days,items:j.items,filter:'all'};save()};
-  const same=JSON.stringify(S.items.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n]))===JSON.stringify(j.items.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n]));
+  const same=JSON.stringify(S.items.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n,i.dr||'']))===JSON.stringify(j.items.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n,i.dr||'']));
   if(same){toast('最新の予定です');return}
   if(!S.items.length){apply();selDay=null;renderAll(false);toast('「'+j.name+'」の予定を読み込みました');return}
   confirmSheet('共有された予定を読み込む',`「${esc(j.name)}」の予定（${j.items.length}件）に入れ替えます。今この端末に入っている予定は消えます。`,()=>{apply();toast('読み込みました')});
 }
 addEventListener('hashchange',checkShareLink);
 
-const sameItems=(a,b)=>JSON.stringify(a.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n]))===JSON.stringify(b.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n]));
+const sameItems=(a,b)=>JSON.stringify(a.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n,i.dr||'']))===JSON.stringify(b.map(i=>[i.d,i.s,i.e,i.k,i.t,i.n,i.dr||'']));
 function eventLink(){
   const q=new URLSearchParams(location.search),e=q.get('e');
   const k=(/[#&]k=([0-9a-f]{32})/i.exec(location.hash)||[])[1]||q.get('k');
