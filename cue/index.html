@@ -121,7 +121,7 @@ body.director .qitem{cursor:pointer}
 #bSB.on{background:var(--amber);color:#000}
 #bGO{background:var(--green);color:#000;font-size:28px}
 #bGO:active{transform:scale(.97)}
-#ctrl .tools{max-width:720px;margin:0 auto 10px;display:flex;gap:8px}
+#ctrl .tools{max-width:720px;margin:0 auto 10px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}#ctrl .tools .icon-btn{flex:none}
 
 /* シート */
 .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
@@ -160,6 +160,39 @@ summary{color:var(--sub);font-size:14px}
 .ack{display:inline-flex;align-items:center;gap:5px;font-size:13px;padding:5px 10px;border-radius:999px;background:var(--card2);color:var(--sub);margin:0 6px 6px 0}
 .ack.ok{background:rgba(48,209,88,.18);color:var(--green)}
 .ack.gone{text-decoration:line-through;opacity:.5}
+/* タイムライン */
+#tl{margin-top:14px;text-align:left}
+.tl-big{background:var(--card2);border-radius:16px;padding:14px 16px;text-align:center}
+.tl-big .lb{font-size:13px;color:var(--sub)}
+.tl-big .what{font-size:22px;font-weight:800;margin:4px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-big .cd{font-size:64px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.05;letter-spacing:.01em}
+.tl-big .abs{font-size:14px;color:var(--sub);font-variant-numeric:tabular-nums}
+.tl-big.soon{background:rgba(255,159,10,.18)}.tl-big.soon .cd{color:var(--amber)}
+.tl-big.mine .what::before{content:"あなたの担当　";font-size:12px;color:#6cb6ff;font-weight:700;vertical-align:middle}
+.tl-bar{height:6px;border-radius:3px;background:var(--card2);margin:12px 2px 6px;position:relative;overflow:hidden}
+.tl-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--green);border-radius:3px}
+.tl-remain{display:flex;justify-content:space-between;font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums;padding:0 2px}
+.tl-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);font-size:14px}
+.tl-row:last-child{border-bottom:0}
+.tl-row .t{font-variant-numeric:tabular-nums;width:72px;flex:none;font-weight:700}
+.tl-row .r{font-variant-numeric:tabular-nums;color:var(--sub);width:64px;flex:none;font-size:12px}
+.tl-row .l{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-row.done{opacity:.35}.tl-row.done .t::after{content:" ✓"}
+.tl-row.nx{color:var(--amber)}
+.tl-row.mine .l{color:#6cb6ff}
+#flash.ev{background:var(--amber)}
+#flash{text-align:center;padding:20px;line-height:1.15}
+/* 編集：タイムライン */
+.ecard .r4{display:flex;gap:8px;align-items:center;margin-top:8px}
+.ecard .r4 input{width:96px;flex:none}
+.ecard .r4 .hint{flex:1}
+.evrow{display:grid;grid-template-columns:96px 70px 1fr 34px;gap:6px;margin-top:6px;align-items:center}
+.evrow select,.evrow input{padding:9px 8px;font-size:14px}
+.evrow .sub2{grid-column:1 / -1;display:flex;gap:6px;align-items:center}
+.evrow .sub2 select{flex:none;width:110px}
+.evrow .sub2 .hint{flex:1}
+.evrow button{background:var(--card2);border-radius:10px;height:38px;color:var(--red)}
+.addev{font-size:13px;color:var(--blue);padding:8px 0}
 </style>
 </head>
 <body>
@@ -200,6 +233,7 @@ summary{color:var(--sub);font-size:14px}
     <div class="tags" id="nowTags"></div>
     <div class="memo" id="nowMemo"></div>
     <div class="elapsed" id="nowElapsed"></div>
+    <div id="tl"></div>
   </div>
 
   <div class="card" id="next">
@@ -229,6 +263,7 @@ summary{color:var(--sub);font-size:14px}
   <div class="tools">
     <button class="icon-btn" id="bEdit">✏️ キューを編集</button>
     <button class="icon-btn" id="bReset">⟲ 最初に戻す</button>
+    <button class="icon-btn hidden" id="bResync">⏱ 開始を今に合わせる</button>
     <button class="icon-btn" id="bPeople2" style="margin-left:auto">👥 <span id="pCount2">0</span></button>
   </div>
   <div class="inner">
@@ -250,7 +285,7 @@ summary{color:var(--sub);font-size:14px}
       <button class="ghost" id="eAdd">＋ キューを追加</button>
       <details>
         <summary>Excel・スプレッドシートから貼り付け</summary>
-        <p class="hint">列の順番：番号／内容／担当（「照明,音響」のようにカンマ区切り）／予定時刻／メモ<br>貼り付けると今のリストが置き換わります。</p>
+        <p class="hint">列の順番：番号／内容／担当（「照明,音響」のようにカンマ区切り）／予定時刻／メモ／長さ（例 9:29）<br>貼り付けると今のリストが置き換わります。</p>
         <textarea id="ePaste" rows="6" placeholder="Q1	客入れBGM	音響	17:30	"></textarea>
         <button class="ghost" id="ePasteGo" style="margin-top:8px">この内容で置き換える</button>
       </details>
@@ -355,8 +390,15 @@ const SAMPLE = [
   {no:'Q2', title:'開演アナウンス', depts:['MC','音響'], time:'17:58', memo:'影アナ'},
   {no:'Q3', title:'客電FO・オープニング映像', depts:['照明','映像','音響'], time:'18:00', memo:''},
   {no:'Q4', title:'MC登場・ピンスポット', depts:['MC','照明'], time:'18:03', memo:'上手から'},
-  {no:'Q5', title:'ドローンショー開始', depts:['ドローン','音響','照明'], time:'18:10', memo:'場内暗転のまま'},
-  {no:'Q6', title:'ドローン着陸・明転', depts:['ドローン','照明'], time:'18:18', memo:''},
+  {no:'Q5', title:'ステージ（9分29秒）', depts:['舞台','音響','照明','ドローン'], time:'18:05', memo:'GOは曲の頭で', dur:'9:29',
+   events:[
+     {ref:'end', t:119, label:'ドローン離陸準備（最終確認）', dept:'ドローン'},
+     {ref:'end', t:89,  label:'ドローン離陸・逆算スタート', dept:'ドローン'},
+     {ref:'end', t:10,  label:'場内暗転', dept:'照明'},
+     {ref:'end', t:0,   label:'ドローン点灯', dept:'ドローン'}
+   ]},
+  {no:'Q6', title:'ドローンショー', depts:['ドローン','音響'], time:'18:15', memo:''},
+  {no:'Q6.5', title:'ドローン着陸・明転', depts:['ドローン','照明'], time:'18:22', memo:''},
   {no:'Q7', title:'登壇者紹介', depts:['MC','映像'], time:'18:20', memo:''},
   {no:'Q8', title:'エンディング・客電UP', depts:['全体'], time:'19:00', memo:''}
 ];
@@ -439,7 +481,7 @@ function showMain(){
 /* ---------- 受信して描画 ---------- */
 function onRoom(d){
   room.meta = d.meta || {};
-  room.cues = toArr(d.cues).map(c => ({...c, depts: toArr(c.depts)}));
+  room.cues = toArr(d.cues).map(c => ({...c, depts: toArr(c.depts), events: toArr(c.events)}));
   room.state = d.state || {index:-1, standby:false, goAt:0};
   room.presence = d.presence || {};
   const st = room.state;
@@ -468,14 +510,14 @@ function render(){
   $('nextTitle').textContent = nx ? nx.title : (i >= cues.length ? '—' : '（最後のQです）');
   $('nextTime').textContent = nx && nx.time ? nx.time : '';
   $('nextTags').innerHTML = nx ? tagsHTML(nx) : '';
-  $('nextMemo').textContent = nx ? (nx.memo || '') : '';
+  $('nextMemo').textContent = nx ? ([nx.memo, previewTL(nx)].filter(Boolean).join('\n')) : '';
   $('nextYours').classList.toggle('hidden', !(nx && isMine(nx) && me.dept !== '全体'));
   $('now').style.borderColor = (cur && isMine(cur) && me.dept !== '全体') ? 'var(--blue)' : 'transparent';
 
   $('qlist').innerHTML = cues.map((c, k) => {
     if (filterMine && !isMine(c)) return '';
     const cls = [k < i ? 'done' : '', k === i ? 'cur' : '', isMine(c) && me.dept !== '全体' ? 'mine' : ''].join(' ');
-    return `<div class="qitem ${cls}" data-k="${k}"><span class="n">${esc(c.no)}</span><div class="t"><div>${esc(c.title)}</div><div class="d">${esc(c.depts.join('・'))}${c.memo ? '　' + esc(c.memo) : ''}</div></div><span class="ptime">${esc(c.time||'')}</span></div>`;
+    return `<div class="qitem ${cls}" data-k="${k}"><span class="n">${esc(c.no)}</span><div class="t"><div>${esc(c.title)}</div><div class="d">${c.dur ? '⏱' + esc(c.dur) + '　' : ''}${c.events.length ? '合図' + c.events.length + '件　' : ''}${esc(c.depts.join('・'))}${c.memo ? '　' + esc(c.memo) : ''}</div></div><span class="ptime">${esc(c.time||'')}</span></div>`;
   }).join('') || '<div class="qitem"><div class="t" style="color:var(--sub)">キューがありません</div></div>';
 
   renderPeople();
@@ -485,6 +527,7 @@ function render(){
     $('bSB').classList.toggle('on', !!state.standby);
     $('bGO').disabled = i >= cues.length;
     $('bGO').style.opacity = i >= cues.length ? .35 : 1;
+    $('bResync').classList.toggle('hidden', !(cur && hasTL(cur)));
   }
   tick();
 }
@@ -567,6 +610,96 @@ function drawConn(){
 }
 setInterval(() => { if (isDemo && store) { renderPeople(); renderAck(room.cues[Number(room.state.index ?? -1) + 1]); } }, 5000);
 
+/* ---------- タイムライン（GOからの逆算） ---------- */
+function parseT(v){
+  if (v == null || v === '') return null;
+  if (typeof v === 'number') return v;
+  const m = String(v).trim().replace(/[：]/g, ':').match(/^(\d+)(?::(\d{1,2}))?$/);
+  if (!m) return null;
+  return m[2] != null ? (+m[1]) * 60 + (+m[2]) : +m[1];
+}
+const fmtT = sec => { sec = Math.max(0, Math.round(sec)); return `${Math.floor(sec/60)}:${pad(sec%60)}`; };
+const hms = t => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
+const hasTL = c => !!(c && (parseT(c.dur) || (c.events && c.events.length)));
+
+/* 開始時刻(start)から各合図の時刻を計算。終了基準の合図は「長さ − 何秒前」 */
+function timeline(c, start){
+  const dur = parseT(c.dur);
+  const end = dur != null ? start + dur * 1000 : null;
+  const evs = (c.events || []).map((e, k) => {
+    const t = parseT(e.t) || 0;
+    const rel = e.ref === 'end' ? (dur != null ? dur - t : null) : t;
+    return rel == null ? null : { key: 'e' + k, label: e.label || '合図', dept: e.dept || '', rel, at: start + rel * 1000 };
+  }).filter(Boolean);
+  if (end != null && !evs.some(e => e.at === end)) evs.push({ key: 'end', label: 'このQの終了', dept: '', rel: dur, at: end, isEnd: true });
+  return { start, end, dur, evs: evs.sort((a, b) => a.at - b.at) };
+}
+function previewTL(c){
+  if (!hasTL(c)) return '';
+  const tl = timeline(c, 0);
+  return '⏱ GOから：' + tl.evs.map(e => `${fmtT(e.rel)} ${e.label}`).join(' ／ ');
+}
+const evMine = e => !e.dept || me.dept === '全体' || me.director || e.dept === me.dept;
+
+let tlFired = new Set();
+function drawTL(now){
+  const st = room.state, i = Number(st.index ?? -1), c = room.cues[i];
+  const box = $('tl');
+  if (!c || !hasTL(c) || !st.goAt) { box.innerHTML = ''; return; }
+  const tl = timeline(c, st.goAt);
+  const nextEv = tl.evs.find(e => e.at > now - 500);
+  let html = '';
+  if (nextEv) {
+    const left = (nextEv.at - now) / 1000;
+    html += `<div class="tl-big ${left <= 10 ? 'soon' : ''} ${evMine(nextEv) && !nextEv.isEnd && me.dept !== '全体' && !me.director ? 'mine' : ''}">
+      <div class="lb">つぎの合図まで</div>
+      <div class="what">${esc(nextEv.label)}</div>
+      <div class="cd">${fmtT(Math.ceil(Math.max(0, left)))}</div>
+      <div class="abs">${hms(nextEv.at)} ちょうど${nextEv.dept ? '・' + esc(nextEv.dept) : ''}</div></div>`;
+  } else {
+    html += `<div class="tl-big"><div class="lb">このQの合図はすべて終わりました</div></div>`;
+  }
+  if (tl.dur) {
+    const p = Math.min(1, Math.max(0, (now - tl.start) / (tl.dur * 1000)));
+    html += `<div class="tl-bar"><i style="width:${(p*100).toFixed(1)}%"></i></div>
+      <div class="tl-remain"><span>経過 ${fmtT((now - tl.start)/1000)}</span><span>残り ${fmtT((tl.end - now)/1000)}／${fmtT(tl.dur)}</span></div>`;
+  }
+  html += '<div style="margin-top:8px">' + tl.evs.map(e => {
+    const cls = [e.at <= now ? 'done' : '', e === nextEv ? 'nx' : '', evMine(e) && e.dept && me.dept !== '全体' && !me.director ? 'mine' : ''].join(' ');
+    return `<div class="tl-row ${cls}"><span class="t">${hms(e.at)}</span><span class="r">+${fmtT(e.rel)}</span><span class="l">${esc(e.label)}</span>${e.dept ? `<span class="tag ${e.dept===me.dept?'mine':''}">${esc(e.dept)}</span>` : ''}</div>`;
+  }).join('') + '</div>';
+  box.innerHTML = html;
+
+  // 合図：3・2・1で短い音、0で画面フラッシュ
+  for (const e of tl.evs) {
+    if (!evMine(e)) continue;
+    const id = st.goAt + ':' + i + ':' + e.key;
+    const left = (e.at - now) / 1000;
+    for (const n of [3, 2, 1]) {
+      const kid = id + ':' + n;
+      if (left <= n && left > n - 1 && !tlFired.has(kid)) { tlFired.add(kid); beep(520, .08); }
+    }
+    if (left <= 0 && left > -2 && !tlFired.has(id)) {
+      tlFired.add(id);
+      if (!e.isEnd) flashText(e.label, true);
+      navigator.vibrate && navigator.vibrate([250, 80, 250]);
+      beep(1046, .3);
+    }
+    if (left <= -2) tlFired.add(id);
+  }
+}
+function flashText(text, ev){
+  const f = $('flash');
+  f.textContent = text;
+  f.style.fontSize = text.length > 6 ? 'clamp(36px, 11vw, 72px)' : '96px';
+  f.classList.toggle('ev', !!ev);
+  f.classList.remove('show'); void f.offsetWidth; f.classList.add('show');
+}
+$('bResync').onclick = () => {
+  if (confirmLite('いまの瞬間を、このQの開始（0:00）に合わせ直しますか？'))
+    store.setState({ ...room.state, goAt: serverNow(), by: me.name });
+};
+
 /* ---------- 時計と経過時間 ---------- */
 const pad = n => String(n).padStart(2, '0');
 function tick(){
@@ -574,16 +707,18 @@ function tick(){
   const now = new Date(Date.now() + store.offset());
   $('clock').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   const st = room.state, i = Number(st.index ?? -1);
-  if (st.goAt && i >= 0 && i < room.cues.length) {
+  const cur = room.cues[i];
+  if (st.goAt && i >= 0 && i < room.cues.length && !hasTL(cur)) {
     const s = Math.max(0, Math.floor((now.getTime() - st.goAt) / 1000));
     $('nowElapsed').textContent = `GOから ${Math.floor(s/60)}:${pad(s%60)}`;
   } else $('nowElapsed').textContent = '';
+  drawTL(now.getTime());
 }
 setInterval(tick, 250);
 
 /* ---------- 合図（画面・振動・音） ---------- */
 function cueFired(){
-  const f = $('flash'); f.classList.remove('show'); void f.offsetWidth; f.classList.add('show');
+  flashText('GO', false);
   navigator.vibrate && navigator.vibrate([180, 60, 180]);
   beep(880, .18);
 }
@@ -651,9 +786,9 @@ function toast(msg){
 
 /* ---------- 編集 ---------- */
 let draft = [];
-$('bEdit').onclick = () => { draft = room.cues.map(c => ({...c, depts:[...c.depts]})); $('eTitle').value = room.meta.title || ''; drawEditor(); $('editSheet').classList.remove('hidden'); };
+$('bEdit').onclick = () => { draft = room.cues.map(c => ({...c, depts:[...c.depts], events:(c.events||[]).map(e => ({...e}))})); $('eTitle').value = room.meta.title || ''; drawEditor(); $('editSheet').classList.remove('hidden'); };
 $('eCancel').onclick = () => $('editSheet').classList.add('hidden');
-$('eAdd').onclick = () => { readEditor(); draft.push({ no:'Q' + (draft.length + 1), title:'', depts:[], time:'', memo:'' }); drawEditor(); $('eList').lastElementChild?.querySelector('[data-f="title"]').focus(); };
+$('eAdd').onclick = () => { readEditor(); draft.push({ no:'Q' + (draft.length + 1), title:'', depts:[], time:'', memo:'', dur:'', events:[] }); drawEditor(); $('eList').lastElementChild?.querySelector('[data-f="title"]').focus(); };
 $('eSave').onclick = async () => {
   readEditor();
   await store.setCues(draft.filter(c => c.title || c.no));
@@ -663,23 +798,58 @@ $('eSave').onclick = async () => {
 $('ePasteGo').onclick = () => {
   const rows = $('ePaste').value.split(/\r?\n/).map(r => r.split('\t')).filter(r => r.join('').trim());
   if (!rows.length) return;
-  draft = rows.map((r, k) => ({ no:(r[0]||'Q'+(k+1)).trim(), title:(r[1]||'').trim(), depts:(r[2]||'').split(/[,、・\/]/).map(s=>s.trim()).filter(Boolean), time:(r[3]||'').trim(), memo:(r[4]||'').trim() }));
+  draft = rows.map((r, k) => ({ no:(r[0]||'Q'+(k+1)).trim(), title:(r[1]||'').trim(), depts:(r[2]||'').split(/[,、・\/]/).map(s=>s.trim()).filter(Boolean), time:(r[3]||'').trim(), memo:(r[4]||'').trim(), dur:(r[5]||'').trim(), events:[] }));
   drawEditor(); toast(`${draft.length}件読み込みました。保存で反映`);
 };
 function drawEditor(){
+  setTimeout(updateHints, 0);
   $('eList').innerHTML = draft.map((c, k) => `
     <div class="ecard" data-k="${k}">
       <div class="r1"><input data-f="no" value="${esc(c.no)}" placeholder="番号"><input data-f="title" value="${esc(c.title)}" placeholder="内容"><input data-f="time" value="${esc(c.time)}" placeholder="時刻" inputmode="numeric"></div>
       <div class="depts">${DEPTS.map(d => `<button class="chip ${c.depts.includes(d)?'on':''}" data-dep="${esc(d)}">${esc(d)}</button>`).join('')}</div>
       <div class="r3"><input data-f="memo" value="${esc(c.memo)}" placeholder="メモ"><div class="ops"><button data-op="up">↑</button><button data-op="down">↓</button><button data-op="del" class="del">✕</button></div></div>
+      <div class="r4"><input data-f="dur" value="${esc(c.dur || '')}" placeholder="長さ 9:29" inputmode="numeric"><span class="hint">GOからこのQが終わるまでの長さ（なくても可）</span></div>
+      ${(c.events || []).map((e, j) => evRowHTML(e, j)).join('')}
+      <button class="addev" data-op="addev">＋ 時間指定の合図を追加</button>
     </div>`).join('');
+}
+function evRowHTML(e, j){
+  const t = parseT(e.t);
+  return `<div class="evrow" data-ej="${j}">
+    <select data-ef="ref"><option value="end" ${e.ref==='end'?'selected':''}>終了の</option><option value="start" ${e.ref!=='end'?'selected':''}>開始から</option></select>
+    <input data-ef="t" value="${t != null ? fmtT(t) : ''}" placeholder="1:29" inputmode="numeric">
+    <input data-ef="label" value="${esc(e.label || '')}" placeholder="例：ドローン離陸">
+    <button data-op="evdel">✕</button>
+    <div class="sub2"><select data-ef="dept"><option value="">担当なし</option>${DEPTS.filter(d=>d!=='全体').map(d => `<option ${e.dept===d?'selected':''}>${esc(d)}</option>`).join('')}</select><span class="hint" data-hint></span></div>
+  </div>`;
 }
 function readEditor(){
   document.querySelectorAll('#eList .ecard').forEach(el => {
     const c = draft[+el.dataset.k];
     el.querySelectorAll('[data-f]').forEach(inp => c[inp.dataset.f] = inp.value.trim());
+    c.events = [...el.querySelectorAll('.evrow')].map(r => ({
+      ref: r.querySelector('[data-ef="ref"]').value,
+      t: parseT(r.querySelector('[data-ef="t"]').value) ?? 0,
+      label: r.querySelector('[data-ef="label"]').value.trim(),
+      dept: r.querySelector('[data-ef="dept"]').value
+    }));
   });
 }
+/* 「終了の1:29前 → GOから8:00」のような換算を表示 */
+function updateHints(){
+  document.querySelectorAll('#eList .ecard').forEach(el => {
+    const dur = parseT(el.querySelector('[data-f="dur"]').value);
+    el.querySelectorAll('.evrow').forEach(r => {
+      const ref = r.querySelector('[data-ef="ref"]').value, t = parseT(r.querySelector('[data-ef="t"]').value);
+      const h = r.querySelector('[data-hint]');
+      if (t == null) { h.textContent = ''; return; }
+      if (ref === 'end') h.textContent = dur == null ? '⚠︎ 長さを入れてください' : (t > dur ? '⚠︎ 長さより前になります' : `前 → GOから ${fmtT(dur - t)}`);
+      else h.textContent = `後 → GOから ${fmtT(t)}`;
+    });
+  });
+}
+$('eList').addEventListener('input', updateHints);
+$('eList').addEventListener('change', updateHints);
 $('eList').onclick = e => {
   const card = e.target.closest('.ecard'); if (!card) return;
   const k = +card.dataset.k;
@@ -687,6 +857,8 @@ $('eList').onclick = e => {
   if (dep) { readEditor(); const d = dep.dataset.dep, a = draft[k].depts; a.includes(d) ? a.splice(a.indexOf(d),1) : a.push(d); drawEditor(); return; }
   const op = e.target.closest('[data-op]')?.dataset.op; if (!op) return;
   readEditor();
+  if (op === 'addev') { draft[k].events.push({ ref: parseT(draft[k].dur) ? 'end' : 'start', t: 0, label: '', dept: '' }); drawEditor(); return; }
+  if (op === 'evdel') { const j = +e.target.closest('.evrow').dataset.ej; draft[k].events.splice(j, 1); drawEditor(); return; }
   if (op === 'del') draft.splice(k, 1);
   if (op === 'up' && k > 0) [draft[k-1], draft[k]] = [draft[k], draft[k-1]];
   if (op === 'down' && k < draft.length - 1) [draft[k+1], draft[k]] = [draft[k], draft[k+1]];
