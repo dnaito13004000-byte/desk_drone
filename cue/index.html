@@ -84,8 +84,21 @@ body.director #main{padding-bottom:calc(190px + var(--sb))}
 .foot{display:flex;gap:8px;justify-content:center;margin-top:18px;flex-wrap:wrap}
 .chipbtn{background:var(--card);border-radius:10px;padding:8px 12px;font-size:13px;color:var(--sub)}
 
+.cds{display:flex;flex-direction:column;gap:12px}
+.cdc{background:var(--card);border-radius:22px;padding:16px 18px 18px;border:2px solid transparent;transition:background .3s,border-color .3s}
+.cdc .hd{display:flex;align-items:baseline;justify-content:space-between;gap:2px 8px;flex-wrap:wrap}
+.cdc .at{white-space:nowrap}
+.cdc .nm{font-size:18px;font-weight:800}
+.cdc .at{font-size:15px;color:var(--sub)}
+.cdc .at b{color:var(--tx);font-size:18px}
+.cdc .v{font-size:min(22vw,110px);font-weight:800;line-height:1;margin-top:8px;text-align:center;letter-spacing:-.01em}
+.cdc.nx{border-color:var(--amber)}
+.cdc.soon{background:#2a1d05}.cdc.soon .v{color:var(--amber)}
+.cdc.done{opacity:.4}.cdc.done .v{font-size:40px}
+.cdc.wait .v{color:#c7c7cc}
 #flash{position:fixed;inset:0;opacity:0;pointer-events:none;z-index:50;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;text-align:center;padding:24px;line-height:1.15;background:var(--green)}
 #flash.ev{background:var(--amber)}
+#flash{white-space:pre-line}
 #flash.show{animation:flash 1.6s ease-out}
 @keyframes flash{0%{opacity:1}75%{opacity:.75}100%{opacity:0}}
 
@@ -126,7 +139,7 @@ body.director #main{padding-bottom:calc(190px + var(--sb))}
 
 <section id="join">
   <h1>ドローンショー 逆算Q</h1>
-  <p class="lead">ステージ開始の合図から、点灯の瞬間までを全員で共有</p>
+  <p class="lead">ステージ終了・ドローン離陸・アニメーションスタートまでを全員で共有</p>
   <div class="field"><label>イベントの合言葉</label><input id="jCode" placeholder="例：escon1203" autocomplete="off" autocapitalize="off"></div>
   <div class="field"><label>お名前</label><input id="jName" placeholder="例：内藤" autocomplete="off"></div>
   <div class="switch-row"><span>Q出し役として入る</span><button class="switch" id="jDirSw" aria-label="Q出し役"></button></div>
@@ -144,20 +157,8 @@ body.director #main{padding-bottom:calc(190px + var(--sb))}
   </div>
   <div id="offBanner" class="hidden">オフライン — 表示が止まっている可能性があります。電波を確認してください</div>
 
-  <div class="card" id="bigCard">
-    <div class="lbl" id="bigLbl"></div>
-    <div class="what" id="bigWhat"></div>
-    <div class="cd num" id="bigCd"></div>
-    <div class="abs num" id="bigAbs"></div>
-  </div>
-
-  <div class="sub">
-    <div><div class="k">点灯まで</div><div class="v num" id="toLight">--:--</div><div class="s num" id="lightAt"></div></div>
-    <div><div class="k">ステージ経過</div><div class="v num" id="elapsed">--:--</div><div class="s num" id="stageLen"></div></div>
-  </div>
-  <div class="bar"><i id="barFill" style="width:0"></i></div>
-
-  <div class="list" id="list"></div>
+  <div class="hidden" id="waitMsg" style="text-align:center;color:var(--sub);font-size:14px;margin:0 0 10px"></div>
+  <div class="cds" id="cds"></div>
 
   <div class="foot">
     <button class="chipbtn" id="bPeople">👥 参加者 <span id="pCount">0</span></button>
@@ -187,10 +188,10 @@ body.director #main{padding-bottom:calc(190px + var(--sb))}
   <div class="sheet-h"><button id="eCancel">キャンセル</button><h3>時間と段取り</h3><button class="save" id="eSave">保存</button></div>
   <div class="sheet-b">
     <div class="field"><label>イベント名</label><input id="eTitle" placeholder="例：ETHICS FUTURES 2026"></div>
-    <div class="field"><label>ステージの長さ（開始の合図から点灯の瞬間まで）</label><input id="eStage" placeholder="9:29" inputmode="numeric" style="font-size:22px;font-weight:700;text-align:center"></div>
-    <p class="hint" style="margin:0 4px 10px">段取りは「点灯の何分何秒前に何をするか」で入れます。開始からの時刻は自動で計算されます。</p>
-    <div id="eSteps"></div>
-    <button class="ghost" id="eAdd">＋ 段取りを追加</button>
+    <div class="field"><label>ステージの長さ（開始の合図からステージ終了まで）</label><input id="eStage" placeholder="9:29" inputmode="numeric" style="font-size:22px;font-weight:700;text-align:center"></div>
+    <div class="field"><label>アニメーションスタートは、ステージ終了の何秒後？（同時なら 0:00）</label><input id="eAnim" placeholder="0:00" inputmode="numeric" style="font-size:22px;font-weight:700;text-align:center"></div>
+    <div class="field"><label>ドローン離陸から、アニメーションスタートまでにかかる時間</label><input id="eLead" placeholder="1:23" inputmode="numeric" style="font-size:22px;font-weight:700;text-align:center"></div>
+    <div class="step"><div class="h num" id="eCalc" style="font-size:15px;line-height:1.8;color:var(--tx)"></div></div>
   </div>
 </div></div>
 
@@ -211,15 +212,8 @@ const ls = {
   set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 };
 
-/* 初期値：ステージ9:29、逆算に1:29 */
-const DEFAULT_SHOW = {
-  stage: '9:29',
-  steps: [
-    { before: 119, label: '逆算スタート準備（最終確認）' },
-    { before: 89,  label: '逆算スタート（離陸開始）' },
-    { before: 0,   label: 'ドローン点灯' }
-  ]
-};
+/* 初期値：ステージ9:29、アニメはステージ終了と同時、離陸からアニメまで1:23 */
+const DEFAULT_SHOW = { stage: '9:29', anim: '0:00', lead: '1:23' };
 
 /* ---------- データの置き場所 ---------- */
 function demoStore(code){
@@ -292,16 +286,14 @@ const fmtT = sec => { sec = Math.abs(Math.round(sec)); return `${Math.floor(sec/
 const hms = t => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
 const serverNow = () => Date.now() + (store ? store.offset() : 0);
 
-/* 段取り一覧：ステージ開始(0:00)＋「点灯の◯秒前」→ 開始から何秒後か */
-function plan(){
-  const stage = parseT(room.show.stage) ?? 569;
-  const steps = toArr(room.show.steps).map((s, k) => {
-    const before = parseT(s.before) ?? 0;
-    return { key: 's' + k, label: s.label || '合図', before, rel: stage - before };
-  });
-  const all = [{ key: 'start', label: 'ステージ開始', before: stage, rel: 0, isStart: true }, ...steps];
-  if (!steps.some(s => s.before === 0)) all.push({ key: 'light', label: '点灯の瞬間', before: 0, rel: stage, isEnd: true });
-  return { stage, steps: all.sort((a, b) => a.rel - b.rel) };
+/* 3つの時刻（ステージ開始からの秒数）。表示順は ステージ終了 → ドローン離陸 → アニメーションスタート */
+function plan(sh = room.show){
+  const stage = parseT(sh.stage) ?? 569, anim = stage + (parseT(sh.anim) ?? 0), lead = parseT(sh.lead) ?? 83;
+  return { stage, items: [
+    { key: 'end',  name: 'ステージ終了',         rel: stage },
+    { key: 'off',  name: 'ドローン離陸',         rel: anim - lead },
+    { key: 'anim', name: 'アニメーションスタート', rel: anim }
+  ]};
 }
 
 /* ---------- 入室 ---------- */
@@ -361,7 +353,7 @@ function showMain(){
 /* ---------- 受信 ---------- */
 function onRoom(d){
   room.meta = d.meta || {};
-  room.show = d.show || DEFAULT_SHOW;
+  room.show = { ...DEFAULT_SHOW, ...(d.show && d.show.lead ? d.show : {}) };
   room.state = d.state || { startAt: 0 };
   room.presence = d.presence || {};
   const st = room.state.startAt || 0;
@@ -380,66 +372,33 @@ function tick(){
   if (!store || !me) return;
   const now = serverNow();
   $('clock').textContent = hms(now);
-  const { stage, steps } = plan();
+  const { stage, items } = plan();
   const start = room.state.startAt || 0, running = !!start;
-  const lightAt = start + stage * 1000;
-  const card = $('bigCard');
-
   if (me.director) {
     $('bStart').classList.toggle('hidden', running);
     $('runCtrl').classList.toggle('hidden', !running);
   }
+  const wm = $('waitMsg');
+  wm.classList.toggle('hidden', running);
+  wm.textContent = me.director ? 'ステージ開始の合図で「▶ ステージ開始」を押してください' : 'Q出し役がステージ開始を押すと、カウントダウンが始まります';
 
-  const nextIdx = running ? steps.findIndex(s => start + s.rel * 1000 > now - 400) : -1;
-  $('list').innerHTML = steps.map((s, k) => {
-    const at = start + s.rel * 1000;
-    const cls = [running && at <= now - 400 ? 'done' : '', k === nextIdx ? 'nx' : '', (s.before === 0) ? 'key' : ''].join(' ');
-    const when = running ? hms(at) : '+' + fmtT(s.rel);
-    const sub = s.isStart ? '合図でQ出し役がタップ' : (s.before === 0 ? 'ステージ終了の瞬間' : `点灯の ${fmtT(s.before)} 前`);
-    return `<div class="row ${cls}"><span class="t num">${when}</span><span class="r num">${running ? '+' + fmtT(s.rel) : ''}</span><span class="l">${esc(s.label)}<small>${sub}</small></span></div>`;
+  const upcoming = running ? items.filter(it => start + it.rel * 1000 > now - 400).sort((a, b) => a.rel - b.rel)[0] : null;
+  $('cds').innerHTML = items.map(it => {
+    const at = start + it.rel * 1000, left = (at - now) / 1000;
+    if (!running) return `<div class="cdc wait"><div class="hd"><span class="nm">${it.name}まで</span><span class="at num">開始から</span></div><div class="v num">${fmtT(it.rel)}</div></div>`;
+    if (left <= -0.4) return `<div class="cdc done"><div class="hd"><span class="nm">${it.name}</span><span class="at num"><b>${hms(at)}</b></span></div><div class="v num">✓ 済み</div></div>`;
+    const cls = ['cdc', it === upcoming ? 'nx' : '', left <= 10 ? 'soon' : ''].join(' ');
+    return `<div class="${cls}"><div class="hd"><span class="nm">${it.name}まで</span><span class="at num"><b>${hms(at)}</b> ちょうど</span></div><div class="v num">${fmtT(Math.ceil(Math.max(0, left)))}</div></div>`;
   }).join('');
+  if (!running) return;
 
-  $('stageLen').textContent = `全体 ${fmtT(stage)}`;
-  if (!running) {
-    card.className = 'card';
-    $('bigLbl').textContent = 'ステージ開始の合図を待っています';
-    const first = steps.find(s => !s.isStart);
-    $('bigWhat').textContent = me.director ? '合図が来たら「▶ ステージ開始」を押す' : 'Q出し役が開始を押すと、ここに時刻が出ます';
-    $('bigCd').textContent = fmtT(stage);
-    $('bigAbs').innerHTML = first ? `開始から <b>${fmtT(first.rel)}</b> 後に「${esc(first.label)}」` : '';
-    $('toLight').textContent = fmtT(stage); $('lightAt').textContent = '開始してから';
-    $('elapsed').textContent = '0:00';
-    $('barFill').style.width = '0';
-    return;
-  }
-  const el = (now - start) / 1000, toL = (lightAt - now) / 1000;
-  $('elapsed').textContent = fmtT(Math.max(0, el));
-  $('toLight').textContent = toL > 0 ? fmtT(Math.ceil(toL)) : '点灯';
-  $('lightAt').textContent = hms(lightAt) + ' ちょうど';
-  $('barFill').style.width = Math.min(100, Math.max(0, el / stage * 100)) + '%';
-
-  const nx = steps[nextIdx];
-  if (nx) {
-    const left = (start + nx.rel * 1000 - now) / 1000;
-    card.className = 'card' + (left <= 10 ? ' soon' : '');
-    $('bigLbl').textContent = 'つぎにやること';
-    $('bigWhat').textContent = nx.label;
-    $('bigCd').textContent = fmtT(Math.ceil(Math.max(0, left)));
-    $('bigAbs').innerHTML = `<b>${hms(start + nx.rel * 1000)}</b> ちょうど`;
-  } else {
-    card.className = 'card done';
-    $('bigLbl').textContent = '点灯しました';
-    $('bigWhat').textContent = 'ショー中';
-    $('bigCd').textContent = '+' + fmtT(Math.max(0, -toL));
-    $('bigAbs').textContent = '点灯からの経過';
-  }
-
-  for (const s of steps) {
-    if (s.isStart) continue;
-    const id = start + ':' + s.key, left = (start + s.rel * 1000 - now) / 1000;
+  const groups = {};
+  items.forEach(it => { (groups[it.rel] = groups[it.rel] || []).push(it); });
+  for (const rel in groups) {
+    const g = groups[rel], id = start + ':' + rel, left = (start + (+rel) * 1000 - now) / 1000;
     for (const n of [3, 2, 1]) { const kid = id + ':' + n; if (left <= n && left > n - 1 && !fired.has(kid)) { fired.add(kid); beep(520, .08); } }
     if (left <= 0 && left > -2 && !fired.has(id)) {
-      fired.add(id); flashText(s.label, true);
+      fired.add(id); flashText(g.map(x => x.name).join('\n'), true);
       navigator.vibrate && navigator.vibrate([250, 80, 250]); beep(1046, .35);
     }
     if (left <= -2) fired.add(id);
@@ -485,49 +444,28 @@ function confirmLite(msg){
 function toast(msg){ const t = $('toast'); t.textContent = msg; t.style.opacity = 1; clearTimeout(t._h); t._h = setTimeout(() => t.style.opacity = 0, 2600); }
 
 /* ---------- 設定 ---------- */
-let draft = [];
 $('bEdit').onclick = () => {
   $('eTitle').value = room.meta.title || '';
-  $('eStage').value = fmtT(parseT(room.show.stage) ?? 569);
-  draft = toArr(room.show.steps).map(s => ({ before: parseT(s.before) ?? 0, label: s.label || '' }));
-  drawSteps(); $('editSheet').classList.remove('hidden');
+  const sh = { ...DEFAULT_SHOW, ...room.show };
+  $('eStage').value = fmtT(parseT(sh.stage) ?? 569);
+  $('eAnim').value = fmtT(parseT(sh.anim) ?? 0);
+  $('eLead').value = fmtT(parseT(sh.lead) ?? 83);
+  calc(); $('editSheet').classList.remove('hidden');
 };
 $('eCancel').onclick = () => $('editSheet').classList.add('hidden');
-$('eAdd').onclick = () => { readSteps(); draft.push({ before: 60, label: '' }); drawSteps(); };
-function drawSteps(){
-  draft.sort((a, b) => b.before - a.before);
-  $('eSteps').innerHTML = draft.map((s, k) => `
-    <div class="step" data-k="${k}">
-      <div class="a"><span>点灯の</span><input class="t num" data-f="before" value="${fmtT(s.before)}" inputmode="numeric"><span>前</span><span class="grow"></span><button data-del>✕</button></div>
-      <input data-f="label" value="${esc(s.label)}" placeholder="やること（例：逆算スタート）" style="margin-top:8px">
-      <div class="h num" data-h></div>
-    </div>`).join('');
-  hints();
+function calc(){
+  const st = parseT($('eStage').value), an = parseT($('eAnim').value), ld = parseT($('eLead').value);
+  if (st == null || an == null || ld == null) { $('eCalc').textContent = '「9:29」の形で入れてください'; return; }
+  const p = plan({ stage: st, anim: an, lead: ld });
+  const warn = p.items[1].rel < 0 ? '<br><span style="color:var(--red)">⚠︎ 離陸がステージ開始より前になります</span>' : '';
+  $('eCalc').innerHTML = 'ステージ開始から<br>' + p.items.slice().sort((a, b) => a.rel - b.rel)
+    .map(it => `<b>${fmtT(Math.max(0, it.rel))}</b>　${it.name}`).join('<br>') + warn;
 }
-function readSteps(){
-  draft = [...document.querySelectorAll('#eSteps .step')].map(el => ({
-    before: parseT(el.querySelector('[data-f="before"]').value) ?? 0,
-    label: el.querySelector('[data-f="label"]').value.trim()
-  }));
-}
-function hints(){
-  const stage = parseT($('eStage').value);
-  document.querySelectorAll('#eSteps .step').forEach(el => {
-    const b = parseT(el.querySelector('[data-f="before"]').value), h = el.querySelector('[data-h]');
-    if (stage == null) h.textContent = '⚠︎ ステージの長さを入れてください';
-    else if (b == null) h.textContent = '「1:29」の形で入れてください';
-    else if (b > stage) h.textContent = '⚠︎ ステージ開始より前になります';
-    else h.textContent = b === 0 ? `→ 開始から ${fmtT(stage)}（ステージ終了の瞬間）` : `→ 開始から ${fmtT(stage - b)}`;
-  });
-}
-$('eSteps').addEventListener('input', hints);
-$('eStage').addEventListener('input', hints);
-$('eSteps').onclick = e => { if (!e.target.closest('[data-del]')) return; readSteps(); draft.splice(+e.target.closest('.step').dataset.k, 1); drawSteps(); };
+['eStage', 'eAnim', 'eLead'].forEach(id => $(id).addEventListener('input', calc));
 $('eSave').onclick = async () => {
-  readSteps();
-  const stage = parseT($('eStage').value);
-  if (stage == null || stage <= 0) return toast('ステージの長さを「9:29」の形で入れてください');
-  await store.setShow({ stage: fmtT(stage), steps: draft.filter(s => s.label).map(s => ({ before: s.before, label: s.label })) });
+  const st = parseT($('eStage').value), an = parseT($('eAnim').value), ld = parseT($('eLead').value);
+  if (!st || an == null || ld == null) return toast('時間を「9:29」の形で入れてください');
+  await store.setShow({ stage: fmtT(st), anim: fmtT(an), lead: fmtT(ld) });
   await store.setTitle($('eTitle').value.trim() || 'ドローンショー');
   $('editSheet').classList.add('hidden'); toast('保存しました（全員に反映）');
 };
