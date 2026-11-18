@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b0b0f">
+<title>Qシート</title>
+<script>
+/* ============================================================
+   ここに Firebase の設定を貼り付けてください（null のままならデモモード）
+   例：
+   window.FIREBASE_CONFIG = {
+     apiKey: "....",
+     authDomain: "xxxx.firebaseapp.com",
+     databaseURL: "https://xxxx-default-rtdb.asia-southeast1.firebasedatabase.app",
+     projectId: "xxxx",
+     appId: "...."
+   };
+   ============================================================ */
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAClq8ybPFAaPhxmgXsq6GE10UZ1moCV7M",
+  authDomain: "qseet-17422.firebaseapp.com",
+  databaseURL: "https://qseet-17422-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "qseet-17422",
+  storageBucket: "qseet-17422.firebasestorage.app",
+  messagingSenderId: "815393580486",
+  appId: "1:815393580486:web:41ec0effa0faf2e68afec7"
+};
+</script>
+<style>
+:root{--bg:#0b0b0f;--card:#17171c;--card2:#202027;--line:#2c2c35;--tx:#f5f5f7;--sub:#9a9aa5;--blue:#0a84ff;--amber:#ff9f0a;--green:#30d158;--red:#ff453a;--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--tx);background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;width:100%;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+.hidden{display:none!important}
+
+/* 入室画面 */
+#join{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:calc(24px + var(--safe-t)) 22px 32px;max-width:460px;margin:0 auto}
+#join h1{font-size:34px;margin:0 0 4px;letter-spacing:.02em}
+#join .lead{color:var(--sub);margin:0 0 26px;font-size:15px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;color:var(--sub);margin:0 0 6px 4px}
+.depts{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:9px 14px;border-radius:999px;background:var(--card2);border:1px solid var(--line);font-size:15px}
+.chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.switch-row{display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.switch{width:51px;height:31px;border-radius:999px;background:#39393f;position:relative;transition:.2s;flex:none}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;transition:.2s}
+.switch.on{background:var(--green)}.switch.on::after{left:22px}
+.primary{width:100%;padding:16px;border-radius:14px;background:var(--blue);color:#fff;font-weight:700;font-size:17px;margin-top:8px}
+.err{color:var(--red);font-size:14px;min-height:20px;margin-top:10px;text-align:center}
+.mode-note{font-size:12px;color:var(--sub);text-align:center;margin-top:18px;line-height:1.6}
+.mode-note b{color:var(--amber)}
+
+/* メイン */
+#main{min-height:100vh;padding:calc(10px + var(--safe-t)) 14px calc(20px + var(--safe-b));max-width:720px;margin:0 auto}
+body.director #main{padding-bottom:calc(190px + var(--safe-b))}
+.top{display:flex;align-items:center;gap:10px;padding:4px 2px 12px}
+.top .ev{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .me{font-size:12px;color:var(--sub)}
+.top .sp{flex:1}
+.clock{font-variant-numeric:tabular-nums;font-size:22px;font-weight:600}
+.icon-btn{background:var(--card);border-radius:10px;padding:7px 10px;font-size:13px;color:var(--sub);white-space:nowrap}
+
+.card{background:var(--card);border-radius:20px;padding:18px;margin-bottom:12px;position:relative;overflow:hidden}
+.label{font-size:12px;letter-spacing:.12em;color:var(--sub);font-weight:700;display:flex;align-items:center;gap:8px}
+.qno{font-variant-numeric:tabular-nums;color:var(--sub);font-weight:700}
+#now{min-height:38vh;display:flex;flex-direction:column;justify-content:center;text-align:center;border:2px solid transparent;transition:border-color .3s}
+#now .label{justify-content:center}
+#nowTitle{font-weight:800;line-height:1.2;margin:14px 0 10px;white-space:nowrap}
+#nowTitle.wrap{white-space:normal}
+#nowNo{font-size:20px}
+.tags{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.tag{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--card2);color:var(--sub)}
+.tag.mine{background:rgba(10,132,255,.2);color:#6cb6ff}
+.memo{color:var(--sub);font-size:15px;margin-top:10px;white-space:pre-wrap}
+.elapsed{font-variant-numeric:tabular-nums;font-size:15px;color:var(--sub);margin-top:12px}
+
+#next{border:2px solid transparent;transition:.25s}
+#next .row{display:flex;align-items:baseline;gap:10px;margin-top:8px}
+#nextTitle{font-size:24px;font-weight:700;flex:1;min-width:0}
+.ptime{font-variant-numeric:tabular-nums;color:var(--sub);font-size:15px;white-space:nowrap}
+.yours{display:inline-block;background:var(--blue);color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px}
+
+body.standby #next{border-color:var(--amber);animation:pulse 1s infinite}
+body.standby .sb-badge{display:inline-block}
+.sb-badge{display:none;background:var(--amber);color:#000;font-weight:800;font-size:12px;padding:3px 9px;border-radius:999px;letter-spacing:.08em}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,159,10,.0)}50%{box-shadow:0 0 0 6px rgba(255,159,10,.35)}}
+
+#flash{position:fixed;inset:0;background:var(--green);opacity:0;pointer-events:none;z-index:50;display:flex;align-items:center;justify-content:center;font-size:96px;font-weight:900;color:#000;letter-spacing:.05em}
+#flash.show{animation:flash 1.1s ease-out}
+@keyframes flash{0%{opacity:.95}70%{opacity:.6}100%{opacity:0}}
+
+.list-head{display:flex;align-items:center;justify-content:space-between;margin:18px 4px 8px}
+.list-head h2{font-size:15px;margin:0;color:var(--sub);font-weight:600}
+.seg{display:flex;background:var(--card);border-radius:10px;padding:2px}
+.seg button{padding:6px 10px;border-radius:8px;font-size:13px;color:var(--sub)}
+.seg button.on{background:var(--card2);color:var(--tx)}
+.qlist{background:var(--card);border-radius:16px;overflow:hidden}
+.qitem{display:flex;gap:12px;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line)}
+.qitem:last-child{border-bottom:0}
+.qitem .n{font-variant-numeric:tabular-nums;color:var(--sub);width:44px;flex:none;font-weight:700}
+.qitem .t{flex:1;min-width:0}
+.qitem .t div:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qitem .t .d{font-size:12px;color:var(--sub);margin-top:2px}
+.qitem.done{opacity:.35}
+.qitem.cur{background:rgba(48,209,88,.12)}
+.qitem.mine .n{color:#6cb6ff}
+body.director .qitem{cursor:pointer}
+
+/* Q出し役コントロール */
+#ctrl{position:fixed;left:0;right:0;bottom:0;background:rgba(11,11,15,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--line);padding:12px 14px calc(12px + var(--safe-b));z-index:20}
+#ctrl .inner{max-width:720px;margin:0 auto;display:grid;grid-template-columns:1fr 1.3fr 2fr;gap:10px}
+#ctrl .inner button{height:76px;border-radius:18px;font-weight:800;font-size:18px}
+#bBack{background:var(--card2);color:var(--sub)}
+#bSB{background:#3a2a0a;color:var(--amber);border:2px solid var(--amber)}
+#bSB.on{background:var(--amber);color:#000}
+#bGO{background:var(--green);color:#000;font-size:28px}
+#bGO:active{transform:scale(.97)}
+#ctrl .tools{max-width:720px;margin:0 auto 10px;display:flex;gap:8px}
+
+/* シート */
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:#121216;width:100%;max-width:720px;max-height:92vh;border-radius:20px 20px 0 0;display:flex;flex-direction:column}
+.sheet-h{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+.sheet-h h3{flex:1;margin:0;font-size:17px;text-align:center}
+.sheet-h button{color:var(--blue);font-size:16px;min-width:64px}
+.sheet-h button.save{font-weight:700;text-align:right}
+.sheet-b{overflow:auto;padding:14px 16px calc(24px + var(--safe-b))}
+.ecard{background:var(--card);border-radius:14px;padding:12px;margin-bottom:10px}
+.ecard .r1{display:grid;grid-template-columns:70px 1fr 84px;gap:8px;margin-bottom:8px}
+.ecard input{padding:10px 11px;font-size:15px}
+.ecard .depts .chip{padding:6px 11px;font-size:13px}
+.ecard .r3{display:flex;gap:8px;margin-top:8px}
+.ecard .r3 input{flex:1}
+.ecard .ops{display:flex;gap:4px}
+.ecard .ops button{background:var(--card2);border-radius:10px;width:40px;font-size:15px}
+.ecard .ops button.del{color:var(--red)}
+.ghost{width:100%;padding:13px;border-radius:12px;border:1px dashed var(--line);color:var(--blue);margin-bottom:10px}
+details{background:var(--card);border-radius:14px;padding:12px;margin-top:6px}
+summary{color:var(--sub);font-size:14px}
+.hint{font-size:12px;color:var(--sub);line-height:1.6}
+.pp{display:flex;justify-content:space-between;padding:12px 4px;border-bottom:1px solid var(--line)}
+.pp .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:8px}
+.pp.off{opacity:.45}.pp.off .dot{background:#636370}
+.pp-sec{font-size:12px;color:var(--sub);letter-spacing:.1em;margin:14px 4px 2px;font-weight:700}
+.conn{display:flex;align-items:center;justify-content:flex-end;gap:5px;font-size:11px;color:var(--sub);margin-top:2px}
+.conn i{width:7px;height:7px;border-radius:50%;background:#636370;display:inline-block}
+.conn.on i{background:var(--green)}.conn.off{color:var(--red)}.conn.off i{background:var(--red)}
+#offBanner{position:sticky;top:0;z-index:30;background:var(--red);color:#fff;font-weight:700;font-size:14px;text-align:center;padding:10px 12px;border-radius:12px;margin-bottom:10px}
+#ackBtn{width:100%;margin-top:14px;padding:16px;border-radius:14px;background:var(--amber);color:#000;font-weight:800;font-size:18px}
+#ackBtn.done{background:var(--card2);color:var(--green)}
+#ackBox{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+#ackBox .ackh{font-size:13px;color:var(--sub);margin-bottom:8px}
+#ackBox .ackh b{color:var(--tx);font-size:16px}
+.ack{display:inline-flex;align-items:center;gap:5px;font-size:13px;padding:5px 10px;border-radius:999px;background:var(--card2);color:var(--sub);margin:0 6px 6px 0}
+.ack.ok{background:rgba(48,209,88,.18);color:var(--green)}
+.ack.gone{text-decoration:line-through;opacity:.5}
+</style>
+</head>
+<body>
+
+<!-- 入室 -->
+<section id="join">
+  <h1>Qシート</h1>
+  <p class="lead">チームで共有するオンタイムQ出し</p>
+
+  <div class="field"><label>イベントの合言葉</label><input id="jCode" placeholder="例：escon1203" autocomplete="off" autocapitalize="off"></div>
+  <div class="field"><label>お名前</label><input id="jName" placeholder="例：内藤" autocomplete="off"></div>
+  <div class="field"><label>担当</label><div class="depts" id="jDepts"></div></div>
+
+  <div class="switch-row"><span>Q出し役として入る</span><button class="switch" id="jDirSw" aria-label="Q出し役"></button></div>
+  <div class="field hidden" id="jPinBox"><label>Q出し役の暗証番号（最初に入った人が決めます）</label><input id="jPin" inputmode="numeric" placeholder="4桁以上" autocomplete="off"></div>
+
+  <button class="primary" id="jGo">入る</button>
+  <div class="err" id="jErr"></div>
+  <div class="mode-note" id="modeNote"></div>
+</section>
+
+<!-- メイン -->
+<section id="main" class="hidden">
+  <div class="top">
+    <div style="min-width:0">
+      <div class="ev" id="evName"></div>
+      <div class="me" id="meLine"></div>
+    </div>
+    <div class="sp"></div>
+    <div><div class="clock" id="clock">--:--:--</div><div class="conn" id="conn"><i></i><span>接続中…</span></div></div>
+  </div>
+  <div id="offBanner" class="hidden">オフライン — 表示が止まっている可能性があります。電波を確認してください</div>
+
+  <div class="card" id="now">
+    <div class="label">いまのQ</div>
+    <div id="nowNo" class="qno"></div>
+    <div id="nowTitle">開演前</div>
+    <div class="tags" id="nowTags"></div>
+    <div class="memo" id="nowMemo"></div>
+    <div class="elapsed" id="nowElapsed"></div>
+  </div>
+
+  <div class="card" id="next">
+    <div class="label">つぎのQ <span class="sb-badge">STANDBY</span> <span class="yours hidden" id="nextYours">あなたの担当</span></div>
+    <div class="row"><span class="qno" id="nextNo"></span><div id="nextTitle">—</div><span class="ptime" id="nextTime"></span></div>
+    <div class="tags" style="justify-content:flex-start;margin-top:8px" id="nextTags"></div>
+    <div class="memo" id="nextMemo"></div>
+    <button id="ackBtn" class="hidden">スタンバイOK</button>
+    <div id="ackBox" class="hidden"></div>
+  </div>
+
+  <div class="list-head">
+    <h2>キューリスト</h2>
+    <div class="seg"><button id="fAll" class="on">すべて</button><button id="fMine">自分の担当</button></div>
+  </div>
+  <div class="qlist" id="qlist"></div>
+
+  <div style="display:flex;gap:8px;justify-content:center;margin-top:20px;flex-wrap:wrap">
+    <button class="icon-btn" id="bPeople">👥 参加者 <span id="pCount">0</span></button>
+    <button class="icon-btn" id="bSound">🔔 音 OFF</button>
+    <button class="icon-btn" id="bLogout">退出</button>
+  </div>
+</section>
+
+<!-- Q出し役コントロール -->
+<div id="ctrl" class="hidden">
+  <div class="tools">
+    <button class="icon-btn" id="bEdit">✏️ キューを編集</button>
+    <button class="icon-btn" id="bReset">⟲ 最初に戻す</button>
+    <button class="icon-btn" id="bPeople2" style="margin-left:auto">👥 <span id="pCount2">0</span></button>
+  </div>
+  <div class="inner">
+    <button id="bBack">◀ 戻す</button>
+    <button id="bSB">STANDBY</button>
+    <button id="bGO">GO</button>
+  </div>
+</div>
+
+<div id="flash">GO</div>
+
+<!-- 編集シート -->
+<div class="sheet-bg hidden" id="editSheet">
+  <div class="sheet">
+    <div class="sheet-h"><button id="eCancel">キャンセル</button><h3>キューを編集</h3><button class="save" id="eSave">保存</button></div>
+    <div class="sheet-b">
+      <div class="field"><label>イベント名</label><input id="eTitle" placeholder="例：ETHICS FUTURES 2026"></div>
+      <div id="eList"></div>
+      <button class="ghost" id="eAdd">＋ キューを追加</button>
+      <details>
+        <summary>Excel・スプレッドシートから貼り付け</summary>
+        <p class="hint">列の順番：番号／内容／担当（「照明,音響」のようにカンマ区切り）／予定時刻／メモ<br>貼り付けると今のリストが置き換わります。</p>
+        <textarea id="ePaste" rows="6" placeholder="Q1	客入れBGM	音響	17:30	"></textarea>
+        <button class="ghost" id="ePasteGo" style="margin-top:8px">この内容で置き換える</button>
+      </details>
+    </div>
+  </div>
+</div>
+
+<!-- 参加者シート -->
+<div class="sheet-bg hidden" id="peopleSheet">
+  <div class="sheet">
+    <div class="sheet-h"><span style="min-width:64px"></span><h3>参加者</h3><button id="pClose">閉じる</button></div>
+    <div class="sheet-b" id="pList"></div>
+  </div>
+</div>
+
+<script type="module">
+const DEPTS = ['全体','照明','音響','映像','舞台','MC','ドローン','撮影'];
+const SESSION_KEY = 'cueq-session';
+const SESSION_HOURS = 24;
+const FB_VER = '10.12.2';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toArr = v => Array.isArray(v) ? v.filter(Boolean) : (v ? Object.values(v).filter(Boolean) : []);
+const isDemo = !window.FIREBASE_CONFIG;
+
+/* ---------- 保存（localStorage は失敗しても動くように） ---------- */
+const ls = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} }
+};
+
+/* ---------- データの置き場所：デモ（同じブラウザ内）／Firebase ---------- */
+function demoStore(code){
+  const key = 'cueq-demo-' + code;
+  const bc = ('BroadcastChannel' in window) ? new BroadcastChannel(key) : null;
+  const subs = [];
+  const read = () => ls.get(key) || {};
+  const emit = () => { const d = read(); subs.forEach(f => f(d)); };
+  const write = d => { ls.set(key, d); emit(); bc && bc.postMessage(1); };
+  if (bc) bc.onmessage = emit;
+  addEventListener('storage', e => { if (e.key === key) emit(); });
+  return {
+    offset: () => 0,
+    async getMeta(){ return read().meta || null; },
+    async setMeta(m){ const d = read(); d.meta = m; write(d); },
+    subscribe(f){ subs.push(f); f(read()); },
+    async setState(s){ const d = read(); d.state = s; write(d); },
+    async setCues(c){ const d = read(); d.cues = c; write(d); },
+    async setTitle(t){ const d = read(); d.meta = {...(d.meta||{}), title:t}; write(d); },
+    presence(id, info){
+      const beat = () => {
+        const d = read(); d.presence = d.presence || {};
+        d.presence[id] = {...(d.presence[id]||{}), ...info, online: navigator.onLine, at: Date.now()};
+        write(d);
+      };
+      beat(); setInterval(beat, 8000);
+      addEventListener('pagehide', () => { const d = read(); if (d.presence && d.presence[id]){ d.presence[id].online = false; ls.set(key, d); bc && bc.postMessage(1); } });
+    },
+    async ack(id, v){ const d = read(); d.presence = d.presence || {}; d.presence[id] = {...(d.presence[id]||{}), ack: v}; write(d); },
+    onConn(cb){ const f = () => cb(navigator.onLine); addEventListener('online', f); addEventListener('offline', f); f(); }
+  };
+}
+
+async function firebaseStore(code){
+  const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
+  const { initializeApp } = await import(base + 'firebase-app.js');
+  const { getAuth, signInAnonymously } = await import(base + 'firebase-auth.js');
+  const D = await import(base + 'firebase-database.js');
+  const app = initializeApp(window.FIREBASE_CONFIG);
+  const auth = getAuth(app);
+  await signInAnonymously(auth);
+  const db = D.getDatabase(app);
+  const root = D.ref(db, 'rooms/' + code);
+  let off = 0; const connCbs = [];
+  D.onValue(D.ref(db, '.info/serverTimeOffset'), s => { off = s.val() || 0; });
+  return {
+    uid: auth.currentUser.uid,
+    offset: () => off,
+    async getMeta(){ return (await D.get(D.child(root, 'meta'))).val(); },
+    async setMeta(m){ await D.set(D.child(root, 'meta'), m); },
+    subscribe(f){ D.onValue(root, s => f(s.val() || {})); },
+    setState(s){ return D.set(D.child(root, 'state'), s); },
+    setCues(c){ return D.set(D.child(root, 'cues'), c); },
+    setTitle(t){ return D.set(D.child(root, 'meta/title'), t); },
+    presence(id, info){
+      const p = D.child(root, 'presence/' + id);
+      D.onValue(D.ref(db, '.info/connected'), s => {
+        const on = !!s.val();
+        connCbs.forEach(f => f(on));
+        if (on) { D.onDisconnect(p).update({ online:false, at: D.serverTimestamp() }); D.update(p, {...info, online:true, at: D.serverTimestamp()}); }
+      });
+    },
+    ack(id, v){ return D.update(D.child(root, 'presence/' + id), { ack: v }); },
+    onConn(cb){ connCbs.push(cb); }
+  };
+}
+
+/* ---------- サンプルのキュー（最初にQ出し役が入ったとき） ---------- */
+const SAMPLE = [
+  {no:'Q1', title:'客入れBGM・客電50%', depts:['音響','照明'], time:'17:30', memo:''},
+  {no:'Q2', title:'開演アナウンス', depts:['MC','音響'], time:'17:58', memo:'影アナ'},
+  {no:'Q3', title:'客電FO・オープニング映像', depts:['照明','映像','音響'], time:'18:00', memo:''},
+  {no:'Q4', title:'MC登場・ピンスポット', depts:['MC','照明'], time:'18:03', memo:'上手から'},
+  {no:'Q5', title:'ドローンショー開始', depts:['ドローン','音響','照明'], time:'18:10', memo:'場内暗転のまま'},
+  {no:'Q6', title:'ドローン着陸・明転', depts:['ドローン','照明'], time:'18:18', memo:''},
+  {no:'Q7', title:'登壇者紹介', depts:['MC','映像'], time:'18:20', memo:''},
+  {no:'Q8', title:'エンディング・客電UP', depts:['全体'], time:'19:00', memo:''}
+];
+
+/* ---------- 状態 ---------- */
+let store = null, me = null;
+let room = { meta:{}, cues:[], state:{index:-1, standby:false, goAt:0}, presence:{} };
+let myId = null, connected = null, offTimer = null;
+let filterMine = false, soundOn = false, lastGoAt = null, lastStandby = null, wakeLock = null, audioCtx = null;
+
+/* ---------- 入室画面 ---------- */
+let joinDept = '全体', joinDir = false;
+function drawJoinDepts(){
+  $('jDepts').innerHTML = DEPTS.map(d => `<button class="chip ${d===joinDept?'on':''}" data-d="${esc(d)}">${esc(d)}</button>`).join('');
+}
+$('jDepts').onclick = e => { const b = e.target.closest('[data-d]'); if (!b) return; joinDept = b.dataset.d; drawJoinDepts(); };
+$('jDirSw').onclick = () => { joinDir = !joinDir; $('jDirSw').classList.toggle('on', joinDir); $('jPinBox').classList.toggle('hidden', !joinDir); };
+$('modeNote').innerHTML = isDemo
+  ? '<b>デモモード</b>：同じブラウザのタブどうしでだけ同期します。<br>Firebaseの設定を入れると全員のスマホで同期します。'
+  : '入ったあと24時間は、開くだけで自動で入れます。';
+drawJoinDepts();
+
+function normCode(s){ return s.trim().toLowerCase().replace(/[.#$\[\]\/\s]/g, ''); }
+
+$('jGo').onclick = async () => {
+  const code = normCode($('jCode').value), name = $('jName').value.trim(), pin = $('jPin').value.trim();
+  $('jErr').textContent = '';
+  if (!code) return $('jErr').textContent = '合言葉を入れてください';
+  if (!name) return $('jErr').textContent = 'お名前を入れてください';
+  if (joinDir && pin.length < 4) return $('jErr').textContent = '暗証番号は4桁以上にしてください';
+  unlockAudio();
+  const sess = { code, name, dept: joinDept, director: joinDir, pin: joinDir ? pin : '', id: (ls.get(SESSION_KEY)?.id) || crypto.randomUUID(), exp: Date.now() + SESSION_HOURS*3600e3 };
+  await enter(sess, true);
+};
+
+async function enter(sess, fromForm){
+  $('jGo').disabled = true; $('jGo').textContent = '接続中…';
+  try {
+    store = isDemo ? demoStore(sess.code) : await firebaseStore(sess.code);
+    if (sess.director) {
+      const meta = await store.getMeta();
+      if (!meta || !meta.pin) {
+        await store.setMeta({ pin: sess.pin, title: (meta && meta.title) || 'イベント', createdAt: Date.now() });
+        await store.setCues(SAMPLE);
+        await store.setState({ index:-1, standby:false, goAt:0 });
+      } else if (String(meta.pin) !== String(sess.pin)) {
+        throw new Error('Q出し役の暗証番号が違います');
+      }
+    }
+    me = sess;
+    ls.set(SESSION_KEY, sess);
+    myId = isDemo ? sess.id : store.uid;
+    store.onConn(setConn);
+    store.presence(myId, { name: sess.name, dept: sess.dept, director: !!sess.director });
+    store.subscribe(onRoom);
+    showMain();
+  } catch (err) {
+    console.error(err);
+    if (!fromForm) { ls.set(SESSION_KEY, {...sess, exp:0}); }
+    showJoin(sess);
+    $('jErr').textContent = err.message.includes('暗証番号') ? err.message : '接続できませんでした：' + err.message;
+  } finally {
+    $('jGo').disabled = false; $('jGo').textContent = '入る';
+  }
+}
+
+function showJoin(sess){
+  $('join').classList.remove('hidden'); $('main').classList.add('hidden'); $('ctrl').classList.add('hidden');
+  document.body.classList.remove('director');
+  if (sess) { $('jCode').value = sess.code || ''; $('jName').value = sess.name || ''; joinDept = sess.dept || '全体'; drawJoinDepts(); }
+}
+function showMain(){
+  $('join').classList.add('hidden'); $('main').classList.remove('hidden');
+  document.body.classList.toggle('director', !!me.director);
+  $('ctrl').classList.toggle('hidden', !me.director);
+  $('meLine').textContent = `${me.name}・${me.dept}${me.director ? '・Q出し役' : ''}`;
+  keepAwake();
+}
+
+/* ---------- 受信して描画 ---------- */
+function onRoom(d){
+  room.meta = d.meta || {};
+  room.cues = toArr(d.cues).map(c => ({...c, depts: toArr(c.depts)}));
+  room.state = d.state || {index:-1, standby:false, goAt:0};
+  room.presence = d.presence || {};
+  const st = room.state;
+  if (lastGoAt !== null && st.goAt && st.goAt !== lastGoAt) cueFired();
+  if (lastStandby !== null && st.standby && !lastStandby) standbyFired();
+  lastGoAt = st.goAt || 0; lastStandby = !!st.standby;
+  render();
+}
+
+function isMine(c){ if (!c) return false; if (me.dept === '全体') return true; return c.depts.includes(me.dept) || c.depts.includes('全体'); }
+function tagsHTML(c){ return c.depts.map(d => `<span class="tag ${(d===me.dept)?'mine':''}">${esc(d)}</span>`).join(''); }
+
+function render(){
+  const { cues, state } = room;
+  const i = Number(state.index ?? -1);
+  $('evName').textContent = room.meta.title || 'イベント';
+  document.body.classList.toggle('standby', !!state.standby);
+
+  const cur = cues[i];
+  if (i < 0) { setNow('', '開演前', null); }
+  else if (i >= cues.length) { setNow('', '終演', null); }
+  else setNow(cur.no, cur.title, cur);
+
+  const nx = cues[i+1];
+  $('nextNo').textContent = nx ? nx.no : '';
+  $('nextTitle').textContent = nx ? nx.title : (i >= cues.length ? '—' : '（最後のQです）');
+  $('nextTime').textContent = nx && nx.time ? nx.time : '';
+  $('nextTags').innerHTML = nx ? tagsHTML(nx) : '';
+  $('nextMemo').textContent = nx ? (nx.memo || '') : '';
+  $('nextYours').classList.toggle('hidden', !(nx && isMine(nx) && me.dept !== '全体'));
+  $('now').style.borderColor = (cur && isMine(cur) && me.dept !== '全体') ? 'var(--blue)' : 'transparent';
+
+  $('qlist').innerHTML = cues.map((c, k) => {
+    if (filterMine && !isMine(c)) return '';
+    const cls = [k < i ? 'done' : '', k === i ? 'cur' : '', isMine(c) && me.dept !== '全体' ? 'mine' : ''].join(' ');
+    return `<div class="qitem ${cls}" data-k="${k}"><span class="n">${esc(c.no)}</span><div class="t"><div>${esc(c.title)}</div><div class="d">${esc(c.depts.join('・'))}${c.memo ? '　' + esc(c.memo) : ''}</div></div><span class="ptime">${esc(c.time||'')}</span></div>`;
+  }).join('') || '<div class="qitem"><div class="t" style="color:var(--sub)">キューがありません</div></div>';
+
+  renderPeople();
+  renderAck(nx);
+
+  if (me.director) {
+    $('bSB').classList.toggle('on', !!state.standby);
+    $('bGO').disabled = i >= cues.length;
+    $('bGO').style.opacity = i >= cues.length ? .35 : 1;
+  }
+  tick();
+}
+
+function setNow(no, title, c){
+  $('nowNo').textContent = no || '';
+  const t = $('nowTitle'); t.textContent = title;
+  $('nowTags').innerHTML = c ? tagsHTML(c) : '';
+  $('nowMemo').textContent = c ? (c.memo || '') : '';
+  fitTitle(t);
+}
+function fitTitle(el){
+  el.classList.remove('wrap');
+  const w = el.parentElement.clientWidth - 36;
+  let size = Math.min(56, Math.max(28, w / 6));
+  el.style.fontSize = size + 'px';
+  while (el.scrollWidth > w && size > 24) { size -= 2; el.style.fontSize = size + 'px'; }
+  if (el.scrollWidth > w) el.classList.add('wrap');
+}
+addEventListener('resize', () => fitTitle($('nowTitle')));
+
+/* ---------- オンライン／オフライン ---------- */
+const STALE_MS = 25000; // 最後の通信からこれ以上たったらオフライン扱い（デモ用）
+function isOnline(p){
+  if (!p) return false;
+  if (p.online === false) return false;
+  if (isDemo && Date.now() - (p.at || 0) > STALE_MS) return false;
+  return true;
+}
+function people(){ return Object.entries(room.presence).map(([id, p]) => ({ id, ...p, on: isOnline(p) })); }
+const hm = t => { if (!t) return ''; const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+
+function renderPeople(){
+  const ps = people();
+  const on = ps.filter(p => p.on), off = ps.filter(p => !p.on);
+  const label = `${on.length}/${ps.length}`;
+  $('pCount').textContent = label; $('pCount2').textContent = label;
+  $('bPeople2').style.color = off.length ? 'var(--amber)' : '';
+  const row = p => `<div class="pp ${p.on ? '' : 'off'}"><span><span class="dot"></span>${esc(p.name)}${p.director ? '（Q出し役）' : ''}${p.id === myId ? '（自分）' : ''}</span><span style="color:var(--sub)">${esc(p.dept)}${p.on ? '' : '・最終 ' + hm(p.at)}</span></div>`;
+  const sort = a => a.sort((x, y) => (y.director ? 1 : 0) - (x.director ? 1 : 0) || String(x.dept).localeCompare(y.dept));
+  $('pList').innerHTML =
+    `<div class="pp-sec">オンライン ${on.length}人</div>` + (sort(on).map(row).join('') || '<p class="hint">いません</p>') +
+    (off.length ? `<div class="pp-sec">オフライン ${off.length}人</div>` + sort(off).map(row).join('') : '');
+}
+
+/* スタンバイOK：次のQの担当者が返信、Q出し役は集計を見る */
+function expectedFor(c){
+  if (!c) return [];
+  return people().filter(p => !p.director && (c.depts.includes('全体') || c.depts.includes(p.dept) || p.dept === '全体'));
+}
+function renderAck(nx){
+  const st = room.state, sb = !!st.standby && !!st.sbId && !!nx;
+  // 担当者側のボタン
+  const mineNext = nx && !me.director && (isMine(nx));
+  const myAck = room.presence[myId]?.ack === st.sbId;
+  $('ackBtn').classList.toggle('hidden', !(sb && mineNext));
+  $('ackBtn').classList.toggle('done', myAck);
+  $('ackBtn').textContent = myAck ? '✓ OKを送りました' : 'スタンバイOK';
+  // Q出し役側の集計
+  if (!(sb && me.director)) { $('ackBox').classList.add('hidden'); return; }
+  const ex = expectedFor(nx);
+  const ok = ex.filter(p => p.ack === st.sbId);
+  const chip = p => `<span class="ack ${p.ack === st.sbId ? 'ok' : ''} ${p.on ? '' : 'gone'}">${p.ack === st.sbId ? '✓' : p.on ? '…' : '⚠︎'} ${esc(p.name)}・${esc(p.dept)}</span>`;
+  $('ackBox').innerHTML = ex.length
+    ? `<div class="ackh">準備OK <b>${ok.length}/${ex.length}</b>${ex.some(p => !p.on) ? '　<span style="color:var(--red)">オフラインの人がいます</span>' : ''}</div>` + ex.map(chip).join('')
+    : `<div class="ackh">このQの担当で入室している人はいません</div>`;
+  $('ackBox').classList.remove('hidden');
+}
+
+function setConn(on){
+  clearTimeout(offTimer);
+  if (on) { connected = true; drawConn(); }
+  else offTimer = setTimeout(() => { connected = false; drawConn(); }, connected === null ? 4000 : 1500);
+}
+function drawConn(){
+  const el = $('conn');
+  el.className = 'conn ' + (connected ? 'on' : connected === false ? 'off' : '');
+  el.querySelector('span').textContent = connected ? 'オンライン' : connected === false ? 'オフライン' : '接続中…';
+  $('offBanner').classList.toggle('hidden', connected !== false);
+}
+setInterval(() => { if (isDemo && store) { renderPeople(); renderAck(room.cues[Number(room.state.index ?? -1) + 1]); } }, 5000);
+
+/* ---------- 時計と経過時間 ---------- */
+const pad = n => String(n).padStart(2, '0');
+function tick(){
+  if (!store) return;
+  const now = new Date(Date.now() + store.offset());
+  $('clock').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const st = room.state, i = Number(st.index ?? -1);
+  if (st.goAt && i >= 0 && i < room.cues.length) {
+    const s = Math.max(0, Math.floor((now.getTime() - st.goAt) / 1000));
+    $('nowElapsed').textContent = `GOから ${Math.floor(s/60)}:${pad(s%60)}`;
+  } else $('nowElapsed').textContent = '';
+}
+setInterval(tick, 250);
+
+/* ---------- 合図（画面・振動・音） ---------- */
+function cueFired(){
+  const f = $('flash'); f.classList.remove('show'); void f.offsetWidth; f.classList.add('show');
+  navigator.vibrate && navigator.vibrate([180, 60, 180]);
+  beep(880, .18);
+}
+function standbyFired(){
+  navigator.vibrate && navigator.vibrate(120);
+  beep(440, .12);
+}
+function unlockAudio(){
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch(e){}
+}
+function beep(freq, dur){
+  if (!soundOn || !audioCtx) return;
+  try {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = freq; o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(.25, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(.001, audioCtx.currentTime + dur);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  } catch(e){}
+}
+$('bSound').onclick = () => { unlockAudio(); soundOn = !soundOn; $('bSound').textContent = soundOn ? '🔔 音 ON' : '🔔 音 OFF'; if (soundOn) beep(660, .1); };
+
+/* 画面を消さない */
+async function keepAwake(){
+  try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && me) keepAwake(); });
+
+/* ---------- Q出し役の操作 ---------- */
+const serverNow = () => Date.now() + store.offset();
+$('bGO').onclick = () => {
+  const i = Number(room.state.index ?? -1);
+  if (i >= room.cues.length) return;
+  store.setState({ index: i + 1, standby: false, goAt: serverNow(), by: me.name });
+};
+$('bSB').onclick = () => {
+  const on = !room.state.standby;
+  store.setState({ ...room.state, standby: on, sbId: on ? Math.random().toString(36).slice(2, 9) : '' });
+};
+$('ackBtn').onclick = () => { if (room.state.standby && room.state.sbId) store.ack(myId, room.state.sbId); };
+$('bBack').onclick = () => {
+  const i = Number(room.state.index ?? -1);
+  if (i < 0) return;
+  store.setState({ index: i - 1, standby: false, goAt: room.state.goAt || 0, by: me.name });
+};
+$('bReset').onclick = () => { if (confirmLite('最初（開演前）に戻しますか？')) store.setState({ index:-1, standby:false, goAt:0 }); };
+$('qlist').onclick = e => {
+  if (!me.director) return;
+  const it = e.target.closest('[data-k]'); if (!it) return;
+  const k = Number(it.dataset.k);
+  if (confirmLite(`${room.cues[k].no}「${room.cues[k].title}」に移動しますか？（合図は出ません）`))
+    store.setState({ index: k, standby: false, goAt: room.state.goAt || 0, by: me.name });
+};
+/* 確認：ボタンを2回押す方式（ブラウザのダイアログを使わない） */
+let pendingConfirm = null;
+function confirmLite(msg){
+  if (pendingConfirm === msg) { pendingConfirm = null; return true; }
+  pendingConfirm = msg; toast(msg + '　もう一度押すと実行'); setTimeout(() => { if (pendingConfirm === msg) pendingConfirm = null; }, 3000);
+  return false;
+}
+function toast(msg){
+  let t = $('toast');
+  if (!t) { t = document.createElement('div'); t.id = 'toast'; t.style.cssText = 'position:fixed;left:50%;top:calc(14px + var(--safe-t));transform:translateX(-50%);background:#2c2c35;padding:10px 16px;border-radius:12px;font-size:14px;z-index:60;max-width:90vw;text-align:center'; document.body.appendChild(t); }
+  t.textContent = msg; t.style.opacity = 1; clearTimeout(t._h); t._h = setTimeout(() => t.style.opacity = 0, 2800);
+}
+
+/* ---------- 編集 ---------- */
+let draft = [];
+$('bEdit').onclick = () => { draft = room.cues.map(c => ({...c, depts:[...c.depts]})); $('eTitle').value = room.meta.title || ''; drawEditor(); $('editSheet').classList.remove('hidden'); };
+$('eCancel').onclick = () => $('editSheet').classList.add('hidden');
+$('eAdd').onclick = () => { readEditor(); draft.push({ no:'Q' + (draft.length + 1), title:'', depts:[], time:'', memo:'' }); drawEditor(); $('eList').lastElementChild?.querySelector('[data-f="title"]').focus(); };
+$('eSave').onclick = async () => {
+  readEditor();
+  await store.setCues(draft.filter(c => c.title || c.no));
+  await store.setTitle($('eTitle').value.trim() || 'イベント');
+  $('editSheet').classList.add('hidden'); toast('保存しました（全員に反映）');
+};
+$('ePasteGo').onclick = () => {
+  const rows = $('ePaste').value.split(/\r?\n/).map(r => r.split('\t')).filter(r => r.join('').trim());
+  if (!rows.length) return;
+  draft = rows.map((r, k) => ({ no:(r[0]||'Q'+(k+1)).trim(), title:(r[1]||'').trim(), depts:(r[2]||'').split(/[,、・\/]/).map(s=>s.trim()).filter(Boolean), time:(r[3]||'').trim(), memo:(r[4]||'').trim() }));
+  drawEditor(); toast(`${draft.length}件読み込みました。保存で反映`);
+};
+function drawEditor(){
+  $('eList').innerHTML = draft.map((c, k) => `
+    <div class="ecard" data-k="${k}">
+      <div class="r1"><input data-f="no" value="${esc(c.no)}" placeholder="番号"><input data-f="title" value="${esc(c.title)}" placeholder="内容"><input data-f="time" value="${esc(c.time)}" placeholder="時刻" inputmode="numeric"></div>
+      <div class="depts">${DEPTS.map(d => `<button class="chip ${c.depts.includes(d)?'on':''}" data-dep="${esc(d)}">${esc(d)}</button>`).join('')}</div>
+      <div class="r3"><input data-f="memo" value="${esc(c.memo)}" placeholder="メモ"><div class="ops"><button data-op="up">↑</button><button data-op="down">↓</button><button data-op="del" class="del">✕</button></div></div>
+    </div>`).join('');
+}
+function readEditor(){
+  document.querySelectorAll('#eList .ecard').forEach(el => {
+    const c = draft[+el.dataset.k];
+    el.querySelectorAll('[data-f]').forEach(inp => c[inp.dataset.f] = inp.value.trim());
+  });
+}
+$('eList').onclick = e => {
+  const card = e.target.closest('.ecard'); if (!card) return;
+  const k = +card.dataset.k;
+  const dep = e.target.closest('[data-dep]');
+  if (dep) { readEditor(); const d = dep.dataset.dep, a = draft[k].depts; a.includes(d) ? a.splice(a.indexOf(d),1) : a.push(d); drawEditor(); return; }
+  const op = e.target.closest('[data-op]')?.dataset.op; if (!op) return;
+  readEditor();
+  if (op === 'del') draft.splice(k, 1);
+  if (op === 'up' && k > 0) [draft[k-1], draft[k]] = [draft[k], draft[k-1]];
+  if (op === 'down' && k < draft.length - 1) [draft[k+1], draft[k]] = [draft[k], draft[k+1]];
+  drawEditor();
+};
+
+/* ---------- そのほか ---------- */
+$('fAll').onclick = () => { filterMine = false; $('fAll').classList.add('on'); $('fMine').classList.remove('on'); render(); };
+$('fMine').onclick = () => { filterMine = true; $('fMine').classList.add('on'); $('fAll').classList.remove('on'); render(); };
+$('bPeople').onclick = $('bPeople2').onclick = () => $('peopleSheet').classList.remove('hidden');
+$('pClose').onclick = () => $('peopleSheet').classList.add('hidden');
+$('bLogout').onclick = () => { if (confirmLite('退出しますか？')) { const s = ls.get(SESSION_KEY); ls.set(SESSION_KEY, {...s, exp:0}); location.reload(); } };
+
+/* ---------- 起動：24時間以内なら自動で入る ---------- */
+const saved = ls.get(SESSION_KEY);
+if (saved && saved.exp > Date.now()) enter(saved, false);
+else showJoin(saved);
+</script>
+</body>
+</html>
