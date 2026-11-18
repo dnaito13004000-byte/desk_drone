@@ -516,6 +516,18 @@ $('bPeople').onclick = $('bPeople2').onclick = () => $('peopleSheet').classList.
 $('pClose').onclick = () => $('peopleSheet').classList.add('hidden');
 $('bLogout').onclick = () => { if (confirmLite('退出しますか？')) { ls.set(SESSION_KEY, {...ls.get(SESSION_KEY), exp:0}); location.reload(); } };
 
+/* ---------- 自動アップデート：新しい版が公開されたら読み込み直す ---------- */
+const APP_VER = '7';
+async function checkUpdate(){
+  try {
+    const r = await fetch(location.pathname + '?t=' + Date.now(), { cache: 'no-store' });
+    const m = (await r.text()).match(/const APP_VER = '([^']+)'/);
+    if (m && m[1] !== APP_VER) location.replace(location.pathname + '?v=' + m[1]);
+  } catch(e){}
+}
+checkUpdate(); setInterval(() => { if (!(room.state && room.state.startAt)) checkUpdate(); }, 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !(room.state && room.state.startAt)) checkUpdate(); });
+
 /* ---------- 起動 ---------- */
 const saved = ls.get(SESSION_KEY);
 if (saved && saved.exp > Date.now()) enter(saved, false); else showJoin(saved);
