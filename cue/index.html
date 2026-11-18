@@ -299,7 +299,7 @@ const serverNow = () => Date.now() + (store ? store.offset() : 0);
 function plan(sh = room.show){
   const stage = parseT(sh.stage) ?? 569, anim = stage + (parseT(sh.anim) ?? 0), lead = parseT(sh.lead) ?? 83;
   return { stage, items: [
-    { key: 'end',  name: 'ステージ終了',         rel: stage },
+    { key: 'end',  name: 'Mプラスプラス終了',     rel: stage },
     { key: 'off',  name: 'ドローン離陸',         rel: anim - lead },
     { key: 'anim', name: 'アニメーションスタート', rel: anim }
   ]};
@@ -505,7 +505,7 @@ $('bPeople').onclick = $('bPeople2').onclick = () => $('peopleSheet').classList.
 $('pClose').onclick = () => $('peopleSheet').classList.add('hidden');
 
 /* ---------- 自動アップデート：新しい版が公開されたら読み込み直す ---------- */
-const APP_VER = '8';
+const APP_VER = '9';
 async function checkUpdate(){
   try {
     const r = await fetch(location.pathname + '?t=' + Date.now(), { cache: 'no-store' });
