@@ -117,6 +117,7 @@ body.director #main{padding-bottom:calc(250px + var(--sb))}
 #bResync{background:#13304f!important;color:#6cb6ff}
 #bReset{width:100%;height:56px;margin-top:8px;border-radius:16px;background:transparent;border:2px solid var(--red);color:var(--red);font-size:17px;font-weight:800}
 #bReset.arm{background:var(--red);color:#fff}
+#bTake.arm{background:var(--amber);color:#000}
 
 .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:#121216;width:100%;max-width:640px;max-height:92vh;border-radius:20px 20px 0 0;display:flex;flex-direction:column}
@@ -145,14 +146,8 @@ body.director #main{padding-bottom:calc(250px + var(--sb))}
 
 <section id="join">
   <h1>ドローンショー 逆算Q</h1>
-  <p class="lead">ステージ終了・ドローン離陸・アニメーションスタートまでを全員で共有</p>
-  <div class="field"><label>イベントの合言葉</label><input id="jCode" placeholder="例：escon1203" autocomplete="off" autocapitalize="off"></div>
-  <div class="field"><label>お名前</label><input id="jName" placeholder="例：内藤" autocomplete="off"></div>
-  <div class="switch-row"><span>Q出し役として入る</span><button class="switch" id="jDirSw" aria-label="Q出し役"></button></div>
-  <div class="field hidden" id="jPinBox"><label>Q出し役の暗証番号（最初に入った人が決めます）</label><input id="jPin" inputmode="numeric" placeholder="4桁以上" autocomplete="off"></div>
-  <button class="primary" id="jGo">入る</button>
-  <div class="err" id="jErr"></div>
-  <div class="note" id="modeNote"></div>
+  <p class="lead" id="jMsg">接続中…</p>
+  <button class="primary hidden" id="jRetry">もう一度つなぐ</button>
 </section>
 
 <section id="main" class="hidden">
@@ -169,7 +164,6 @@ body.director #main{padding-bottom:calc(250px + var(--sb))}
   <div class="foot">
     <button class="chipbtn" id="bPeople">👥 参加者 <span id="pCount">0</span></button>
     <button class="chipbtn" id="bSound">🔔 音 OFF</button>
-    <button class="chipbtn" id="bLogout">退出</button>
   </div>
 </section>
 
@@ -185,6 +179,10 @@ body.director #main{padding-bottom:calc(250px + var(--sb))}
     <button id="bResync">⏱ 今を開始に合わせる</button>
   </div>
   <button id="bReset" class="hidden">⟲ 最初に戻す</button>
+  <div id="lockBox" class="hidden" style="text-align:center;padding:6px 0 2px">
+    <div style="font-size:15px;color:var(--sub);margin-bottom:8px">🔒 ほかの端末で開始されました。操作は開始した端末だけができます</div>
+    <button class="chipbtn" id="bTake">操作をこの端末に引き継ぐ</button>
+  </div>
 </div></div>
 
 <div id="flash"></div>
@@ -235,6 +233,7 @@ function demoStore(code){
     async setMeta(m){ const d = read(); d.meta = m; write(d); },
     subscribe(f){ subs.push(f); f(read()); },
     async setState(s){ const d = read(); d.state = s; write(d); },
+    async claimStart(t, id){ const d = read(); if (d.state && d.state.startAt) return false; d.state = { startAt: t, byId: id }; write(d); return true; },
     async setShow(s){ const d = read(); d.show = s; write(d); },
     async setTitle(t){ const d = read(); d.meta = {...(d.meta||{}), title:t}; write(d); },
     presence(id, info){
@@ -262,6 +261,10 @@ async function firebaseStore(code){
     async setMeta(m){ await D.set(D.child(root, 'meta'), m); },
     subscribe(f){ D.onValue(root, s => f(s.val() || {})); },
     setState(s){ return D.set(D.child(root, 'state'), s); },
+    async claimStart(t, id){
+      const r = await D.runTransaction(D.child(root, 'state'), cur => (cur && cur.startAt) ? undefined : { startAt: t, byId: id });
+      return r.committed;
+    },
     setShow(s){ return D.set(D.child(root, 'show'), s); },
     setTitle(t){ return D.set(D.child(root, 'meta/title'), t); },
     presence(id, info){
@@ -302,61 +305,30 @@ function plan(sh = room.show){
   ]};
 }
 
-/* ---------- 入室 ---------- */
-let joinDir = false;
-$('jDirSw').onclick = () => { joinDir = !joinDir; $('jDirSw').classList.toggle('on', joinDir); $('jPinBox').classList.toggle('hidden', !joinDir); };
-$('modeNote').textContent = isDemo ? 'デモモード：同じブラウザのタブどうしでだけ同期します。' : '入ったあと24時間は、開くだけで自動で入れます。';
-const normCode = s => s.trim().toLowerCase().replace(/[.#$\[\]\/\s]/g, '');
-
-$('jGo').onclick = async () => {
-  const code = normCode($('jCode').value), name = $('jName').value.trim(), pin = $('jPin').value.trim();
-  $('jErr').textContent = '';
-  if (!code) return $('jErr').textContent = '合言葉を入れてください';
-  if (!name) return $('jErr').textContent = 'お名前を入れてください';
-  if (joinDir && pin.length < 4) return $('jErr').textContent = '暗証番号は4桁以上にしてください';
-  unlockAudio();
-  const sess = { code, name, director: joinDir, pin: joinDir ? pin : '', id: ls.get(SESSION_KEY)?.id || crypto.randomUUID(), exp: Date.now() + SESSION_HOURS*3600e3 };
-  await enter(sess, true);
-};
-
-async function enter(sess, fromForm){
-  $('jGo').disabled = true; $('jGo').textContent = '接続中…';
+/* ---------- 接続（ログインなし・開いたらすぐ） ---------- */
+const ROOM = (new URLSearchParams(location.search).get('room') || 'main').toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'main';
+async function enter(){
+  $('jMsg').textContent = '接続中…'; $('jRetry').classList.add('hidden');
   try {
-    store = isDemo ? demoStore(sess.code) : await firebaseStore(sess.code);
-    if (sess.director) {
-      const meta = await store.getMeta();
-      if (!meta || !meta.pin) {
-        await store.setMeta({ pin: sess.pin, title: 'ドローンショー', createdAt: Date.now() });
-        await store.setShow(DEFAULT_SHOW);
-        await store.setState({ startAt: 0 });
-      } else if (String(meta.pin) !== String(sess.pin)) throw new Error('Q出し役の暗証番号が違います');
-    }
-    me = sess; ls.set(SESSION_KEY, sess);
-    myId = isDemo ? sess.id : store.uid;
+    store = isDemo ? demoStore(ROOM) : await firebaseStore(ROOM);
+    let devId = ls.get('dsq-dev'); if (!devId) { devId = crypto.randomUUID(); ls.set('dsq-dev', devId); }
+    myId = isDemo ? devId : store.uid;
+    me = { id: myId };
     store.onConn(setConn);
-    store.presence(myId, { name: sess.name, director: !!sess.director });
+    store.presence(myId, { dev: navigator.userAgent.includes('iPhone') ? 'iPhone' : navigator.userAgent.includes('Android') ? 'Android' : 'PC' });
     store.subscribe(onRoom);
-    showMain();
+    $('join').classList.add('hidden'); $('main').classList.remove('hidden'); $('ctrl').classList.remove('hidden');
+    document.body.classList.add('director');
+    keepAwake();
   } catch (err) {
     console.error(err);
-    if (!fromForm) ls.set(SESSION_KEY, {...sess, exp:0});
-    showJoin(sess);
-    $('jErr').textContent = err.message.includes('暗証番号') ? err.message : '接続できませんでした：' + err.message;
-  } finally { $('jGo').disabled = false; $('jGo').textContent = '入る'; }
+    $('jMsg').textContent = '接続できませんでした：' + err.message;
+    $('jRetry').classList.remove('hidden');
+  }
 }
-function showJoin(sess){
-  $('join').classList.remove('hidden'); $('main').classList.add('hidden'); $('ctrl').classList.add('hidden');
-  if (sess) { $('jCode').value = sess.code || ''; $('jName').value = sess.name || ''; }
-}
-function showMain(){
-  $('join').classList.add('hidden'); $('main').classList.remove('hidden');
-  document.body.classList.toggle('director', !!me.director);
-  $('ctrl').classList.toggle('hidden', !me.director);
-  $('meLine').textContent = me.name + (me.director ? '・Q出し役' : '');
-  keepAwake();
-}
+$('jRetry').onclick = enter;
 
-/* ---------- 受信 ---------- */
+
 function onRoom(d){
   room.meta = d.meta || {};
   room.show = { ...DEFAULT_SHOW, ...(d.show && d.show.lead ? d.show : {}) };
@@ -380,14 +352,16 @@ function tick(){
   $('clock').textContent = hms(now);
   const { stage, items } = plan();
   const start = room.state.startAt || 0, running = !!start;
-  if (me.director) {
-    $('bStart').classList.toggle('hidden', running);
-    $('runCtrl').classList.toggle('hidden', !running);
-    $('bReset').classList.toggle('hidden', !running);
-  }
+  const mine = running && room.state.byId === myId;
+  $('bStart').classList.toggle('hidden', running);
+  $('runCtrl').classList.toggle('hidden', !mine);
+  $('bReset').classList.toggle('hidden', !mine);
+  $('lockBox').classList.toggle('hidden', !(running && !mine));
+  $('bEdit').classList.toggle('hidden', running);
+  $('meLine').textContent = !running ? '開始前' : mine ? 'この端末で操作中' : 'ほかの端末で操作中';
   const wm = $('waitMsg');
   wm.classList.toggle('hidden', running);
-  wm.textContent = me.director ? 'ステージ開始の合図で「▶ ステージ開始」を押してください' : 'Q出し役がステージ開始を押すと、カウントダウンが始まります';
+  wm.textContent = 'ステージ開始の合図で、だれか1人が「▶ ステージ開始」を押してください';
 
   const upcoming = running ? items.filter(it => start + it.rel * 1000 > now - 400).sort((a, b) => a.rel - b.rel)[0] : null;
   $('cds').innerHTML = items.map(it => {
@@ -436,8 +410,23 @@ async function keepAwake(){ try { if ('wakeLock' in navigator) await navigator.w
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && me) keepAwake(); });
 
 /* ---------- Q出し役の操作 ---------- */
-$('bStart').onclick = () => { unlockAudio(); fired.clear(); store.setState({ startAt: serverNow(), by: me.name }); };
-$('bResync').onclick = () => { if (confirmLite('いまの瞬間を「ステージ開始」に合わせ直しますか？')) store.setState({ startAt: serverNow(), by: me.name, adjusted: true }); };
+$('bStart').onclick = async () => {
+  unlockAudio(); fired.clear();
+  const ok = await store.claimStart(serverNow(), myId);
+  if (!ok) toast('ほかの端末がすでに開始しました');
+};
+let takeTimer = null;
+$('bTake').onclick = () => {
+  const b = $('bTake');
+  if (!b.classList.contains('arm')) {
+    b.classList.add('arm'); b.textContent = 'もう一度押すと引き継ぎます';
+    clearTimeout(takeTimer); takeTimer = setTimeout(() => { b.classList.remove('arm'); b.textContent = '操作をこの端末に引き継ぐ'; }, 3000);
+    return;
+  }
+  clearTimeout(takeTimer); b.classList.remove('arm'); b.textContent = '操作をこの端末に引き継ぐ';
+  store.setState({ ...room.state, byId: myId }); toast('操作をこの端末に引き継ぎました');
+};
+$('bResync').onclick = () => { if (confirmLite('いまの瞬間を「ステージ開始」に合わせ直しますか？')) store.setState({ startAt: serverNow(), byId: myId, adjusted: true }); };
 $('bMinus').onclick = () => store.setState({ ...room.state, startAt: room.state.startAt - 1000, adjusted: true }).then(() => toast('全体を1秒早めました'));
 $('bPlus').onclick  = () => store.setState({ ...room.state, startAt: room.state.startAt + 1000, adjusted: true }).then(() => toast('全体を1秒遅らせました'));
 let resetTimer = null;
@@ -497,7 +486,7 @@ function renderPeople(){
   $('pCount').textContent = label; $('pCount2').textContent = label;
   $('bPeople2').style.color = off.length ? 'var(--amber)' : '';
   const hm = t => { if (!t) return ''; const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-  const row = p => `<div class="pp ${p.on ? '' : 'off'}"><span><span class="dot"></span>${esc(p.name)}${p.director ? '（Q出し役）' : ''}${p.id === myId ? '（自分）' : ''}</span><span style="color:var(--sub)">${p.on ? 'オンライン' : '最終 ' + hm(p.at)}</span></div>`;
+  const row = p => `<div class="pp ${p.on ? '' : 'off'}"><span><span class="dot"></span>${esc(p.dev || '端末')}${p.id === room.state.byId && room.state.startAt ? '（操作中）' : ''}${p.id === myId ? '（この端末）' : ''}</span><span style="color:var(--sub)">${p.on ? 'オンライン' : '最終 ' + hm(p.at)}</span></div>`;
   $('pList').innerHTML = `<div class="sec">オンライン ${on.length}人</div>` + (on.map(row).join('') || '<p class="hint">いません</p>') +
     (off.length ? `<div class="sec">オフライン ${off.length}人</div>` + off.map(row).join('') : '');
 }
@@ -514,10 +503,9 @@ function drawConn(){
 }
 $('bPeople').onclick = $('bPeople2').onclick = () => $('peopleSheet').classList.remove('hidden');
 $('pClose').onclick = () => $('peopleSheet').classList.add('hidden');
-$('bLogout').onclick = () => { if (confirmLite('退出しますか？')) { ls.set(SESSION_KEY, {...ls.get(SESSION_KEY), exp:0}); location.reload(); } };
 
 /* ---------- 自動アップデート：新しい版が公開されたら読み込み直す ---------- */
-const APP_VER = '7';
+const APP_VER = '8';
 async function checkUpdate(){
   try {
     const r = await fetch(location.pathname + '?t=' + Date.now(), { cache: 'no-store' });
@@ -529,8 +517,7 @@ checkUpdate(); setInterval(() => { if (!(room.state && room.state.startAt)) chec
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !(room.state && room.state.startAt)) checkUpdate(); });
 
 /* ---------- 起動 ---------- */
-const saved = ls.get(SESSION_KEY);
-if (saved && saved.exp > Date.now()) enter(saved, false); else showJoin(saved);
+enter();
 </script>
 </body>
 </html>
