@@ -216,8 +216,8 @@ const ls = {
   set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 };
 
-/* 初期値：ステージ9:29、アニメはステージ終了と同時、離陸からアニメまで1:23 */
-const DEFAULT_SHOW = { stage: '9:29', anim: '0:00', lead: '1:23' };
+/* 初期値：ステージ9:38、アニメはステージ終了と同時、離陸からアニメまで1:23 */
+const DEFAULT_SHOW = { stage: '9:38', anim: '0:00', lead: '1:23' };
 
 /* ---------- データの置き場所 ---------- */
 function demoStore(code){
@@ -505,7 +505,7 @@ $('bPeople').onclick = $('bPeople2').onclick = () => $('peopleSheet').classList.
 $('pClose').onclick = () => $('peopleSheet').classList.add('hidden');
 
 /* ---------- 自動アップデート：新しい版が公開されたら読み込み直す ---------- */
-const APP_VER = '9';
+const APP_VER = '10';
 async function checkUpdate(){
   try {
     const r = await fetch(location.pathname + '?t=' + Date.now(), { cache: 'no-store' });
