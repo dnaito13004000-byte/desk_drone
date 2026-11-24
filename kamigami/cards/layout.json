@@ -1,0 +1,17 @@
+{
+  "canvasPx": [591,887],
+  "origin": "top-left",
+  "order": ["x","y","width","height"],
+  "outerBoundsPx": {
+    "attack": [16.5,761.5,97,97],
+    "health": [477.5,761.5,97,97],
+    "effect": [118,744,355,113],
+    "evolution": [58,703,475,31]
+  },
+  "safeTextBoundsPx": {
+    "attack": [37,788,56,44],
+    "health": [498,788,56,44],
+    "effect": [132,756,327,89],
+    "evolution": [78,708,435,21]
+  }
+}
