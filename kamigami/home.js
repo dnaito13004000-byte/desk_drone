@@ -31,13 +31,13 @@ if(typeof save.shards!=='number')save.shards=0;
 if(typeof save.wins!=='number')save.wins=0;
 const packsLeft=()=>UNLIMITED_PACKS?Infinity:save.tickets,packLabel=()=>UNLIMITED_PACKS?'∞':save.tickets;
 let lastReward=null;
-function grantReward(won){if(window.__storyBattle)return {won,story:true};let r=won?REWARD.win:REWARD.lose;for(const k in r)save[k]=(save[k]||0)+r[k];persist();return {won,...r}}
+function grantReward(won){if(window.__storyBattle||window.__tutorial)return {won,story:true};let r=won?REWARD.win:REWARD.lose;for(const k in r)save[k]=(save[k]||0)+r[k];persist();return {won,...r}}
 const TICKET='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 8v8" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2"/></svg>';
 const SHARD='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l6 8-6 12-6-12z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M6 10h12M12 2v20" stroke="currentColor" stroke-width="1" opacity=".6"/></svg>';
 const CROWN='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18l1-11-5 4-5-7-5 7-5-4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>';
 function wallet(){return '<div class="wallet"><span class="w-tk">'+TICKET+'<small>チケット</small><b>'+packLabel()+'</b></span><span class="w-sh">'+SHARD+'<small>神の欠片</small><b>'+save.shards+'</b></span><span class="w-wn">'+CROWN+'<small>通算勝利</small><b>'+save.wins+'</b></span></div>'}
 // 対戦終了画面：勝敗ともらった報酬
-function resultScreen(){if(window.__storyBattle&&typeof storyResult==='function'){storyResult();return}tag.textContent='';let r=lastReward||{won:ending==='勝利'},won=ending==='勝利';
+function resultScreen(){if(window.__storyBattle&&typeof storyResult==='function'){storyResult();return}if(window.__tutorial){tutorialResult();return}tag.textContent='';let r=lastReward||{won:ending==='勝利'},won=ending==='勝利';
  app.innerHTML='<div class="scene resultscreen '+(won?'win':'lose')+'"><div class="sc-bg dim"></div><div class="sc-rain"></div><div class="sc-frame"></div>'
  +'<div class="rs-in"><p class="rs-sub">'+titles[p.id]+' '+names[p.id]+' × '+titles[c.id]+' '+names[c.id]+'</p><h2 class="rs-title">'+(won?'勝利':'敗北')+'</h2><p class="rs-why">'+(won?'相手の本陣を突破しました。':r.surrender?'降参しました。':'神殿を突破されました。')+'</p>'
  +'<div class="rs-reward"><p>報酬</p>'+(won?'<span class="rw">'+TICKET+'パックチケット ×'+(r.tickets||0)+'</span><span class="rw">'+CROWN+'通算勝利 +'+(r.wins||0)+'</span>':(r.surrender?'<small>降参のため報酬はありません</small>':'<span class="rw">'+SHARD+'神の欠片 ×'+(r.shards||0)+'</span><small>神の欠片の使い道は近日追加予定です</small>'))+'</div>'
@@ -181,7 +181,7 @@ function howto(){tag.textContent='';
  const sec=(h,body)=>'<section class="ht-sec"><h3>'+h+'</h3>'+body+'</section>';
  app.innerHTML='<div class="scene howto"><div class="sc-bg dim"></div><div class="sc-frame"></div>'
  +'<header class="sc-head"><button class="sc-back" onclick="home()" aria-label="ホームへ">‹</button><b>遊び方</b><span></span></header><div class="ht-body">'
- +sec('勝ち方','<p>相手の<b>神殿</b>（伏せたカード5枚）をすべて割り、そのあと相手にもう一撃当てると勝ち。自分の神殿を全部割られて一撃受けると負け。</p><p><b>壁</b>：相手の場に仲間がいる間、神殿と主神は攻撃できません。まず仲間を倒しましょう（すり抜けを持つカードは例外です）。</p><p><b>破殿解放</b>：神殿が割れたとき、そのカードをコストなしで使えます（破殿解放）。使わなければ手札に加わります。主神の身代わりで割れたときも同じ。</p><p><b>主神は倒れない。倒れる代わりに神殿が1枚割れる</b>（主神は最大体力まで回復する。神殿が0枚のときに倒れると負け）。</p>')
+ +'<button class="btn-gold-s ht-tut" onclick="tutorialStart()">チュートリアルをはじめる</button>'+sec('勝ち方','<p>相手の<b>神殿</b>（伏せたカード5枚）をすべて割り、そのあと相手にもう一撃当てると勝ち。自分の神殿を全部割られて一撃受けると負け。</p><p><b>壁</b>：相手の場に仲間がいる間、神殿と主神は攻撃できません。まず仲間を倒しましょう（すり抜けを持つカードは例外です）。</p><p><b>破殿解放</b>：神殿が割れたとき、そのカードをコストなしで使えます（破殿解放）。使わなければ手札に加わります。主神の身代わりで割れたときも同じ。</p><p><b>主神は倒れない。倒れる代わりに神殿が1枚割れる</b>（主神は最大体力まで回復する。神殿が0枚のときに倒れると負け）。</p>')
  +sec('神力','<p>カードを使うためのポイント。どのカードもコストぶんの神力を払って使う。</p><ul><li>手札を毎ターン1枚まで「神力に置く」と、神力の最大値が1増える。</li><li>自分のターンの始めに、最大値まで回復する。</li></ul>')
  +sec('ターンの流れ','<ol><li>ターン開始：神力が回復し、山札から1枚引く。</li><li>手札を1枚まで神力に置ける。</li><li>仲間を召喚したり、呪文を使ったりする。</li><li>自分の神で攻撃する（1体につき1回）。場に出たターンは攻撃できません（速攻を持つカードは例外です）。主神もおたがい1ターン目は攻撃できない。相手の神か、相手の神殿をねらう。神どうしは、おたがいに攻撃力ぶんのダメージを与える。</li><li>「ターン終了」を押すと相手の番。</li></ol>')
  +sec('進化と覚醒','<ul><li><b>進化</b>：主神が通常攻撃を当てるたびに進化ゲージが1増える。自分の神殿が割れたときも、進化ゲージが1増えます。'+ASCEND.evolve.gauge+'たまると、神力'+ASCEND.evolve.cost+'を払って進化できる。</li><li><b>覚醒</b>：進化した主神は、自分の神殿が1枚でも割られたあと（身代わりで割れた場合も含む）、神力'+ASCEND.awaken.cost+'を払って覚醒できる。</li><li>形が変わると攻撃力・体力が上がり、スキルも強くなる。</li></ul>')
@@ -201,5 +201,5 @@ function starterPick(i){let o=document.createElement('div');o.className='handzoo
   if(!ownForm(i,'SR'))save.cards.push([i,'SR']);delete save.starterPending;persist();
   save.pending=[];lastPack=[];let x=[i,'SR'];
   app.innerHTML='<div class="scene revealscreen"><div class="sc-bg dim"></div><div class="sc-frame"></div><header class="sc-head"><span></span><b>スタート特典</b><span></span></header>'
-  +'<div class="rv-stage sr hero flip"><i class="rv-aura"></i><div class="flipper"><div class="face front" style="visibility:visible">'+card(x)+'</div></div></div><p class="rv-tip"><b class="srtxt">スーパーレア！</b><br>'+stageOf(i,2).name+'を受け取りました</p><button class="btn-gold-s" onclick="home()">はじめる</button></div>';
+  +'<div class="rv-stage sr hero flip"><i class="rv-aura"></i><div class="flipper"><div class="face front" style="visibility:visible">'+card(x)+'</div></div></div><p class="rv-tip"><b class="srtxt">スーパーレア！</b><br>'+stageOf(i,2).name+'を受け取りました</p><button class="btn-gold-s" onclick="if(!save.tutorialDone&&typeof tutorialStart===\'function\')tutorialStart();else home()">はじめる</button></div>';
   sfx&&sfx('summon')};document.body.appendChild(o)}
