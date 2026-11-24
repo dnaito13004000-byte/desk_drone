@@ -127,6 +127,7 @@ ol.steps{margin:0;padding-left:1.3em;font-size:.88rem}
   <!-- 録り終わったあと -->
   <section class="panel" id="review" hidden>
     <h2>この内容で送ります</h2>
+    <p class="warn" id="reviewNote" hidden>画面が切り替わったので、ここで録音を区切りました。ここまでの分は保存してあります。続きは、もう一度赤いボタンで録れます。</p>
     <audio id="player" controls></audio>
     <div><label class="lbl" for="text">文字（直せます）</label><textarea id="text" placeholder="文字にならなかったときは、音声だけ送られます"></textarea></div>
     <div class="btns">
@@ -149,14 +150,20 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
 const ls = { get(k, d=""){ try{ return localStorage.getItem(k) ?? d; }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} } };
 let tt; function toast(m){ const t=$("toast"); t.textContent=m; t.hidden=false; clearTimeout(tt); tt=setTimeout(()=>t.hidden=true,2600); }
 
-/* ---------- 保管（送信待ちを含む。IndexedDB） ---------- */
+/* ---------- 保管（録音の途中経過・送信待ちを含む。IndexedDB） ---------- */
 const DB = {
   db:null,
-  open(){ return new Promise((ok,ng)=>{ const r=indexedDB.open("imatoru",1); r.onupgradeneeded=()=>r.result.createObjectStore("items",{keyPath:"id"}); r.onsuccess=()=>{this.db=r.result;ok();}; r.onerror=()=>ng(r.error); }); },
-  tx(mode){ return this.db.transaction("items",mode).objectStore("items"); },
-  put(it){ if(!this.db) return Promise.resolve(); return new Promise((ok,ng)=>{ const r=this.tx("readwrite").put(it); r.onsuccess=ok; r.onerror=()=>ng(r.error); }); },
-  del(id){ if(!this.db) return Promise.resolve(); return new Promise(ok=>{ const r=this.tx("readwrite").delete(id); r.onsuccess=ok; r.onerror=ok; }); },
-  all(){ if(!this.db) return Promise.resolve([]); return new Promise(ok=>{ const r=this.tx("readonly").getAll(); r.onsuccess=()=>ok(r.result.sort((a,b)=>b.at-a.at)); r.onerror=()=>ok([]); }); }
+  open(){ return new Promise((ok,ng)=>{ const r=indexedDB.open("imatoru",2);
+    r.onupgradeneeded=()=>{ const d=r.result; if(!d.objectStoreNames.contains("items")) d.createObjectStore("items",{keyPath:"id"}); if(!d.objectStoreNames.contains("chunks")) d.createObjectStore("chunks",{keyPath:"k"}); };
+    r.onsuccess=()=>{this.db=r.result;ok();}; r.onerror=()=>ng(r.error); }); },
+  st(name, mode){ return this.db.transaction(name, mode).objectStore(name); },
+  req(r){ return new Promise(ok=>{ r.onsuccess=()=>ok(r.result); r.onerror=()=>ok(null); }); },
+  put(it){ return this.db ? this.req(this.st("items","readwrite").put(it)) : Promise.resolve(); },
+  del(id){ return this.db ? this.req(this.st("items","readwrite").delete(id)) : Promise.resolve(); },
+  async all(){ if(!this.db) return []; const a = await this.req(this.st("items","readonly").getAll()); return (a||[]).sort((x,y)=>y.at-x.at); },
+  putChunk(id, seq, data){ return this.db ? this.req(this.st("chunks","readwrite").put({ k:`${id}:${String(seq).padStart(6,"0")}`, data })) : Promise.resolve(); },
+  async chunks(id){ if(!this.db) return []; const a = await this.req(this.st("chunks","readonly").getAll(IDBKeyRange.bound(id+":", id+":￿"))); return (a||[]).map(c=>c.data); },
+  delChunks(id){ return this.db ? this.req(this.st("chunks","readwrite").delete(IDBKeyRange.bound(id+":", id+":￿"))) : Promise.resolve(); }
 };
 
 /* ---------- 設定 ---------- */
@@ -180,33 +187,83 @@ function renderRecent(items){
   $("recent").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{ $("who").value = $("who").value.trim()===b.dataset.w ? "" : b.dataset.w; ls.set("imatoru-who",$("who").value); renderRecent(items); });
 }
 
-/* ---------- 録音 ---------- */
-let rec=null, chunks=[], stream=null, startAt=0, tick=null, sr=null, finalText="", interim="", recording=false, current=null;
+/* ---------- 録音 ----------
+   ・1秒ごとに端末へ書き込むので、途中でページが閉じても、そこまでの分は残る
+   ・画面が裏に回ったら、その時点で区切って保存する
+   ・10分ごとに自動で区切って送る（長い録音でも送信に失敗しにくくする） */
+const SPLIT_SEC = 600;
+let rec=null, stream=null, mem=[], seq=0, cur=null, segStart=0, sessionStart=0, tick=null, sr=null, finalText="", interim="", recording=false, stopReason="", review=null;
 const pickMime = () => ["audio/mp4","audio/webm;codecs=opus","audio/webm","audio/ogg"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || "";
 const extOf = m => m.includes("mp4") ? "m4a" : m.includes("ogg") ? "ogg" : "webm";
+const newId = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
-$("recBtn").onclick = () => recording ? stop() : start();
+$("recBtn").onclick = () => recording ? stop("button") : start();
 
 async function start(){
   $("micErr").hidden = true;
   if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder){ showMicErr("このブラウザでは録音できません。iPhoneはSafari、AndroidはChromeで開いてください。"); return; }
   try{ stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true } }); }
   catch(e){ showMicErr("マイクが使えませんでした。ブラウザの設定でマイクを「許可」にしてください。"); return; }
-  const mime = pickMime();
-  try{ rec = mime ? new MediaRecorder(stream, { mimeType:mime }) : new MediaRecorder(stream); }
-  catch(e){ rec = new MediaRecorder(stream); }
-  chunks = []; finalText = ""; interim = "";
-  rec.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
-  rec.onstop = finish;
-  rec.start(1000);
-  recording = true; startAt = Date.now();
+  recording = true; sessionStart = Date.now(); finalText = ""; interim = "";
   $("recBtn").classList.add("on"); $("micIcon").hidden = true; $("stopIcon").hidden = false;
   $("recBtn").setAttribute("aria-label","録音を止める"); $("recLabel").textContent = "録音中… 押すと止まります";
   $("review").hidden = true; $("live").textContent = "";
-  tick = setInterval(() => { const s=Math.floor((Date.now()-startAt)/1000); $("timer").textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }, 250);
+  tick = setInterval(onTick, 250);
   try{ navigator.wakeLock?.request("screen").then(l => window._wl = l).catch(()=>{}); }catch(e){}
+  await startSegment(1);
   if(cfg().stt) startSTT();
 }
+
+async function startSegment(part){
+  const mime = pickMime();
+  try{ rec = mime ? new MediaRecorder(stream, { mimeType:mime }) : new MediaRecorder(stream); }catch(e){ rec = new MediaRecorder(stream); }
+  mem = []; seq = 0; segStart = Date.now();
+  cur = { id:newId(), at:segStart, who:$("who").value.trim(), by:$("by").value.trim(), text:"", mime:rec.mimeType || mime || "audio/webm",
+          seconds:0, part, status:"recording" };
+  cur.ext = extOf(cur.mime);
+  ls.set("imatoru-who", cur.who); ls.set("imatoru-by", cur.by);
+  await DB.put(cur);
+  const item = cur;
+  rec.ondataavailable = e => { if(e.data && e.data.size){ mem.push(e.data); DB.putChunk(item.id, seq++, e.data); } };
+  rec.onstop = () => segmentDone(item);
+  rec.start(1000);
+}
+
+function onTick(){
+  const s = Math.floor((Date.now()-sessionStart)/1000);
+  $("timer").textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+  if(recording && rec?.state === "recording" && Date.now()-segStart >= SPLIT_SEC*1000){ stopReason = "split"; rec.stop(); }
+}
+
+function takeText(){ const t = (finalText + interim).trim(); finalText = ""; interim = ""; return t; }
+
+async function segmentDone(item){
+  item.seconds = Math.round((Date.now()-item.at)/1000);
+  const reason = stopReason; stopReason = "";
+  if(reason === "split" && recording){
+    // 10分たったので区切って送り、すぐ次を録り始める
+    item.text = takeText(); item.status = "wait"; await DB.put(item);
+    await startSegment((item.part||1)+1);
+    toast(`${item.part}本目を区切って送っています`);
+    send(item);
+    return;
+  }
+  // ボタン・画面切り替えで止まったとき
+  stream?.getTracks().forEach(t => t.stop());
+  resetButton();
+  const blob = new Blob(mem, { type:item.mime });
+  if(!blob.size){ await DB.del(item.id); await DB.delChunks(item.id); showMicErr("音が録れていませんでした。もう一度お試しください。"); renderHist(); return; }
+  await new Promise(r => setTimeout(r, 400)); // 文字起こしの最後の結果を待つ
+  item.text = takeText(); item.status = "review"; await DB.put(item);
+  review = { item, blob };
+  $("player").src = URL.createObjectURL(blob);
+  $("text").value = item.text;
+  $("reviewNote").hidden = reason !== "hidden";
+  $("review").hidden = false;
+  if(reason !== "hidden") $("review").scrollIntoView({ behavior:"smooth", block:"start" });
+  renderHist();
+}
+
 function startSTT(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if(!SR) return;
   try{
@@ -217,78 +274,102 @@ function startSTT(){
     sr.start();
   }catch(e){ sr = null; }
 }
-function stop(){
-  recording = false; clearInterval(tick);
+
+function stop(reason){
+  if(!recording) return;
+  recording = false; stopReason = reason; clearInterval(tick);
   try{ sr && sr.stop(); }catch(e){}
-  try{ rec && rec.state !== "inactive" && rec.stop(); }catch(e){ finish(); }
   try{ window._wl?.release(); }catch(e){}
+  try{ if(rec && rec.state !== "inactive") rec.stop(); else segmentDone(cur); }catch(e){ segmentDone(cur); }
 }
-function finish(){
-  stream?.getTracks().forEach(t => t.stop());
+function resetButton(){
   $("recBtn").classList.remove("on"); $("micIcon").hidden = false; $("stopIcon").hidden = true;
   $("recBtn").setAttribute("aria-label","録音を始める"); $("recLabel").textContent = "押して録音"; $("timer").textContent = ""; $("live").textContent = "";
-  const type = rec?.mimeType || pickMime() || "audio/webm";
-  const blob = new Blob(chunks, { type });
-  if(!blob.size){ showMicErr("音が録れていませんでした。もう一度お試しください。"); return; }
-  current = { blob, mime:type, seconds: Math.round((Date.now()-startAt)/1000) };
-  $("player").src = URL.createObjectURL(blob);
-  setTimeout(() => { $("text").value = (finalText + interim).trim(); }, 400);
-  $("review").hidden = false; $("review").scrollIntoView({ behavior:"smooth", block:"start" });
 }
 function showMicErr(m){ $("micErr").textContent = m; $("micErr").hidden = false; }
-$("discardBtn").onclick = () => { current = null; $("review").hidden = true; window.scrollTo({ top:0, behavior:"smooth" }); };
+
+// 画面が裏に回ったら、その時点で区切って保存する
+document.addEventListener("visibilitychange", () => { if(document.hidden && recording) stop("hidden"); });
+window.addEventListener("pagehide", () => { if(recording) stop("hidden"); });
+
+$("discardBtn").onclick = async () => {
+  if(review){ await DB.del(review.item.id); await DB.delChunks(review.item.id); }
+  review = null; $("review").hidden = true; renderHist(); window.scrollTo({ top:0, behavior:"smooth" });
+};
 
 /* ---------- 送る ---------- */
 const toB64 = blob => new Promise(ok => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1] || ""); r.readAsDataURL(blob); });
 $("sendBtn").onclick = async () => {
-  if(!current) return;
-  const item = { id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), at: Date.now(),
-    who: $("who").value.trim(), by: $("by").value.trim(), text: $("text").value.trim(),
-    mime: current.mime, ext: extOf(current.mime), seconds: current.seconds, audio: current.blob, status:"wait" };
-  ls.set("imatoru-who", item.who); ls.set("imatoru-by", item.by);
-  await DB.put(item);
-  current = null; $("review").hidden = true; window.scrollTo({ top:0, behavior:"smooth" });
+  if(!review) return;
+  const item = review.item;
+  item.text = $("text").value.trim(); item.status = "wait"; await DB.put(item);
+  review = null; $("review").hidden = true; window.scrollTo({ top:0, behavior:"smooth" });
   await send(item);
 };
+async function audioOf(item){
+  if(item.audio) return item.audio; // 旧版で保存したもの
+  const parts = await DB.chunks(item.id);
+  return parts.length ? new Blob(parts, { type:item.mime }) : null;
+}
+const sending = new Set();
 async function send(item){
+  if(sending.has(item.id)) return;
   const c = cfg();
   if(!c.url || !c.key){ toast("この端末に保存しました。設定を入れると送れます"); return renderHist(); }
-  toast("送っています…");
+  sending.add(item.id); renderHist();
   try{
-    const body = JSON.stringify({ key:c.key, at:item.at, who:item.who, by:item.by, text:item.text, mime:item.mime, ext:item.ext, seconds:item.seconds, audio: item.audio ? await toB64(item.audio) : "" });
+    const blob = await audioOf(item);
+    if(!blob && !item.text) throw new Error("中身がありません");
+    const body = JSON.stringify({ key:c.key, at:item.at, who:item.who, by:item.by, text:item.text, mime:item.mime, ext:item.ext,
+      seconds:item.seconds, part:item.part || 1, audio: blob ? await toB64(blob) : "" });
     const res = await fetch(c.url, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body });
     const j = await res.json();
     if(!j.ok) throw new Error(j.error === "key" ? "合言葉が違います" : (j.error || "送信エラー"));
-    item.status = "sent"; delete item.audio; await DB.put(item);
+    item.status = "sent"; delete item.audio; await DB.put(item); await DB.delChunks(item.id);
     toast("ドライブに送りました");
   }catch(e){
     toast(String(e.message).includes("合言葉") ? "合言葉が違います。設定を確認してください" : "送れませんでした。この端末に残してあるので、あとで再送できます");
-  }
-  renderHist();
+  }finally{ sending.delete(item.id); renderHist(); }
 }
 
 /* ---------- 履歴 ---------- */
 const fmt = t => { const d=new Date(t); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
+const LABEL = { sent:["sent","送信済み"], wait:["wait","未送信"], review:["wait","確認待ち"], recording:["wait","録音中"] };
 async function renderHist(){
   let items = await DB.all();
-  const sent = items.filter(i => i.status === "sent");
-  for(const old of sent.slice(50)) await DB.del(old.id);
+  for(const old of items.filter(i => i.status === "sent").slice(50)) await DB.del(old.id);
   items = await DB.all();
   renderRecent(items);
   const el = $("hist");
-  if(!items.length){ el.innerHTML = `<p class="empty">まだ記録はありません。赤いボタンを押して話すと、ここに並びます。</p>`; return; }
-  el.innerHTML = items.map(i => `<div class="item">
-    <span class="meta">${fmt(i.at)}${i.who ? "　" + esc(i.who) : ""}${i.by ? "（" + esc(i.by) + "）" : ""}・${Math.floor((i.seconds||0)/60)}分${(i.seconds||0)%60}秒</span>
-    <span class="badge ${i.status === "sent" ? "sent" : "wait"}">${i.status === "sent" ? "送信済み" : "未送信"}</span>
+  const shown = items.filter(i => !(review && i.id === review.item.id) && !(recording && cur && i.id === cur.id));
+  if(!shown.length){ el.innerHTML = `<p class="empty">まだ記録はありません。赤いボタンを押して話すと、ここに並びます。</p>`; return; }
+  el.innerHTML = shown.map(i => { const [cls, lab] = sending.has(i.id) ? ["wait","送信中…"] : (LABEL[i.status] || LABEL.wait);
+    return `<div class="item">
+    <span class="meta">${fmt(i.at)}${i.who ? "　" + esc(i.who) : ""}${i.by ? "（" + esc(i.by) + "）" : ""}${i.part > 1 ? `・続き${i.part}` : ""}・${Math.floor((i.seconds||0)/60)}分${(i.seconds||0)%60}秒</span>
+    <span class="badge ${cls}">${lab}</span>
     <span class="tx">${esc(i.text ? i.text.slice(0,80) + (i.text.length>80 ? "…" : "") : "（音声のみ）")}
-      ${i.status !== "sent" ? `<button class="retry" data-id="${i.id}">いま送る</button>` : ""}</span>
-  </div>`).join("");
-  el.querySelectorAll(".retry").forEach(b => b.onclick = async () => { const it = (await DB.all()).find(x => x.id === b.dataset.id); if(it) send(it); });
+      ${i.status !== "sent" && !sending.has(i.id) ? `<button class="retry" data-id="${i.id}">いま送る</button>` : ""}</span>
+  </div>`; }).join("");
+  el.querySelectorAll(".retry").forEach(b => b.onclick = async () => { const it = (await DB.all()).find(x => x.id === b.dataset.id); if(it){ if(it.status !== "wait"){ it.status = "wait"; await DB.put(it); } send(it); } });
+}
+
+// 前回、途中で止まった録音（ページが閉じられた等）を拾い直す
+async function recover(){
+  const left = (await DB.all()).filter(i => i.status === "recording" || i.status === "review");
+  let n = 0;
+  for(const it of left){
+    const parts = await DB.chunks(it.id);
+    if(!parts.length && !it.text){ await DB.del(it.id); continue; }
+    if(it.status === "recording") it.seconds = it.seconds || parts.length;
+    it.status = "wait"; await DB.put(it); n++;
+  }
+  if(n) toast(`途中で止まった録音が${n}件あります。「いま送る」で送れます`);
 }
 
 (async () => {
   fillSettings();
   try{ await DB.open(); }catch(e){ toast("この端末に記録を残せません（プライベートブラウズ中かもしれません）"); }
+  await recover();
   renderHist();
   if(!cfg().url) { $("settings").hidden = false; $("setBtn").setAttribute("aria-expanded", "true"); }
 })();
