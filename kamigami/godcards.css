@@ -399,3 +399,15 @@ button.res-cell{background:none;border:0;padding:0;cursor:pointer;font:inherit;c
 .tut-box{pointer-events:none}.tut-box button{pointer-events:auto}
 .tut-box.mid{top:36%}
 @media (max-height:700px){.tut-box{grid-template-columns:44px 1fr;padding:6px 8px}.tut-box img{width:44px;height:66px}.tut-txt p{font-size:13px;line-height:1.5}}
+/* チュートリアル：押す場所をはっきり光らせる */
+.tut-ring{border:4px solid #fff3a0;border-radius:16px;box-shadow:0 0 0 9999px #00000059,0 0 26px 10px #ffd76a;animation:tutPulse2 .9s ease-in-out infinite}
+@keyframes tutPulse2{0%,100%{transform:scale(1);border-color:#fff3a0}50%{transform:scale(1.06);border-color:#ffb02e;box-shadow:0 0 0 9999px #00000059,0 0 40px 16px #ffcf4a}}
+.tut-ring::after{content:'ここ！ ▼';position:absolute;left:50%;bottom:100%;transform:translate(-50%,-6px);padding:3px 10px;border-radius:999px;background:#ffe27a;color:#2a1904;font:900 13px "Shippori Mincho B1",serif;white-space:nowrap;box-shadow:0 2px 8px #0009;animation:tutBob .8s ease-in-out infinite}
+.tut-ring.below::after{content:'▲ ここ！';bottom:auto;top:100%;transform:translate(-50%,6px)}
+@keyframes tutBob{50%{margin-bottom:6px;margin-top:6px}}
+.tut-glow{position:relative;z-index:93!important;outline:4px solid #ffe27a!important;outline-offset:2px;box-shadow:0 0 22px 8px #ffd76acc!important;animation:tutGlow .9s ease-in-out infinite!important;filter:brightness(1.15)!important}
+@keyframes tutGlow{50%{outline-color:#ff9f1a;box-shadow:0 0 34px 14px #ffcf4a!important}}
+.tut-help{min-height:30px;padding:0 10px;border-radius:999px;border:1px solid #9fe3ff;background:#0b2a3a;color:#cfefff;font:800 12px sans-serif;cursor:pointer}
+.tut-acts{flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){.tut-ring::after,.tut-glow{animation:none!important}}
+.tut-ring.info::after{content:none}.tut-ring.info{animation:none;border-style:dashed}
