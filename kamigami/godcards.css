@@ -411,3 +411,5 @@ button.res-cell{background:none;border:0;padding:0;cursor:pointer;font:inherit;c
 .tut-acts{flex-wrap:wrap}
 @media (prefers-reduced-motion:reduce){.tut-ring::after,.tut-glow{animation:none!important}}
 .tut-ring.info::after{content:none}.tut-ring.info{animation:none;border-style:dashed}
+.tut-box.nudge{animation:tutNudge .35s}
+@keyframes tutNudge{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}

@@ -44,12 +44,12 @@ function tutorialStart(){if(typeof start!=='function')return;window.__tutorial=t
  // 練習用に場を整える（2ターン目の状態。自分の主神はもう攻撃でき、進化ゲージは2/3）
  p.turns=2;round=2;p.max=p.mp=3;p.charged=false;p.hand=['draw','g6','rain','bolt'];p.gauge=2;weather='晴れ';c.shrines=['seed','seed'];c.hand=['seed'];
  let g=mk(c,6);g.hp=2;g.bornTurn=-5;c.units.push(g);c.turns=1;render();
- TUT={i:0,el:null,ring:null,timer:null};tutDraw();TUT.timer=setInterval(tutTick,150)}
+ TUT={i:0,el:null,ring:null,timer:null,allow:null};tutGuardOn();tutDraw();TUT.timer=setInterval(tutTick,150)}
 function tutDraw(){if(TUT)TUT.t=0;let s=TUT_STEPS[TUT.i];if(!TUT.el){TUT.el=document.createElement('div');TUT.el.className='tut-box';document.body.appendChild(TUT.el);TUT.ring=document.createElement('div');TUT.ring.className='tut-ring';document.body.appendChild(TUT.ring)}
   TUT.el.innerHTML='<img src="story/portraits/guide.webp" alt="" onerror="this.remove()"><div class="tut-txt"><b>案内の巫女</b><p>'+s.say+'</p><div class="tut-acts"><small>'+(TUT.i+1)+' / '+TUT_STEPS.length+'</small>'
- +(s.wait?(s.noNext?'':'<em>光っている所を押してね</em>')+(s.auto?'<button class="tut-help" onclick="tutAuto()" hidden>うまくいかない？ 代わりにやる</button>':''):'<button class="tut-next" onclick="tutNext()">'+(s.last?'はじめる':'次へ')+'</button>')+'<button class="tut-skip" onclick="tutEnd(true)">スキップ</button></div></div>';tutRing()}
+ +(s.wait?(s.noNext?'':'<em>光っている所を押してね</em>')+(s.auto?'<button class="tut-help" onclick="tutAuto()" hidden>うまくいかない？ 代わりにやる</button>':''):'<button class="tut-next" onclick="tutNext()">'+(s.last?'はじめる':'次へ')+'</button>')+'<button class="tut-skip" onclick="if(this.dataset.ok){tutEnd(true)}else{this.dataset.ok=1;this.textContent=\'もう一度押すとスキップ\'}">スキップ</button></div></div>';tutRing()}
 function tutRing(){if(!TUT)return;let s=TUT_STEPS[TUT.i],sel=s.hl&&s.hl(),el=sel&&[...document.querySelectorAll(sel)].find(e=>e.getClientRects().length);
- document.querySelectorAll('.tut-glow').forEach(e=>{if(e!==el)e.classList.remove('tut-glow')});if(el&&s.wait)el.classList.add('tut-glow');if(!el||!el.getClientRects().length){TUT.ring.style.display='none';tutPos(s,null);return}
+ document.querySelectorAll('.tut-glow').forEach(e=>{if(e!==el)e.classList.remove('tut-glow')});TUT.allow=s.wait?el:null;if(el&&s.wait)el.classList.add('tut-glow');if(!el||!el.getClientRects().length){TUT.ring.style.display='none';tutPos(s,null);return}
  let r=el.getBoundingClientRect();TUT.ring.classList.toggle('below',r.top<90);TUT.ring.classList.toggle('info',!s.wait);Object.assign(TUT.ring.style,{display:'block',left:(r.left-6)+'px',top:(r.top-6)+'px',width:(r.width+12)+'px',height:(r.height+12)+'px'});
  // 説明の箱が光らせた場所に重ならないよう、上か下に寄せる
  let mid=(r.top+r.bottom)/2;tutPos(s,mid)}
@@ -58,10 +58,18 @@ function tutNext(){if(!TUT)return;let s=TUT_STEPS[TUT.i];if(s.last){tutEnd(false
  // 先回りして済んでいる操作は飛ばす
  while(TUT_STEPS[TUT.i]&&TUT_STEPS[TUT.i].wait&&!TUT_STEPS[TUT.i].noNext&&TUT_STEPS[TUT.i].wait())TUT.i++;tutDraw()}
 async function tutAuto(){if(!TUT||busy)return;let i0=TUT.i,s=TUT_STEPS[i0];if(!s.auto)return;try{busy=false;await s.auto()}catch(e){console.warn(e)}busy=false;render();if(!TUT||TUT.i!==i0)return;if(s.wait&&s.wait())tutNext();else{TUT.i++;tutDraw()}}
-function tutEnd(skip){if(!TUT)return;clearInterval(TUT.timer);document.querySelectorAll('.tut-glow').forEach(e=>e.classList.remove('tut-glow'));TUT.el&&TUT.el.remove();TUT.ring&&TUT.ring.remove();TUT=null;save.tutorialDone=true;persist();
+function tutEnd(skip){if(!TUT)return;clearInterval(TUT.timer);tutGuardOff();document.querySelectorAll('.tut-glow').forEach(e=>e.classList.remove('tut-glow'));TUT.el&&TUT.el.remove();TUT.ring&&TUT.ring.remove();TUT=null;save.tutorialDone=true;persist();
  if(skip&&!ending){latest='チュートリアルをスキップしました。このまま練習バトルを続けられます。';render()}}
 function tutorialResult(){let won=ending==='勝利';if(TUT)tutEnd(false);save.tutorialDone=true;persist();tag.textContent='';
  app.innerHTML='<div class="scene resultscreen '+(won?'win':'lose')+'"><div class="sc-bg dim"></div><div class="sc-frame"></div><div class="rs-in"><p class="rs-sub">チュートリアル</p><h2 class="rs-title">'+(won?'勝利！':'おつかれさま')+'</h2>'
  +'<p class="rs-why">'+(won?'チュートリアル完了！ 神力・召喚・天候・壁・破殿解放・進化、これで基本はばっちりです。':'練習バトルはここまで。基本の流れはつかめましたか？')+'<br>次は「対戦する」で本番、「ストーリー」で神々との物語へ。</p>'
  +'<div class="rs-actions"><button class="btn-gold-s" onclick="window.__tutorial=false;ending=\'\';home()">ホームへ</button><button class="btn-navy" onclick="ending=\'\';tutorialStart()">もう一度</button></div></div></div>'}
 function tutPos(s,mid){let p0=s.pos||(s.top?'low':mid==null?'top':mid<innerHeight*0.5?'low':'top');TUT.el.classList.toggle('low',p0==='low');TUT.el.classList.toggle('mid',p0==='mid')}
+
+// ---- 指示以外は押せないようにする（説明の箱のボタンと、光っている所だけ反応） ----
+function tutGuard(e){if(!TUT)return;let t=e.target;if(t.closest&&t.closest('.tut-box'))return;
+ let st=TUT_STEPS[TUT.i],sel=st&&st.wait&&st.hl&&st.hl(),a=sel&&[...document.querySelectorAll(sel)].find(x=>x.getClientRects().length);if(a&&(a===t||a.contains(t)))return;
+ e.preventDefault();e.stopPropagation();if(e.type==='click'){TUT.el&&TUT.el.classList.remove('nudge');void (TUT.el&&TUT.el.offsetWidth);TUT.el&&TUT.el.classList.add('nudge')}}
+const TUT_EVENTS=['click','pointerdown','pointerup','mousedown','mouseup','touchstart','touchend','dragstart','dblclick','contextmenu'];
+function tutGuardOn(){TUT_EVENTS.forEach(ev=>document.addEventListener(ev,tutGuard,{capture:true,passive:false}))}
+function tutGuardOff(){TUT_EVENTS.forEach(ev=>document.removeEventListener(ev,tutGuard,{capture:true}))}
