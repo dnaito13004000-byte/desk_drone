@@ -49,7 +49,7 @@ function pct(b){let [W,H]=CARD_LAYOUT.canvasPx;return 'left:'+(b[0]/W*100)+'%;to
 // 主神カード1枚。live＝対戦中の値（攻撃力・現在/最大体力）
 function gcard(id,st,live,cls='',short=false){let s=stageOf(id,st),B=CARD_LAYOUT.safeTextBoundsPx,
   atk=live?live.atk:s.atk,hp=live?'<b class="cur">'+Math.max(0,live.hp)+'</b><small>/'+live.max+'</small>':s.hp,weak=live&&live.weak;
- return '<span class="gc '+cls+'" data-id="'+id+'" data-st="'+st+'"><img src="'+cardImg(id,st)+'" alt="'+s.name+'" draggable="false" decoding="async" loading="lazy">'
+ return '<span class="gc '+cls+'" data-id="'+id+'" data-st="'+st+'"><img src="'+cardImg(id,st)+'" alt="'+s.name+'" draggable="false" loading="lazy">'
  +statIcon('atk',atk,weak)
  +statIcon('hp',live?Math.max(0,live.hp):s.hp,false,live?live.max:null)
  +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+(short?s.skill+(s.cost&&(s.fx.bolt||s.fx.heal||s.fx.fox)&&st===0?'（神力'+s.cost+'）':''):stageText(id,st))+'</i></span>'
@@ -120,7 +120,7 @@ const RANK_STAGE={N:0,U:0,R:1,SR:2};   // パックの主神カードはレア�
 function hdArt(k){let m=/^g(\d+)$/.exec(k);if(m)return +m[1]<12?'art/hd/p'+m[1]+'.webp':portraits[+m[1]];if(['rain','bolt','guard','draw'].includes(k))return 'art/hd/'+k+'.webp';if(SPELL_ART[k])return SPELL_ART[k];return art(k)}
 function costBadge(o){return '<span class="uc-badge'+(o.cantPay?' nopay':'')+'" style="'+pct(FRAME_PX.badge)+'" title="コスト"><b>'+(o.cost!=null?o.cost:1)+'</b></span>'}
 function cardKind(key){if(typeof key==='number')return GOD_CARDS[key]?'hero':'ally';let m=/^g(\d+)$/.exec(key);if(m)return GOD_CARDS[+m[1]]?'hero':'ally';return 'spell'}
-function ucard(key,o={}){if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[key])return expCard(key,o);if(o.cost==null){try{o=Object.assign({},o,{cost:cardCost(typeof key==='string'&&/^g\d+$/.test(key)?+key.slice(1):key)})}catch(e){}}let kind=cardKind(key),id=typeof key==='number'?key:(/^g(\d+)$/.exec(key)||[])[1];id=id==null?null:+id;
+function ucard(key,o={}){if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[key])return expCard(key,o);if(STARTER_ART[key])return starterCard(key,o);if(o.cost==null){try{o=Object.assign({},o,{cost:cardCost(typeof key==='string'&&/^g\d+$/.test(key)?+key.slice(1):key)})}catch(e){}}let kind=cardKind(key),id=typeof key==='number'?key:(/^g(\d+)$/.exec(key)||[])[1];id=id==null?null:+id;
  if(kind==='hero'){let st=o.stage!=null?o.stage:0,h=gcard(id,st,o.live||null,(o.cls||'')+(o.rank?' r-hero':''),o.short);return o.showCost?h.replace(/<\/span>$/,costBadge(o)+'</span>'):h}
  let O=CARD_LAYOUT.outerBoundsPx||{attack:[16.5,761.5,97,97],health:[477.5,761.5,97,97],effect:[118,744,355,113],evolution:[58,703,475,31]},S=CARD_LAYOUT.safeTextBoundsPx,
   r=cardRarity(kind==='ally'?id:key),name,img,band,eff,stats=null;
@@ -130,7 +130,7 @@ function ucard(key,o={}){if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[key])retur
  else{name=spellName(key);img=hdArt(key);band='呪文';eff=cardShort(key)}
  let hp=null;
  return '<span class="gc uc uc-'+kind+' r-'+r+' '+(o.cls||'')+'" data-k="'+key+'"><span class="uc-frame"></span>'
- +'<span class="uc-art" style="'+pct(FRAME_PX.art)+'"><img src="'+img+'" alt="" draggable="false" decoding="async" loading="lazy"></span>'
+ +'<span class="uc-art" style="'+pct(FRAME_PX.art)+'"><img src="'+img+'" alt="" draggable="false" loading="lazy"></span>'
  +costBadge(o)
  +(o.rank?'<span class="uc-rk">'+r+'</span>':'')
  +'<span class="uc-nameband" style="'+pct(FRAME_PX.nameBand)+'"></span><span class="uc-panel" style="'+pct(FRAME_PX.panel)+'"></span>'
@@ -298,7 +298,7 @@ function colorChip(k){let c=colorOf(k);return '<i class="colchip c-'+(COLORS.ind
 function cardCost(k){if(EXP_CARDS[k])return EXP_CARDS[k].cost;if(typeof k==='number')return (typeof ALLY_COST!=='undefined'&&ALLY_COST[k])||1;return moves[k]?moves[k][1]:1}
 // 拡張カードの表示：完成カード絵＋剣・ハートの器に数字（仲間）＋効果帯に全文＋細帯にコスト
 function expCard(k,o={}){let e=EXP_CARDS[k],B=CARD_LAYOUT.safeTextBoundsPx,ally=e.kind==='ally';
- return '<span class="gc uc uc-exp '+(ally?'uc-ally':'uc-spell')+' r-'+e.r+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/expansion/'+k+'.webp" alt="'+e.name+'" draggable="false" decoding="async" loading="lazy">'
+ return '<span class="gc uc uc-exp '+(ally?'uc-ally':'uc-spell')+' r-'+e.r+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/expansion/'+k+'.webp" alt="'+e.name+'" draggable="false" loading="lazy">'
  +(ally?(o.live?statIcon('atk',o.live.atk,o.live.weak)+statIcon('hp',Math.max(0,o.live.hp),false,o.live.max):statIcon('atk',e.atk)+statIcon('hp',e.hp)):'')
  +'<span class="gb evo" data-k="evolution" style="'+pct(B.evolution)+'"><i class="fit one" data-r=".9">コスト'+e.cost+'</i></span>'
  +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+e.text+'</i></span>'
@@ -311,3 +311,11 @@ function expInfo(k){closeGodDetail();let e=EXP_CARDS[k],ally=e.kind==='ally';
  +'<button class="gd-close" onclick="closeGodDetail()">閉じる</button></div></div>';
  d.onclick=e2=>{if(e2.target===d)closeGodDetail()};document.body.appendChild(d)}
 TERMS.push(['最終決戦','神殿がすべて割れた側は、主神が攻撃の対象になる。主神の体力を0にしたら勝ち。'],['すり抜け','神殿を無視して主神を攻撃できること。風翼解放ハヤテ・蒼翼神ハヤテ、雨の間の瀬渡りのカワセミ神、疾風の忍神、水面抜きの対象。'],['破殿解放','神殿が割れたとき、そのカードをコストなしで使えること。使わなければ手札に加わる。'],['召喚酔い','場に出たターンは攻撃できない状態。次の自分のターンから攻撃できる。主神もおたがい1ターン目は攻撃できない。'],['速攻','「出たターンから攻撃できる」効果。召喚酔いにならない。'],['登場時','その仲間を場に出したとき。'],['元の値','カードに書かれている攻撃力。弱める効果などで下がっていると「元の値より低い」状態になる。']);
+
+// ---- 初期呪文8種：枠つき完成イラスト（2026-11-25差し替え）。名前帯はアート側、コスト・効果文は既存の重ね表示で載せる ----
+const STARTER_ART={rain:'amagoi',sun:'kumobarai',bolt:'shourai',guard:'shugo',draw:'shintaku',seed:'tanemaki',mirror:'kakusei_kagami',scroll:'shini_keishou'};
+function starterCard(k,o={}){let B=CARD_LAYOUT.safeTextBoundsPx,t=CARD_TABLE[k]||{},cost=o.cost!=null?o.cost:(typeof costOf==='function'?costOf(k):1);
+ return '<span class="gc uc uc-exp uc-spell r-'+(t.r||'N')+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/starter/'+STARTER_ART[k]+'.webp" alt="'+spellName(k)+'" draggable="false" loading="lazy">'
+ +'<span class="gb evo" data-k="evolution" style="'+pct(B.evolution)+'"><i class="fit one" data-r=".9">コスト'+cost+'</i></span>'
+ +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+(t.full||cardShort(k))+'</i></span>'
+ +(o.showCost?costBadge(Object.assign({},o,{cost})):'')+'</span>'}
