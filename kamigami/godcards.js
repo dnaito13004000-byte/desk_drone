@@ -269,6 +269,20 @@ const EXP_CARDS={
  'mystic-6':{name:'薄暮の呪い手',color:'神秘',kind:'ally',r:'R',cost:5,atk:3,hp:6,text:'登場したとき、敵全員の攻撃力を1下げる。この効果は、その敵が場を離れるまで続く。'}
 };
 const R_ALLIES_AM=['sky-6','earth-6','fire-6','water-6','mystic-6'];
+Object.assign(EXP_CARDS,{
+ // ---- 追加カード（2026-11-25決定）：N追加10種。AIの標準デッキには入れない（N_ADD_AN）----
+ 'sky-7':{name:'霙神',color:'天象',kind:'ally',r:'N',cost:3,atk:2,hp:5,text:'天候が変わったとき、この仲間を1回復する。'},
+ 'sky-8':{name:'稲光',color:'天象',kind:'spell',r:'N',cost:1,atk:null,hp:null,text:'敵の主神に1ダメージ。'},
+ 'earth-7':{name:'苗神',color:'大地',kind:'ally',r:'N',cost:3,atk:2,hp:4,text:'登場したとき、自分の主神を1回復する。'},
+ 'earth-8':{name:'大地の恵み',color:'大地',kind:'spell',r:'N',cost:1,atk:null,hp:null,text:'味方1体を2回復する。'},
+ 'fire-7':{name:'火達磨',color:'烈火',kind:'ally',r:'N',cost:3,atk:4,hp:2,text:'効果なし'},
+ 'fire-8':{name:'火付け',color:'烈火',kind:'spell',r:'N',cost:1,atk:null,hp:null,text:'味方の仲間1体の攻撃力を、このターン+2する。'},
+ 'water-7':{name:'飛沫神',color:'奔流',kind:'ally',r:'N',cost:3,atk:1,hp:3,text:'出たターンから攻撃できる。1ターンに2回まで攻撃できる。'},
+ 'water-8':{name:'引き潮',color:'奔流',kind:'spell',r:'N',cost:2,atk:null,hp:null,text:'敵の仲間1体を、持ち主の手札に戻す。'},
+ 'mystic-7':{name:'写し神',color:'神秘',kind:'ally',r:'N',cost:2,atk:0,hp:3,text:'登場したとき、敵の仲間1体を選ぶ。この仲間の攻撃力は、その敵の攻撃力と同じになる。'},
+ 'mystic-8':{name:'心読み',color:'神秘',kind:'spell',r:'N',cost:1,atk:null,hp:null,text:'相手の手札をすべて見る。山札から1枚引く。'}
+});
+const N_ADD_AN=['sky-7','sky-8','earth-7','earth-8','fire-7','fire-8','water-7','water-8','mystic-7','mystic-8'];
 for(const [k,e] of Object.entries(EXP_CARDS)){CARD_TABLE[k]={r:e.r,name:e.name,short:e.text,full:e.text,exp:true};if(e.kind==='ally'){names[k]=e.name;titles[k]='';types[k]=e.color}}
 // 対戦に入らないカード（数値未確定の仲間・今のルールでは効果が変化しない呪文）
 ['mirror','scroll'].forEach(k=>CARD_TABLE[k].later=false);

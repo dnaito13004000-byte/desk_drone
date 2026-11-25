@@ -428,3 +428,10 @@ button.res-cell{background:none;border:0;padding:0;cursor:pointer;font:inherit;c
 .finalbanner small{color:#ffd6c8;font:700 13px sans-serif}
 @keyframes finalIn{0%{opacity:0;transform:translate(-50%,-50%) scale(1.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){.duel .zone.final .unit.herocard .gc,.finalbanner{animation:none}}
+
+/* 心読み・写し神の選択画面 */
+.foehand .hz-in{max-height:92vh;overflow:auto}
+.foehand .fh-list{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
+.foehand .fh-card{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:#f3e7c4}
+.foehand .fh-card .gc{width:100%;height:auto}
+.copypick{display:flex;flex-direction:column;gap:8px}

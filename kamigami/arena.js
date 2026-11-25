@@ -28,7 +28,7 @@ async function subFx(){let list=subLog;subLog=[];if(calm())return;
 function heroFx(f){return GOD_CARDS[f.id]?stageOf(f.id,f.stage).fx:{}}
 function fxOf(f,u){return u&&u.hero?heroFx(f):{}}
 const atkOf=u=>Math.max(0,(u.setAtk!=null?u.setAtk:u.atk+(u.tmpAtk||0))-(u.weak||0));
-function maxAttacks(f,u){return (fxOf(f,u).attacks||1)+(u&&u.extraAtt||0)}
+function maxAttacks(f,u){return (fxOf(f,u).attacks||(u&&u.id==='water-7'?2:1))+(u&&u.extraAtt||0)}
 function canEvolve(f){let h=heroOf(f);return !!h&&f.stage===0&&f.gauge>=ASCEND.evolve.gauge&&f.mp>=ASCEND.evolve.cost}
 function canAwaken(f){let h=heroOf(f);return !!h&&f.stage===1&&f.shrineBroken&&f.mp>=ASCEND.awaken.cost}
 // 進化（N→R）・覚醒（R→SR）：最大体力が増えた分だけ現在体力も増える（全回復はしない）
@@ -318,6 +318,11 @@ const SP={
  'water-3':{tgt:'allyMate',ok:(f,t)=>t.bornTurn===f.turns&&!hasteOf(f,t),run:(f,t)=>{t.haste=true;latest+='　'+names[t.id]+'はこのターンから攻撃できる'},why:'このターンに出した味方の仲間がいるときだけ使える'},
  'water-4':{tgt:'allyMate',run:(f,t)=>{t.pierce=true;latest+='　'+names[t.id]+'はこのターン、神殿を無視して主神を攻撃できる'},ai:f=>foeOf(f).shrines.length?mates(f).filter(u=>!u.used&&!sickOf(f,u)&&!t_pierce(f,u)).sort((a,b)=>atkOf(b)-atkOf(a))[0]||null:null},
  'water-5':{can:f=>!!f.heroHit&&f.deck.length>0,run:f=>drawN(f,1),why:'このターンに味方の仲間が敵の主神を攻撃していれば使える',post:true},
+ 'sky-8':{run:(f)=>{dmgHero(foeOf(f),1,'稲光')},ai:f=>'none'},
+ 'earth-8':{tgt:'ally',ok:(f,t)=>t.hp<t.max,run:(f,t)=>{let b=t.hp;t.hp=Math.min(t.max,t.hp+2);latest+='　'+names[t.id]+'を'+(t.hp-b)+'回復';healed(f)},why:'体力が減っている味方がいるときだけ使える',ai:f=>[...f.units].filter(u=>u.hp>0&&u.hp<u.max).sort((a,b)=>(b.max-b.hp)-(a.max-a.hp))[0]||null},
+ 'fire-8':{tgt:'allyMate',run:(f,t)=>{t.tmpAtk=(t.tmpAtk||0)+2;latest+='　'+names[t.id]+'の攻撃力+2（このターン）'},ai:f=>mates(f).filter(u=>!u.used&&!sickOf(f,u)).sort((a,b)=>atkOf(b)-atkOf(a))[0]||null},
+ 'water-8':{tgt:'foeMate',run:(f,t)=>{bounce(foeOf(f),t)},ai:f=>mates(foeOf(f)).sort((a,b)=>atkOf(b)-atkOf(a))[0]||null},
+ 'mystic-8':{can:f=>true,run:(f)=>{let d=foeOf(f);if(f===p&&!window.__autoP)showFoeHand(d.hand.slice());drawN(f,1);latest+='　相手の手札を見て、1枚引いた'},ai:f=>f.deck.length?'none':null},
  'mystic-3':{tgt:'foe',ok:(f,t)=>weakened(t),run:(f,t)=>{let n=hurt(t,2);latest+='　'+names[t.id]+'に'+n+'ダメージ'},why:'攻撃力が下がっている敵がいるときだけ使える'},
  'mystic-4':{tgt:'allyMate',run:(f,t)=>{t.dodge=true;latest+='　'+names[t.id]+'は次の相手ターン終了まで敵の仲間に狙われない'},ai:f=>mates(f).filter(u=>!u.dodge).sort((a,b)=>a.hp-b.hp)[0]||null},
  'mystic-5':{tgt:'foe',ok:(f,t)=>weakened(t),run:(f,t)=>{let n=hurt(t,Math.min(3,t.weak||0));latest+='　'+names[t.id]+'に'+n+'ダメージ'},why:'攻撃力が下がっている敵がいるときだけ使える'}
@@ -332,6 +337,8 @@ function whyNot(f,k){if(legal(f,k))return '';let need=costOf(k)-f.mp;if(need>0)r
 // 登場時の効果
 function onEnter(f,u){let d=foeOf(f);
  if(u.id==='sky-1'){if(f===p)setTimeout(askWeather,0);else{let want=f.id===2||f.hand.includes('bolt')||f.units.some(x=>x.id==='sky-2'&&!x.trig2)?(weather==='雨'?'晴れ':'雨'):null;if(want){sky(want);latest+='　天候を'+want+'にした'}}}
+ if(u.id==='earth-7'){let h=heroOf(f);if(h&&h.hp>0&&h.hp<h.max){h.hp=Math.min(h.max,h.hp+1);latest+='　苗神：'+names[h.id]+'を1回復';healed(f)}}
+ if(u.id==='mystic-7'){let L=mates(d);if(!L.length)latest+='　写し神：敵の仲間がいないので攻撃力0のまま';else if(f===p&&!window.__autoP)setTimeout(()=>askCopy(u),0);else{let t=[...L].sort((a,b)=>atkOf(b)-atkOf(a))[0];copyAtk(u,t)}}
  if(u.id==='mystic-6'){let n=0;for(const t of d.units)if(t.hp>0){t.weak=Math.max(t.weak||0,1);t.weakBy=null;n++}if(n)latest+='　薄暮の呪い手：敵全員の攻撃力−1（場を離れるまで）'}
  if(u.id==='mystic-1'){let t=[...d.units].filter(x=>x.hp>0).sort((a,b)=>(weakened(a)?1:0)-(weakened(b)?1:0)||atkOf(b)-atkOf(a))[0];if(t){t.weak=Math.max(t.weak||0,1);t.weakBy=null;latest+='　'+names[t.id]+'の攻撃力−1（場を離れるまで）'}}}
 function askWeather(){if(ending)return;let o=document.createElement('div');o.className='handzoom confirm';o.setAttribute('role','dialog');
@@ -355,7 +362,7 @@ async function castSpell(f,i,t){let k=f.hand[i];if(SP[k]&&SP[k].tgt&&!spTargets(
 // ---- 標準デッキ：その色の仲間 → その色の呪文 → 色なし → 足りなければ他の色の仲間（低コスト順）。同名2枚まで、20枚 ----
 function battleReady(k){if(isSum('g'+k)||typeof k==='number')return !!gods[k]&&!GOD_CARDS[k];if(isSum(k))return true;return !!SP[k]&&!SP[k].noDeck}
 function handKey(k){return typeof k==='number'?'g'+k:k}
-function standardDeck(id){let col=GOD_CARDS[id].type,pool=[...SET_ALL.allies,...SET_ALL.spells].filter(battleReady).filter(k=>!R_ALLIES_AM.includes(k)),own=k=>save.cards.filter(x=>x[0]===k).length;
+function standardDeck(id){let col=GOD_CARDS[id].type,pool=[...SET_ALL.allies,...SET_ALL.spells].filter(battleReady).filter(k=>!R_ALLIES_AM.includes(k)&&!N_ADD_AN.includes(k)),own=k=>save.cards.filter(x=>x[0]===k).length;
  pool=pool.filter(k=>own(k)>0);let ally=k=>typeof k==='number'||isSum(k);
  let order=[...pool.filter(k=>colorOf(k)===col&&ally(k)),...pool.filter(k=>colorOf(k)===col&&!ally(k)),...pool.filter(k=>!colorOf(k)),...pool.filter(k=>colorOf(k)&&colorOf(k)!==col&&ally(k)).sort((a,b)=>costOf(handKey(a))-costOf(handKey(b)))];
  let deck=[];for(const k of order){for(let n=0;n<Math.min(2,own(k))&&deck.length<20;n++)deck.push(handKey(k));if(deck.length>=20)break}return deck}
@@ -367,6 +374,7 @@ function resetTurn(f){for(const s of [p,c])for(const u of s.units){u.hitThisTurn
  f.atkCount=0;f.heroHit=false;f.spells=0;f.units.forEach(u=>{u.trig2=false;u.trig3=false;u.dodge=false})}
 function healed(f){if(turn!==f)return;for(const u of f.units)if(u.id==='earth-2'&&!u.trig3&&u.hp>0){u.trig3=true;u.tmpAtk=(u.tmpAtk||0)+2;latest+='　古根の角王の攻撃力+2（このターン）'}}
 function sky(value){let changed=value!==weather;weather=value;if(!changed||!turn||ending)return;let f=turn,d=foeOf(f);
+ for(const s2 of [f,d])for(const u of s2.units)if(u.id==='sky-7'&&u.hp>0&&u.hp<u.max){u.hp=Math.min(u.max,u.hp+1);latest+='　霙神が1回復';healed(s2)}
  for(const u of f.units)if(u.id==='sky-2'&&!u.trig2&&u.hp>0){u.trig2=true;let t=[...d.units].filter(x=>x.hp>0&&!x.ward).sort((a,b)=>(a.hero?1:0)-(b.hero?1:0)||(a.hp<=2?-1:0)-(b.hp<=2?-1:0)||a.hp-b.hp)[0]||d.units[0];if(t){let n=hurt(t,2);latest+='　霹靂を喰う天狗が'+names[t.id]+'に'+n+'ダメージ'}}
  for(const u of f.units)if(u.id==='sky-6'&&u.hp>0)dmgHero(d,1,'嵐呼の雷獣');settle(d,f)}
 // 攻撃のあとに起きる効果（resolveStrike の最後で呼ぶ）
@@ -402,7 +410,7 @@ for(const [k,e] of Object.entries(EXP_CARDS))if(e.kind==='ally')gods[k]=[e.atk,e
 
 // ---- 召喚酔い：場に出たターン（主神は自分の1ターン目）は攻撃できない。速攻＝シズク・ハヤテ全形態・火走りのイタチ神・条件を満たした潮先の鷺神・追い潮の対象 ----
 const SHRINES=5;
-function hasteOf(f,u){if(u.haste)return true;if(u.hero)return !!heroFx(f).haste;if(u.id===1||u.id==='fire-1')return true;if(u.id==='water-1')return (f.spells||0)>0;return false}
+function hasteOf(f,u){if(u.haste)return true;if(u.hero)return !!heroFx(f).haste;if(u.id===1||u.id==='fire-1'||u.id==='water-7')return true;if(u.id==='water-1')return (f.spells||0)>0;return false}
 function sickOf(f,u){return u.bornTurn!=null&&u.bornTurn>=(f.turns||0)&&!hasteOf(f,u)}
 
 // ==== 破殿解放：神殿が割れたら、そのカードをコストなしで使うか、手札に加えるかを選ぶ（AIは使えるなら使う）====
@@ -479,3 +487,16 @@ for(const [k,v] of Object.entries(ALLY_COST))if(typeof EXP_CARDS!=='undefined'&&
 function costOf(k){if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[k])return EXP_CARDS[k].cost;if(/^g\d+$/.test(k))return ALLY_COST[+k.slice(1)]||1;return moves[k]?moves[k][1]:1}
 
 (function(){const r0=render;render=function(){r0.apply(this,arguments);try{finalCheck()}catch(e){}}})();
+
+// ==== N追加10種の補助 ====
+// 写し神：選んだ敵の「その時点の攻撃力」を自分の元の攻撃力として固定（以後の相手の変化には追随しない）
+function copyAtk(u,t){let v=atkOf(t);u.atk=v;u.copyOf=t.id;latest+='　写し神：'+names[t.id]+'の攻撃力'+v+'を写した'}
+function askCopy(u){if(ending)return;let L=mates(c);if(!L.length||u.hp<=0)return;let o=document.createElement('div');o.className='handzoom confirm';o.setAttribute('role','dialog');
+ o.innerHTML='<div class="hz-in"><div class="hz-text"><h3>写し神（登場時）</h3><p class="hz-eff">攻撃力を写す敵の仲間を選んでください</p></div><div class="hz-acts copypick">'+L.map(t=>'<button class="hz-btn gold" data-u="'+t.uid+'">'+names[t.id]+'（攻撃力'+atkOf(t)+'）</button>').join('')+'</div></div>';
+ o.onclick=e=>{let b=e.target.closest('button');if(!b)return;let t=c.units.find(x=>x.uid==+b.dataset.u);if(!t)return;o.remove();copyAtk(u,t);render()};document.body.appendChild(o)}
+// 引き潮：場から外して持ち主の手札へ。ダメージ・攻撃力低下・一時効果は消える（手札上限のルールはないのでそのまま加える）
+function bounce(d,t){d.units=d.units.filter(x=>x!==t);d.hand.push(handKey(t.id));latest+='　'+names[t.id]+'は持ち主の手札に戻った'}
+// 心読み：相手の手札を一覧表示（閉じるまで）
+function showFoeHand(list){let o=document.createElement('div');o.className='handzoom confirm foehand';o.setAttribute('role','dialog');o.setAttribute('aria-label','相手の手札');
+ o.innerHTML='<div class="hz-in"><div class="hz-text"><h3>心読み：相手の手札（'+list.length+'枚）</h3></div><div class="fh-list">'+(list.length?list.map(k=>'<div class="fh-card">'+ucard(typeof k==='string'&&/^g\d+$/.test(k)?+k.slice(1):k,{})+'<b>'+(cardLabel?cardLabel(k):k)+'</b></div>').join(''):'<p class="hz-eff">相手の手札はありません</p>')+'</div><div class="hz-acts"><button class="hz-btn gold">閉じる</button></div></div>';
+ o.onclick=e=>{if(e.target.closest('button'))o.remove()};document.body.appendChild(o)}
