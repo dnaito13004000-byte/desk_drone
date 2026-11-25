@@ -260,8 +260,15 @@ const EXP_CARDS={
  'mystic-2':{name:'逆夢の獏神',color:'神秘',kind:'ally',r:'R',cost:3,atk:3,hp:5,text:'攻撃力が元の値より低い敵を攻撃したとき、攻撃後に、その敵の攻撃力が下がった分だけ敵の主神にダメージ。'},
  'mystic-3':{name:'影の縫い返し',color:'神秘',kind:'spell',r:'U',cost:1,atk:null,hp:null,text:'攻撃力が元の値より低い敵1体に2ダメージ。'},
  'mystic-4':{name:'空蝉の歩法',color:'神秘',kind:'spell',r:'N',cost:1,atk:null,hp:null,text:'味方の仲間1体は、次の相手ターン終了まで敵の仲間の攻撃対象にならない。'},
- 'mystic-5':{name:'逆さ月の宣告',color:'神秘',kind:'spell',r:'R',cost:3,atk:null,hp:null,text:'攻撃力が元の値より低い敵1体に、元の値から下がった分だけダメージ。最大3ダメージ。'}
+ 'mystic-5':{name:'逆さ月の宣告',color:'神秘',kind:'spell',r:'R',cost:3,atk:null,hp:null,text:'攻撃力が元の値より低い敵1体に、元の値から下がった分だけダメージ。最大3ダメージ。'},
+ // ---- 追加カード（2026-11-25決定）：R仲間5種。パック・図鑑・デッキ編成用。AIの標準デッキには入れない（R_ALLIES_AM）----
+ 'sky-6':{name:'嵐呼の雷獣',color:'天象',kind:'ally',r:'R',cost:5,atk:4,hp:7,text:'自分のターンに天候が変わったとき、敵の主神に1ダメージ。'},
+ 'earth-6':{name:'不動の山神',color:'大地',kind:'ally',r:'R',cost:5,atk:3,hp:9,text:'自分の神殿が割れたとき、この仲間を2回復する。'},
+ 'fire-6':{name:'爆炎の剣神',color:'烈火',kind:'ally',r:'R',cost:4,atk:5,hp:4,text:'この仲間が倒れたとき、敵1体に2ダメージ。'},
+ 'water-6':{name:'疾風の忍神',color:'奔流',kind:'ally',r:'R',cost:4,atk:3,hp:5,text:'この仲間は神殿を無視して、敵の主神を攻撃できる。'},
+ 'mystic-6':{name:'薄暮の呪い手',color:'神秘',kind:'ally',r:'R',cost:5,atk:3,hp:6,text:'登場したとき、敵全員の攻撃力を1下げる。この効果は、その敵が場を離れるまで続く。'}
 };
+const R_ALLIES_AM=['sky-6','earth-6','fire-6','water-6','mystic-6'];
 for(const [k,e] of Object.entries(EXP_CARDS)){CARD_TABLE[k]={r:e.r,name:e.name,short:e.text,full:e.text,exp:true};if(e.kind==='ally'){names[k]=e.name;titles[k]='';types[k]=e.color}}
 // 対戦に入らないカード（数値未確定の仲間・今のルールでは効果が変化しない呪文）
 ['mirror','scroll'].forEach(k=>CARD_TABLE[k].later=false);
@@ -289,4 +296,4 @@ function expInfo(k){closeGodDetail();let e=EXP_CARDS[k],ally=e.kind==='ally';
  +(CARD_TABLE[k].later?'<p class="gd-next">このカードは、今の対戦デッキにはまだ入っていません。</p>':'')+termList(e.text+(ally?'仲間':''))
  +'<button class="gd-close" onclick="closeGodDetail()">閉じる</button></div></div>';
  d.onclick=e2=>{if(e2.target===d)closeGodDetail()};document.body.appendChild(d)}
-TERMS.push(['最終決戦','神殿がすべて割れた側は、主神が攻撃の対象になる。主神の体力を0にしたら勝ち。'],['すり抜け','神殿を無視して主神を攻撃できること。風翼解放ハヤテ・蒼翼神ハヤテ、雨の間の瀬渡りのカワセミ神、水面抜きの対象。'],['破殿解放','神殿が割れたとき、そのカードをコストなしで使えること。使わなければ手札に加わる。'],['召喚酔い','場に出たターンは攻撃できない状態。次の自分のターンから攻撃できる。主神もおたがい1ターン目は攻撃できない。'],['速攻','「出たターンから攻撃できる」効果。召喚酔いにならない。'],['登場時','その仲間を場に出したとき。'],['元の値','カードに書かれている攻撃力。弱める効果などで下がっていると「元の値より低い」状態になる。']);
+TERMS.push(['最終決戦','神殿がすべて割れた側は、主神が攻撃の対象になる。主神の体力を0にしたら勝ち。'],['すり抜け','神殿を無視して主神を攻撃できること。風翼解放ハヤテ・蒼翼神ハヤテ、雨の間の瀬渡りのカワセミ神、疾風の忍神、水面抜きの対象。'],['破殿解放','神殿が割れたとき、そのカードをコストなしで使えること。使わなければ手札に加わる。'],['召喚酔い','場に出たターンは攻撃できない状態。次の自分のターンから攻撃できる。主神もおたがい1ターン目は攻撃できない。'],['速攻','「出たターンから攻撃できる」効果。召喚酔いにならない。'],['登場時','その仲間を場に出したとき。'],['元の値','カードに書かれている攻撃力。弱める効果などで下がっていると「元の値より低い」状態になる。']);

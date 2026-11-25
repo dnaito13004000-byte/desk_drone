@@ -102,7 +102,7 @@ function pack(){tag.textContent='';zoom=null;if(save.pending.length){revealStep(
  +'<div class="pk-stage"><button class="tpack'+(n?'':' empty')+'" id="wrapper" aria-label="雷鳴の社のパック。上のギザギザを横になぞるか、タップして開封" '+(n?'':'disabled')+'>'
  +'<span class="crimp top"><i class="cut"></i></span><span class="pk-body">'+packArt()+'<span class="pk-title">雷鳴の社</span><span class="pk-sheen"></span></span><span class="crimp bottom"></span></button></div>'
  +'<p class="pk-hint">'+(n?'上のギザギザを横になぞって開封（タップでも開きます）'+(UNLIMITED_PACKS?'':'　チケット1枚を使います'):'チケットがありません。チケットは対戦に勝つともらえます')+'</p>'+(n?'':'<button class="btn-gold-s" onclick="chooseGodFromPack()">対戦する</button>')
- +'<p class="pk-note">全45種（主神5・仲間17・呪文23）から5枚。主神1枚確定（主神枠の形態 N'+HERO_FORM_RATES.N+'%・R'+HERO_FORM_RATES.R+'%・SR'+HERO_FORM_RATES.SR+'%。同じ形態の2枚目以降は神の欠片5個に）<br>ほかの4枚の出やすさ N'+RARITY_RATES.N+'%・U'+RARITY_RATES.U+'%・R'+RARITY_RATES.R+'%'+(UNLIMITED_PACKS?'<br><span class="test-tag">実験中：パック無制限</span>':'')+'</p></div>';
+ +'<p class="pk-note">全'+SET_ALL.cards.length+'種（主神'+SET_ALL.heroes.length+'・仲間'+SET_ALL.allies.length+'・呪文'+SET_ALL.spells.length+'）から5枚。主神1枚確定（主神枠の形態 N'+HERO_FORM_RATES.N+'%・R'+HERO_FORM_RATES.R+'%・SR'+HERO_FORM_RATES.SR+'%。同じ形態の2枚目以降は神の欠片5個に）<br>ほかの4枚の出やすさ N'+RARITY_RATES.N+'%・U'+RARITY_RATES.U+'%・R'+RARITY_RATES.R+'%'+(UNLIMITED_PACKS?'<br><span class="test-tag">実験中：パック無制限</span>':'')+'</p></div>';
  if(!n)return;
  let w=document.getElementById('wrapper'),x0=null,done=false,cut=w.querySelector('.cut');
  let open=()=>{if(done)return;done=true;navigator.vibrate?.(25);if(!UNLIMITED_PACKS){save.tickets--;let t=document.getElementById('tkn');if(t){t.textContent=save.tickets;t.animate([{transform:'scale(1.8)',color:'#ff9c7a'},{transform:'none'}],{duration:600})}}
