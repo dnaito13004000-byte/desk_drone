@@ -413,3 +413,18 @@ button.res-cell{background:none;border:0;padding:0;cursor:pointer;font:inherit;c
 .tut-ring.info::after{content:none}.tut-ring.info{animation:none;border-style:dashed}
 .tut-box.nudge{animation:tutNudge .35s}
 @keyframes tutNudge{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+
+/* ==== プロンプトAL：神殿を中央に、主神は後方 ==== */
+.duel .zone.foe{grid-template-rows:minmax(0,1fr) auto!important}
+.duel .zone.mine{grid-template-rows:auto minmax(0,1fr)!important}
+.duel .zone.foe .shrinerow{padding:2px 0 0}.duel .zone.mine .shrinerow{padding:0 0 2px}
+.arena.duel .zone.mine>.atkbtn{top:0!important;bottom:auto!important}
+/* 最終決戦：神殿がなくなった側の主神を強調 */
+.duel .zone.final .unit.herocard .gc{box-shadow:0 0 0 3px #ff5a3a,0 0 22px 6px #ff5a3acc;animation:finalPulse 1.2s ease-in-out infinite}
+@keyframes finalPulse{50%{box-shadow:0 0 0 3px #ffb03a,0 0 32px 12px #ff7a3a}}
+.duel .zone.final .shrinerow::after{content:'最終決戦';margin-left:8px;align-self:center;padding:2px 10px;border-radius:999px;background:#7a1408;color:#ffd6c8;font:900 12px "Shippori Mincho B1",serif;letter-spacing:.1em}
+.finalbanner{position:fixed;left:50%;top:42%;z-index:96;transform:translate(-50%,-50%);display:grid;justify-items:center;gap:6px;padding:16px 28px;border-radius:16px;background:radial-gradient(circle,#5a1408f2,#1a0402f2);border:2px solid #ff9a6a;box-shadow:0 0 40px #ff5a3aaa;pointer-events:none;animation:finalIn 2.2s ease-out forwards;text-align:center}
+.finalbanner b{font:900 40px "Shippori Mincho B1",serif;letter-spacing:.15em;color:#fff1d6;text-shadow:0 0 18px #ff7a3a}
+.finalbanner small{color:#ffd6c8;font:700 13px sans-serif}
+@keyframes finalIn{0%{opacity:0;transform:translate(-50%,-50%) scale(1.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.duel .zone.final .unit.herocard .gc,.finalbanner{animation:none}}

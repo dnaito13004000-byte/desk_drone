@@ -27,8 +27,8 @@ const GOD_CARDS={
   {rank:'SR',name:'熔獅神カグラ',atk:7,hp:10,skill:'獅子王',fx:{attacks:2,extra:2},text:'獅子王：1ターンに{attacks}回攻撃できる。攻撃した相手に追加で{extra}ダメージ'}]},
  3:{key:'hayate',name:'ハヤテ',type:'奔流',stages:[
   {rank:'N',name:'幼神ハヤテ',atk:3,hp:6,skill:'そよ風',fx:{haste:true},text:'そよ風：場に出たターンから攻撃できる'},
-  {rank:'R',name:'風翼解放ハヤテ',atk:4,hp:8,skill:'風渡り',fx:{haste:true,pierce:'hero'},text:'風渡り：出たターンから攻撃できる。主神と神殿へは仲間をすり抜けて攻撃できる'},
-  {rank:'SR',name:'蒼翼神ハヤテ',atk:5,hp:11,skill:'天翔',fx:{haste:true,pierce:'all'},text:'天翔：出たターンから攻撃できる。すべての攻撃で仲間をすり抜けられる'}]},
+  {rank:'R',name:'風翼解放ハヤテ',atk:4,hp:8,skill:'風渡り',fx:{haste:true,pierce:'hero'},text:'風渡り：出たターンから攻撃できる。すり抜け（神殿を無視して主神を攻撃できる）'},
+  {rank:'SR',name:'蒼翼神ハヤテ',atk:5,hp:11,skill:'天翔',fx:{haste:true,pierce:'all'},text:'天翔：出たターンから攻撃できる。すり抜け（神殿を無視して主神を攻撃できる）'}]},
  10:{key:'oboro',name:'オボロ',type:'神秘',stages:[
   {rank:'N',name:'幼神オボロ',atk:2,hp:7,skill:'狐火',cost:1,fx:{fox:1},text:'狐火（神力{cost}）：敵1体の攻撃力を、その敵が場を離れるまで−{fox}'},
   {rank:'R',name:'影紋解放オボロ',atk:3,hp:9,skill:'影写し',cost:1,fx:{fox:1,shadow:true},text:'影写し：自分への攻撃を1回だけ影に受けさせる（ダメージ0）'},
@@ -120,7 +120,7 @@ const RANK_STAGE={N:0,U:0,R:1,SR:2};   // パックの主神カードはレア�
 function hdArt(k){let m=/^g(\d+)$/.exec(k);if(m)return +m[1]<12?'art/hd/p'+m[1]+'.webp':portraits[+m[1]];if(['rain','bolt','guard','draw'].includes(k))return 'art/hd/'+k+'.webp';if(SPELL_ART[k])return SPELL_ART[k];return art(k)}
 function costBadge(o){return '<span class="uc-badge'+(o.cantPay?' nopay':'')+'" style="'+pct(FRAME_PX.badge)+'" title="コスト"><b>'+(o.cost!=null?o.cost:1)+'</b></span>'}
 function cardKind(key){if(typeof key==='number')return GOD_CARDS[key]?'hero':'ally';let m=/^g(\d+)$/.exec(key);if(m)return GOD_CARDS[+m[1]]?'hero':'ally';return 'spell'}
-function ucard(key,o={}){if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[key])return expCard(key,o);let kind=cardKind(key),id=typeof key==='number'?key:(/^g(\d+)$/.exec(key)||[])[1];id=id==null?null:+id;
+function ucard(key,o={}){if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[key])return expCard(key,o);if(o.cost==null){try{o=Object.assign({},o,{cost:cardCost(typeof key==='string'&&/^g\d+$/.test(key)?+key.slice(1):key)})}catch(e){}}let kind=cardKind(key),id=typeof key==='number'?key:(/^g(\d+)$/.exec(key)||[])[1];id=id==null?null:+id;
  if(kind==='hero'){let st=o.stage!=null?o.stage:0,h=gcard(id,st,o.live||null,(o.cls||'')+(o.rank?' r-hero':''),o.short);return o.showCost?h.replace(/<\/span>$/,costBadge(o)+'</span>'):h}
  let O=CARD_LAYOUT.outerBoundsPx||{attack:[16.5,761.5,97,97],health:[477.5,761.5,97,97],effect:[118,744,355,113],evolution:[58,703,475,31]},S=CARD_LAYOUT.safeTextBoundsPx,
   r=cardRarity(kind==='ally'?id:key),name,img,band,eff,stats=null;
@@ -201,8 +201,8 @@ const TERMS=[
  ['神力','カードを使うためのポイント。手札を毎ターン1枚まで「神力に置く」と、最大値が1増える。自分のターンの始めに最大まで回復する。'],
  ['進化ゲージ','主神が通常攻撃を当てるたびに1増える。自分の神殿が割れたときも、進化ゲージが1増えます。'+ASCEND.evolve.gauge+'たまると、神力'+ASCEND.evolve.cost+'を払って進化できる。'],
  ['覚醒','進化した主神は、自分の神殿が1枚でも割られたあと（身代わりで割れた場合も含む）、神力'+ASCEND.awaken.cost+'を払って覚醒できる。'],
- ['神殿','おたがい5枚ずつ持つ伏せたカード。攻撃されると1枚割れ、中のカードは守る側がコストなしで使うか（破殿解放）、手札に加える。5枚とも割れたあと、もう一撃当てると勝ち。主神は倒れず、倒れるダメージを受けると代わりに神殿が1枚割れて全回復する（神殿が0枚なら負け）。'],
- ['主神','デッキの中心になる神。最初から場にいて、進化・覚醒で強くなる。倒れるダメージを受けても倒れず、代わりに神殿が1枚割れる。'],
+ ['神殿','おたがい5枚ずつ、場の中央に伏せて置くカード。攻撃されると1枚割れ、中のカードは守る側がコストなしで使うか（破殿解放）、手札に加える。神殿が残っている間は主神を攻撃できない。すべて割ると最終決戦。主神は倒れず、倒れるダメージを受けると代わりに神殿が1枚割れて全回復する。'],
+ ['主神','デッキの中心になる神。最初から場の後方にいて、進化・覚醒で強くなる。倒れるダメージを受けても倒れず、代わりに神殿が1枚割れる。'],
  ['仲間','手札から召喚する神。場に出たターンは攻撃できず、次の自分のターンから攻撃できる（速攻を持つカードは例外）。場に出せるのは主神を含めて3体まで。'],
  ['ダメージ','体力が減ること。体力が0になった神は場から退く。神どうしで戦うと、おたがいに攻撃力ぶんのダメージを与える（反撃）。'],
  ['山札','まだ引いていないカードの束。自分のターンの始めに1枚引く。']
@@ -252,9 +252,9 @@ const EXP_CARDS={
  'fire-4':{name:'二の太刀',color:'烈火',kind:'spell',r:'U',cost:2,atk:null,hp:null,text:'このターンにちょうど1回攻撃した味方の仲間1体は、このターンもう1回攻撃できる。'},
  'fire-5':{name:'落日の火葬鐘',color:'烈火',kind:'spell',r:'R',cost:3,atk:null,hp:null,text:'このターンに味方が合計2回以上攻撃していれば使える。敵の主神に3ダメージ。'},
  'water-1':{name:'潮先の鷺神',color:'奔流',kind:'ally',r:'N',cost:1,atk:2,hp:3,text:'このターンに呪文を使っていれば、出たターンから攻撃できる。'},
- 'water-2':{name:'瀬渡りのカワセミ神',color:'奔流',kind:'ally',r:'R',cost:2,atk:2,hp:4,text:'雨の間、この仲間は敵の仲間を無視して敵の主神を攻撃できる。'},
+ 'water-2':{name:'瀬渡りのカワセミ神',color:'奔流',kind:'ally',r:'R',cost:2,atk:2,hp:4,text:'雨の間、この仲間はすり抜けを持つ（神殿を無視して敵の主神を攻撃できる）。'},
  'water-3':{name:'追い潮',color:'奔流',kind:'spell',r:'U',cost:1,atk:null,hp:null,text:'このターンに出した味方の仲間1体は、このターンから攻撃できる。'},
- 'water-4':{name:'水面抜き',color:'奔流',kind:'spell',r:'N',cost:2,atk:null,hp:null,text:'味方の仲間1体は、このターン、敵の仲間を無視して敵の主神を攻撃できる。'},
+ 'water-4':{name:'水面抜き',color:'奔流',kind:'spell',r:'N',cost:2,atk:null,hp:null,text:'味方の仲間1体は、このターン、すり抜けを得る（神殿を無視して敵の主神を攻撃できる）。'},
  'water-5':{name:'航跡を読む',color:'奔流',kind:'spell',r:'U',cost:1,atk:null,hp:null,text:'このターンに味方の仲間が敵の主神を攻撃していれば使える。山札から1枚引く。'},
  'mystic-1':{name:'面削りの童神',color:'神秘',kind:'ally',r:'N',cost:2,atk:2,hp:4,text:'登場時、敵1体の攻撃力を、その敵が場を離れるまで1下げる。'},
  'mystic-2':{name:'逆夢の獏神',color:'神秘',kind:'ally',r:'R',cost:3,atk:3,hp:5,text:'攻撃力が元の値より低い敵を攻撃したとき、攻撃後に、その敵の攻撃力が下がった分だけ敵の主神にダメージ。'},
@@ -274,7 +274,7 @@ const COLORS=['烈火','奔流','天象','神秘','大地'];
 const BASE_COLOR={rain:'天象',sun:'天象',bolt:'天象',seed:'大地',guard:'',draw:'',mirror:'',scroll:''};// ★rain/sun/bolt/seed は仮、guard/mirror/scroll は未定
 function colorOf(k){if(EXP_CARDS[k])return EXP_CARDS[k].color;if(typeof k==='number')return GOD_CARDS[k]?GOD_CARDS[k].type:(types[k]||'');return BASE_COLOR[k]||''}
 function colorChip(k){let c=colorOf(k);return '<i class="colchip c-'+(COLORS.indexOf(c)+1)+'">'+(c||'色なし')+'</i>'}
-function cardCost(k){if(EXP_CARDS[k])return EXP_CARDS[k].cost;return typeof k==='number'?1:(moves[k]?moves[k][1]:1)}
+function cardCost(k){if(EXP_CARDS[k])return EXP_CARDS[k].cost;if(typeof k==='number')return (typeof ALLY_COST!=='undefined'&&ALLY_COST[k])||1;return moves[k]?moves[k][1]:1}
 // 拡張カードの表示：完成カード絵＋剣・ハートの器に数字（仲間）＋効果帯に全文＋細帯にコスト
 function expCard(k,o={}){let e=EXP_CARDS[k],B=CARD_LAYOUT.safeTextBoundsPx,ally=e.kind==='ally';
  return '<span class="gc uc uc-exp '+(ally?'uc-ally':'uc-spell')+' r-'+e.r+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/expansion/'+k+'.webp" alt="'+e.name+'" draggable="false">'
@@ -289,4 +289,4 @@ function expInfo(k){closeGodDetail();let e=EXP_CARDS[k],ally=e.kind==='ally';
  +(CARD_TABLE[k].later?'<p class="gd-next">このカードは、今の対戦デッキにはまだ入っていません。</p>':'')+termList(e.text+(ally?'仲間':''))
  +'<button class="gd-close" onclick="closeGodDetail()">閉じる</button></div></div>';
  d.onclick=e2=>{if(e2.target===d)closeGodDetail()};document.body.appendChild(d)}
-TERMS.push(['壁','相手の場に仲間がいる間、神殿と主神は攻撃できない。まず仲間を倒す（すり抜けは例外）。'],['すり抜け','仲間がいても、主神・神殿・本陣を攻撃できること。ハヤテ全形態、雨の間の瀬渡りのカワセミ神、水面抜きの対象。'],['破殿解放','神殿が割れたとき、そのカードをコストなしで使えること。使わなければ手札に加わる。'],['召喚酔い','場に出たターンは攻撃できない状態。次の自分のターンから攻撃できる。主神もおたがい1ターン目は攻撃できない。'],['速攻','「出たターンから攻撃できる」効果。召喚酔いにならない。'],['登場時','その仲間を場に出したとき。'],['元の値','カードに書かれている攻撃力。弱める効果などで下がっていると「元の値より低い」状態になる。']);
+TERMS.push(['最終決戦','神殿がすべて割れた側は、主神が攻撃の対象になる。主神の体力を0にしたら勝ち。'],['すり抜け','神殿を無視して主神を攻撃できること。風翼解放ハヤテ・蒼翼神ハヤテ、雨の間の瀬渡りのカワセミ神、水面抜きの対象。'],['破殿解放','神殿が割れたとき、そのカードをコストなしで使えること。使わなければ手札に加わる。'],['召喚酔い','場に出たターンは攻撃できない状態。次の自分のターンから攻撃できる。主神もおたがい1ターン目は攻撃できない。'],['速攻','「出たターンから攻撃できる」効果。召喚酔いにならない。'],['登場時','その仲間を場に出したとき。'],['元の値','カードに書かれている攻撃力。弱める効果などで下がっていると「元の値より低い」状態になる。']);

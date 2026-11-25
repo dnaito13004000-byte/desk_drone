@@ -39,7 +39,7 @@ function wallet(){return '<div class="wallet"><span class="w-tk">'+TICKET+'<smal
 // 対戦終了画面：勝敗ともらった報酬
 function resultScreen(){if(window.__storyBattle&&typeof storyResult==='function'){storyResult();return}if(window.__tutorial){tutorialResult();return}tag.textContent='';let r=lastReward||{won:ending==='勝利'},won=ending==='勝利';
  app.innerHTML='<div class="scene resultscreen '+(won?'win':'lose')+'"><div class="sc-bg dim"></div><div class="sc-rain"></div><div class="sc-frame"></div>'
- +'<div class="rs-in"><p class="rs-sub">'+titles[p.id]+' '+names[p.id]+' × '+titles[c.id]+' '+names[c.id]+'</p><h2 class="rs-title">'+(won?'勝利':'敗北')+'</h2><p class="rs-why">'+(won?'相手の本陣を突破しました。':r.surrender?'降参しました。':'神殿を突破されました。')+'</p>'
+ +'<div class="rs-in"><p class="rs-sub">'+titles[p.id]+' '+names[p.id]+' × '+titles[c.id]+' '+names[c.id]+'</p><h2 class="rs-title">'+(won?'勝利':'敗北')+'</h2><p class="rs-why">'+(won?'相手の主神を倒しました。':r.surrender?'降参しました。':'主神を倒されました。')+'</p>'
  +'<div class="rs-reward"><p>報酬</p>'+(won?'<span class="rw">'+TICKET+'パックチケット ×'+(r.tickets||0)+'</span><span class="rw">'+CROWN+'通算勝利 +'+(r.wins||0)+'</span>':(r.surrender?'<small>降参のため報酬はありません</small>':'<span class="rw">'+SHARD+'神の欠片 ×'+(r.shards||0)+'</span><small>神の欠片の使い道は近日追加予定です</small>'))+'</div>'
  +wallet()
  +'<div class="res-actions">'+(packsLeft()?'<button class="btn-gold-s" onclick="pack()">パックを開ける'+(UNLIMITED_PACKS?'':'（チケット'+save.tickets+'枚）')+'</button>':'')
@@ -181,9 +181,9 @@ function howto(){tag.textContent='';
  const sec=(h,body)=>'<section class="ht-sec"><h3>'+h+'</h3>'+body+'</section>';
  app.innerHTML='<div class="scene howto"><div class="sc-bg dim"></div><div class="sc-frame"></div>'
  +'<header class="sc-head"><button class="sc-back" onclick="home()" aria-label="ホームへ">‹</button><b>遊び方</b><span></span></header><div class="ht-body">'
- +'<button class="btn-gold-s ht-tut" onclick="tutorialStart()">チュートリアルをはじめる</button>'+sec('勝ち方','<p>相手の<b>神殿</b>（伏せたカード5枚）をすべて割り、そのあと相手にもう一撃当てると勝ち。自分の神殿を全部割られて一撃受けると負け。</p><p><b>壁</b>：相手の場に仲間がいる間、神殿と主神は攻撃できません。まず仲間を倒しましょう（すり抜けを持つカードは例外です）。</p><p><b>破殿解放</b>：神殿が割れたとき、そのカードをコストなしで使えます（破殿解放）。使わなければ手札に加わります。主神の身代わりで割れたときも同じ。</p><p><b>主神は倒れない。倒れる代わりに神殿が1枚割れる</b>（主神は最大体力まで回復する。神殿が0枚のときに倒れると負け）。</p>')
+ +'<button class="btn-gold-s ht-tut" onclick="tutorialStart()">チュートリアルをはじめる</button>'+sec('勝ち方','<p>攻撃できるのは、相手の仲間と、中央にある神殿だけです。</p><p>神殿をすべて割ると、相手の主神を攻撃できます。主神の体力を0にしたら勝ちです（<b>最終決戦</b>）。</p><p>すり抜けを持つカードは、神殿を無視して主神を攻撃できます。</p><p><b>破殿解放</b>：神殿が割れたとき、そのカードをコストなしで使えます（破殿解放）。使わなければ手札に加わります。主神の身代わりで割れたときも同じ。</p><p><b>主神は倒れない。倒れる代わりに神殿が1枚割れる</b>（主神は最大体力まで回復する。神殿が0枚のときに倒れると負け）。</p>')
  +sec('神力','<p>カードを使うためのポイント。どのカードもコストぶんの神力を払って使う。</p><ul><li>手札を毎ターン1枚まで「神力に置く」と、神力の最大値が1増える。</li><li>自分のターンの始めに、最大値まで回復する。</li></ul>')
- +sec('ターンの流れ','<ol><li>ターン開始：神力が回復し、山札から1枚引く。</li><li>手札を1枚まで神力に置ける。</li><li>仲間を召喚したり、呪文を使ったりする。</li><li>自分の神で攻撃する（1体につき1回）。場に出たターンは攻撃できません（速攻を持つカードは例外です）。主神もおたがい1ターン目は攻撃できない。相手の神か、相手の神殿をねらう。神どうしは、おたがいに攻撃力ぶんのダメージを与える。</li><li>「ターン終了」を押すと相手の番。</li></ol>')
+ +sec('ターンの流れ','<ol><li>ターン開始：神力が回復し、山札から1枚引く。</li><li>手札を1枚まで神力に置ける。</li><li>仲間を召喚したり、呪文を使ったりする。</li><li>自分の神で攻撃する（1体につき1回）。場に出たターンは攻撃できません（速攻を持つカードは例外です）。主神もおたがい1ターン目は攻撃できない。相手の仲間か、中央の相手の神殿をねらう（神殿がなくなったら相手の主神）。神どうしは、おたがいに攻撃力ぶんのダメージを与える。</li><li>「ターン終了」を押すと相手の番。</li></ol>')
  +sec('進化と覚醒','<ul><li><b>進化</b>：主神が通常攻撃を当てるたびに進化ゲージが1増える。自分の神殿が割れたときも、進化ゲージが1増えます。'+ASCEND.evolve.gauge+'たまると、神力'+ASCEND.evolve.cost+'を払って進化できる。</li><li><b>覚醒</b>：進化した主神は、自分の神殿が1枚でも割られたあと（身代わりで割れた場合も含む）、神力'+ASCEND.awaken.cost+'を払って覚醒できる。</li><li>形が変わると攻撃力・体力が上がり、スキルも強くなる。</li></ul>')
  +sec('天候','<p>場全体の天気で、おたがい共通。対戦は「晴れ」から始まる。対戦中は、まん中の天候表示をタップすると説明が出る。</p><ul><li><b>☀ 晴れ</b>：陽神アカツキの攻撃力が+1される。</li><li><b>☂ 雨</b>：潮神ナギの攻撃力が+1される。呪文「招雷」が使えるようになる。</li><li>「雨乞い」で雨、「雲払い」で晴れに変わる。</li></ul>')
  +sec('用語集','<dl class="terms">'+TERMS.map(([w,d])=>'<dt>'+w+'</dt><dd>'+d.replace(/^天候「.+?」：/,'')+'</dd>').join('')+'</dl>')

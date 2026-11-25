@@ -200,7 +200,7 @@ async function strike(f,u,d,v){let node=document.getElementById('u'+u.uid),tgt=d
   await pause(280);let cd0=f.hitInfo?f.hitInfo.u:was.u-u.hp;if(cd0>0){let cd=cd0,me=body(node,.5);sfx('hit');burst(fxKind[v.id]||'rock',me.x+dx,me.y+dy);shake(cd*.6);struck(node);pop('−'+cd,me.x+dx,body(node,.2).y+dy,cd*.8,'counter');drain(node,u)}}
  else if(lost>0){sfx('hit');hitCards.forEach(crack);burst(fxKind[u.id]||'bolt',b.x,b.y);await hitstop(90);shake(2+lost);
   await pause(230);sfx('shrine');hitCards.forEach(c=>breakCard(c,d===c_()));let cn=tgt.querySelector('.cnt b');if(cn)cn.textContent=d.shrines.length;pop('神殿 −'+lost,b.x,b.y+(d===p?-58:58),0,'shrine')}
- else if(ending){sfx('hit');burst(fxKind[u.id]||'bolt',b.x,b.y);await hitstop(100);shake(6);pop('本陣突破！',b.x,b.y,4,'shrine')}
+ else if(ending){sfx('hit');burst(fxKind[u.id]||'bolt',b.x,b.y);await hitstop(100);shake(6);pop('決着！',b.x,b.y,4,'shrine')}
  else{sfx('hit');burst('guard',b.x,b.y);await hitstop(70);shake(1);pop('守護',b.x,b.y-6,2,'guard')}
  await pause(170);if(subLog.length){node.animate([{transform:hit},{transform:'none'}],{duration:260,fill:'forwards'});await subFx()}
  await node.animate([{transform:hit},{transform:'none'}],{duration:260,easing:'cubic-bezier(.2,.8,.3,1)',fill:'forwards'}).finished;
@@ -211,7 +211,7 @@ async function strike(f,u,d,v){let node=document.getElementById('u'+u.uid),tgt=d
  if(keep){let now=[...document.querySelectorAll('#shrine'+d.id+' .back')];now.forEach((c,i)=>{if(keep[i]==null)return;let dx2=keep[i]-c.getBoundingClientRect().left;if(Math.abs(dx2)>.5)c.animate([{transform:'translateX('+dx2+'px)'},{transform:'none'}],{duration:340,easing:'cubic-bezier(.2,.8,.3,1)'})})}
  f.hitInfo=null;await shrineReveal(f,u,d);await shrineReveal(d,u,f)}
 const c_=()=>c;
-async function target(uid){let v0=c.units.find(x=>x.uid===uid);if(skillMode&&skillMode.side==='foe'&&v0&&turn===p&&!busy){if(skillMode.spell)await castSpell(p,skillMode.i,v0);else await useSkill(p,v0);return}if(attacker<0&&v0){inspect(c,v0);return}let u=selectedGod(attacker),v=c.units.find(x=>x.uid===uid);if(!u||u.used||sickOf(p,u)||turn!==p||busy||ending||(uid&&!v))return;if((!v||v.hero)&&walled(p,u,c)){latest='仲間がいる間は攻撃できません（まず相手の仲間を倒しましょう）';render();return}if(v&&v.dodge&&!u.hero){latest=names[v.id]+'は仲間の攻撃の対象にならない（空蝉の歩法）';render();return}busy=true;await strike(p,u,c,v);busy=false;if(!canAttackAny())attackMode=false;render()}
+async function target(uid){let v0=c.units.find(x=>x.uid===uid);if(skillMode&&skillMode.side==='foe'&&v0&&turn===p&&!busy){if(skillMode.spell)await castSpell(p,skillMode.i,v0);else await useSkill(p,v0);return}if(attacker<0&&v0){inspect(c,v0);return}let u=selectedGod(attacker),v=c.units.find(x=>x.uid===uid);if(!u||u.used||sickOf(p,u)||turn!==p||busy||ending||(uid&&!v))return;if(!v&&!c.shrines.length){latest='相手の神殿はもうありません。相手の主神を攻撃しましょう（最終決戦）';render();return}if(v&&v.hero&&heroLocked(p,u,c)){latest='神殿が残っている間は、主神を攻撃できません';render();return}if(v&&v.dodge&&!u.hero){latest=names[v.id]+'は仲間の攻撃の対象にならない（空蝉の歩法）';render();return}busy=true;await strike(p,u,c,v);busy=false;if(!canAttackAny())attackMode=false;render()}
 async function enemyTurn(){if(turn!==p||busy||ending)return;busy=true;begin(c);latest='相手の番';render();await pause(350);
  if(c.hand.length>1&&c.max<5){let i=c.hand.findIndex((x,i)=>c.hand.indexOf(x)<i);await chargeUI(c,i>=0?i:c.hand.length-1)}
  if(canAwaken(c)||canEvolve(c)){await ascendUI(c);await pause(250)}
@@ -231,7 +231,7 @@ const marks={ready:'<svg viewBox="0 0 100 24"><ellipse cx="50" cy="12" rx="46" r
  picked:'<svg viewBox="0 0 100 24"><ellipse cx="50" cy="12" rx="47" ry="10" fill="#ffd76a33" stroke="#ffd76a" stroke-width="3.5"/><ellipse cx="50" cy="12" rx="36" ry="6.5" fill="none" stroke="#fff4c8" stroke-width="1.5"/></svg>',
  target:'<svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M2 22V2h22M76 2h22v20M98 78v20H76M24 98H2V78" fill="none" stroke="#ffb08a" stroke-width="4" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></svg>'};
 function soldiers(f){return f.units.map(u=>{let ally=f===p,mine=turn===p&&!ending,hero=!!u.hero&&!!GOD_CARDS[u.id],awake=hero&&f.evolved,sk=skillMode&&mine&&!busy,
- st=sk?((skillMode.side==='ally')===ally?'target':''):ally?(attacker===u.uid?'picked':mine&&!u.used&&!busy&&sickOf(f,u)?'sick':mine&&!u.used&&!busy?(attackMode?'ready glow':'ready'):mine&&u.used?'used':''):(attacker>=0&&(!u.hero||!walled(p,selectedGod(attacker),c))?'target':attacker>=0?'walled':''),w=Math.max(0,u.hp)/u.max*100+'%',fresh=awake&&!f.awakeShown;if(fresh){f.awakeShown=true;setTimeout(()=>sfx('awaken'),0)}
+ st=sk?((skillMode.side==='ally')===ally?'target':''):ally?(attacker===u.uid?'picked':mine&&!u.used&&!busy&&sickOf(f,u)?'sick':mine&&!u.used&&!busy?(attackMode?'ready glow':'ready'):mine&&u.used?'used':''):(attacker>=0&&(!u.hero||!heroLocked(p,selectedGod(attacker),c))?'target':attacker>=0?'walled':''),w=Math.max(0,u.hp)/u.max*100+'%',fresh=awake&&!f.awakeShown;if(fresh){f.awakeShown=true;setTimeout(()=>sfx('awaken'),0)}
  let face=hero?gcard(u.id,f.stage,{atk:atkOf(u),hp:u.hp,max:u.max,weak:u.weak},'',true).replace(/<\/span>$/,costBadge({cost:1})+'</span>')
   :ucard(u.id,{live:{atk:atkOf(u),hp:u.hp,max:u.max,weak:u.weak}});
  let tagline=hero?'<span class="gtag'+(f.gaugeFlash&&Date.now()-f.gaugeFlash<1600?' flash':'')+'">'+(f.stage===0?'進化 '+Array.from({length:ASCEND.evolve.gauge},(_,i)=>'<i class="'+(i<f.gauge?'on':'')+(f.gaugeFlash&&Date.now()-f.gaugeFlash<1600&&i===f.gauge-1?' new':'')+'"></i>').join(''):f.stage===1?'覚醒 <i class="'+(f.shrineBroken?'on':'')+'"></i>'+(f.shrineBroken?'可':'神殿待ち'):'最終')+'</span>':'';
@@ -243,7 +243,7 @@ function heroActs(){if(turn!==p||busy||ending||!heroOf(p))return '';let o='',k=s
  else if(p.stage===1)o+=btn('覚醒 · 神力'+ASCEND.awaken.cost+(p.shrineBroken?'':'（神殿が割れたら）'),'ascendUI(p)',!canAwaken(p),canAwaken(p)?'gold':'');
  return o}
 function inspect(f,u){unitZoom(f,u)}
-function shrine(f){let n=f.shrines.length,foe=f===c,aim=foe&&attacker>=0&&!walled(p,selectedGod(attacker),c);return '<button class="shrine'+(aim?' target':'')+'" id="shrine'+f.id+'" aria-label="'+(foe?'相手':'自分')+'の神殿 残り'+n+(aim?' 攻撃する':'')+'" '+(foe?'onclick="target(0)"':'')+'><span class="pile">'+(n?Array.from({length:n},(_,i)=>'<i class="back" style="--i:'+i+'"></i>').join(''):'<i class="keep">本陣</i>')+'</span><span class="cnt"><small>神殿</small><b>'+n+'</b></span></button>'}
+function shrine(f){let n=f.shrines.length,foe=f===c,aim=foe&&attacker>=0&&f.shrines.length>0;return '<button class="shrine'+(aim?' target':'')+'" id="shrine'+f.id+'" aria-label="'+(foe?'相手':'自分')+'の神殿 残り'+n+(aim?' 攻撃する':'')+'" '+(foe?'onclick="target(0)"':'')+'><span class="pile">'+(n?Array.from({length:n},(_,i)=>'<i class="back" style="--i:'+i+'"></i>').join(''):'<i class="keep">主神むき出し</i>')+'</span><span class="cnt"><small>神殿</small><b>'+n+'</b></span></button>'}
 function backs(n){return '<span class="ohand" style="--n:'+Math.min(n,7)+'">'+Array.from({length:Math.min(n,7)},(_,i)=>'<i style="--i:'+i+'"></i>').join('')+'</span>'}
 // 神力ゾーン：最初の1は神殿の灯（丸）、神力に置いたカードは裏向きのミニカード。使った分は暗くなる
 let landing=null;
@@ -273,12 +273,12 @@ function render(){if(ending){resultScreen();return}
  else dock='<div class="detail idle"><p class="long">'+(wait?'相手の番です…':attackMode?'光っている自分の神をタップ → 攻撃先（相手の神か神殿）をタップ':'手札をタップで大きく表示／アタックか自分の神をタップで攻撃／相手の神をタップで詳細')+'</p>'+(free?'<div class="acts">'+heroActs()+'</div>':'')+'</div>';
  app.innerHTML='<div class="arena duel'+(weather==='雨'?' rain':'')+(mineTurn&&!busy?' my-turn':' their-turn')+'">'
  +'<header class="opp"><span class="who">'+titles[c.id]+' '+names[c.id]+'</span>'+backs(c.hand.length)+'<span class="stat"><small>手札</small><b>'+c.hand.length+'</b></span>'+mana(c)+'</header>'
- +'<section class="zone foe"><div class="shrinerow">'+shrine(c)+'</div><div class="gods" style="--n:'+Math.max(1,c.units.length)+'">'+soldiers(c)+'</div></section>'
+ +'<section class="zone foe'+(c.shrines.length?'':' final')+'"><div class="gods" style="--n:'+Math.max(1,c.units.length)+'">'+soldiers(c)+'</div><div class="shrinerow">'+shrine(c)+'</div></section>'
  +'<div class="mid"><span class="turnchip">'+(turn===p?'あなたの番':'相手の番')+'</span><button class="weather" onclick="weatherInfo()" aria-label="天候の説明">'+(weather==='雨'?'☂ 雨':'☀ 晴れ')+' <i>?</i></button><span class="round">'+round+'ターン目</span><p class="say">'+latest+'</p></div>'
- +'<section class="zone mine" id="dropzone">'+'<button class="atkbtn'+(canAttackAny()?' lit':'')+(attackMode?' on':'')+'" onclick="attackBtn()"'+(canAttackAny()?'':' disabled')+' aria-label="アタック"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 3 21 3 21 9.5 11 19.5 8.5 17zM5 15l4 4-2 2-1.5-1.5L4 21l-1-1 1.5-1.5L3 17z" fill="currentColor"/></svg><b>'+(attackMode?'攻撃先を選ぶ':'アタック')+'</b></button>'+'<div class="gods" style="--n:'+Math.max(1,p.units.length)+'">'+soldiers(p)+'</div><div class="shrinerow">'+shrine(p)+'</div></section>'
+ +'<section class="zone mine'+(p.shrines.length?'':' final')+'" id="dropzone">'+'<button class="atkbtn'+(canAttackAny()?' lit':'')+(attackMode?' on':'')+'" onclick="attackBtn()"'+(canAttackAny()?'':' disabled')+' aria-label="アタック"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 3 21 3 21 9.5 11 19.5 8.5 17zM5 15l4 4-2 2-1.5-1.5L4 21l-1-1 1.5-1.5L3 17z" fill="currentColor"/></svg><b>'+(attackMode?'攻撃先を選ぶ':'アタック')+'</b></button>'+'<div class="shrinerow">'+shrine(p)+'</div><div class="gods" style="--n:'+Math.max(1,p.units.length)+'">'+soldiers(p)+'</div></section>'
  +'<footer class="near"><div class="dock">'+mana(p)+dock+'<div class="ends">'+btn('ターン終了','endTurnUI()',!free,'end')+'<button class="surr" onclick="surrenderUI()" aria-label="降参する（バトルをやめる）">降参</button>'+btn(soundCfg().muted?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2"/></svg>','soundOpen=!soundOpen;render()','','helpbtn sndbtn')+btn('？','help=!help;render()','','helpbtn')+'</div></div>'
  +'<div class="handrail">'+p.hand.map((k,i)=>'<button draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\''+i+'\')" class="spell uspell'+(sel===i?' selected':'')+(free&&legal(p,k)?'':' cant')+'" onclick="cardPick('+i+')" aria-label="'+info(k)[0]+'">'+ucard(k,{stage:(isSum(k)&&+k.slice(1)===p.id)?p.stage:undefined,showCost:true,cost:costOf(k),cantPay:p.mp<costOf(k)})+'</button>').join('')+'</div></footer>'
- +(soundOpen?soundPanel():'')+(help?'<div class="notes"><b>遊び方</b><p>手札をタップ →「召喚する／使う」か「神力に置く」。自分の神カード → 上の相手の神カード（または相手の神殿）の順にタップして攻撃。神同士は同時にダメージを与えます。神殿3枚を壊し、本陣へ一撃で勝利。</p><p><b>壁</b>　相手の場に仲間がいる間、神殿と主神は攻撃できません。まず仲間を倒しましょう（すり抜けを持つカードは例外です）。</p><p><b>破殿解放</b>　神殿が割れたとき、そのカードをコストなしで使えます（破殿解放）。使わなければ手札に加わります。</p><p><b>召喚酔い</b>　場に出たターンは攻撃できません（速攻を持つカードは例外です）。主神もおたがい1ターン目は攻撃できません。</p><p><b>主神は倒れない</b>　倒れるダメージを受けると、代わりに神殿が1枚割れて主神は全回復します。神殿が0枚のときに倒れると負け。</p><p>手札は毎ターン1枚まで神力に置けます。呪文の効果は、手札をタップすると全文と用語の説明が見られます。</p><p>まん中の天候（☀晴れ／☂雨）をタップすると、いまの天候で何が起きるかが分かります。</p><p>くわしいルールはホームの「遊び方」へ。</p>'+btn('閉じる','help=false;render()')+'</div>':'')+'</div>';arrived='';
+ +(soundOpen?soundPanel():'')+(help?'<div class="notes"><b>遊び方</b><p>手札をタップ →「召喚する／使う」か「神力に置く」。自分の神カード → 上の相手の神カード（または相手の神殿）の順にタップして攻撃。神同士は同時にダメージを与えます。中央の神殿5枚をすべて割ったら最終決戦。相手の主神の体力を0にしたら勝ち。</p><p><b>攻撃できる相手</b>　攻撃できるのは、相手の仲間と、中央にある神殿だけです。神殿をすべて割ると、相手の主神を攻撃できます。主神の体力を0にしたら勝ちです。すり抜けを持つカードは、神殿を無視して主神を攻撃できます。</p><p><b>破殿解放</b>　神殿が割れたとき、そのカードをコストなしで使えます（破殿解放）。使わなければ手札に加わります。</p><p><b>召喚酔い</b>　場に出たターンは攻撃できません（速攻を持つカードは例外です）。主神もおたがい1ターン目は攻撃できません。</p><p><b>主神は倒れない</b>（神殿が残っている間）　倒れるダメージを受けると、代わりに神殿が1枚割れて主神は全回復します。神殿が0枚のときに倒れると負け。</p><p>手札は毎ターン1枚まで神力に置けます。呪文の効果は、手札をタップすると全文と用語の説明が見られます。</p><p>まん中の天候（☀晴れ／☂雨）をタップすると、いまの天候で何が起きるかが分かります。</p><p>くわしいルールはホームの「遊び方」へ。</p>'+btn('閉じる','help=false;render()')+'</div>':'')+'</div>';arrived='';
  let zone=document.getElementById('dropzone');zone.ondragover=e=>e.preventDefault();zone.ondrop=e=>{e.preventDefault();let raw=e.dataTransfer.getData('text/plain'),i=Number(raw);if(raw!==''&&free&&isSum(p.hand[i])){busy=true;doPlay(p,i).then(()=>{busy=false;render()})}}}
 
 // ====================================================================
@@ -309,7 +309,7 @@ const SP={
  'fire-4':{tgt:'allyMate',ok:(f,t)=>(t.att||0)===1,run:(f,t)=>{t.extraAtt=(t.extraAtt||0)+1;t.used=false;latest+='　'+names[t.id]+'はもう1回攻撃できる'},why:'このターンにちょうど1回攻撃した味方の仲間がいるときだけ使える',post:true},
  'fire-5':{can:f=>(f.atkCount||0)>=2,run:f=>{dmgHero(foeOf(f),3,'落日の火葬鐘')},why:'このターンに味方が合計2回以上攻撃していれば使える',post:true},
  'water-3':{tgt:'allyMate',ok:(f,t)=>t.bornTurn===f.turns&&!hasteOf(f,t),run:(f,t)=>{t.haste=true;latest+='　'+names[t.id]+'はこのターンから攻撃できる'},why:'このターンに出した味方の仲間がいるときだけ使える'},
- 'water-4':{tgt:'allyMate',run:(f,t)=>{t.pierce=true;latest+='　'+names[t.id]+'はこのターン、仲間を無視して主神・神殿を攻撃できる'},ai:f=>mates(foeOf(f)).length?mates(f).filter(u=>!u.used&&!sickOf(f,u)&&!t_pierce(f,u)).sort((a,b)=>atkOf(b)-atkOf(a))[0]||null:null},
+ 'water-4':{tgt:'allyMate',run:(f,t)=>{t.pierce=true;latest+='　'+names[t.id]+'はこのターン、神殿を無視して主神を攻撃できる'},ai:f=>foeOf(f).shrines.length?mates(f).filter(u=>!u.used&&!sickOf(f,u)&&!t_pierce(f,u)).sort((a,b)=>atkOf(b)-atkOf(a))[0]||null:null},
  'water-5':{can:f=>!!f.heroHit&&f.deck.length>0,run:f=>drawN(f,1),why:'このターンに味方の仲間が敵の主神を攻撃していれば使える',post:true},
  'mystic-3':{tgt:'foe',ok:(f,t)=>weakened(t),run:(f,t)=>{let n=hurt(t,2);latest+='　'+names[t.id]+'に'+n+'ダメージ'},why:'攻撃力が下がっている敵がいるときだけ使える'},
  'mystic-4':{tgt:'allyMate',run:(f,t)=>{t.dodge=true;latest+='　'+names[t.id]+'は次の相手ターン終了まで敵の仲間に狙われない'},ai:f=>mates(f).filter(u=>!u.dodge).sort((a,b)=>a.hp-b.hp)[0]||null},
@@ -376,8 +376,8 @@ async function aiPlay(f,post){for(let j=0;j<8&&!ending;j++){let best=null;
   if(!best)for(let i=0;i<f.hand.length;i++){let k=f.hand[i];if(isSum(k)||!legal(f,k))continue;if(!!SP[k].post!==!!post&&SP[k].post)continue;let t=aiTarget(f,k);if(t==null)continue;best=[i,t==='none'?null:t];break}
   if(!best)break;await castSpell(f,best[0],best[1]||undefined);render();await pause(calm()?0:240)}}
 async function aiAttack(f){let d=foeOf(f);for(let u of [...f.units]){for(let n=0;n<4&&!ending&&!u.used&&u.hp>0&&!sickOf(f,u)&&f.units.includes(u);n++){let ok=v=>!(v.dodge&&!u.hero),v;
-  if(walled(f,u,d)){let L=mates(d).filter(ok);if(!L.length)break;v=L.find(x=>x.hp<=atkOf(u)&&!x.shadow&&!x.ward)||L.sort((a,b)=>a.hp-b.hp)[0]}
-  else{let victims=d.units.filter(x=>x.hp<=atkOf(u)&&!x.shadow&&!x.ward&&ok(x));v=d.shrines.length&&victims.length?victims[0]:null}
+  let h=heroOf(d),kill=mates(d).filter(x=>ok(x)&&x.hp<=atkOf(u)&&!x.shadow&&!x.ward);
+  if(!d.shrines.length)v=h;else if(!heroLocked(f,u,d)&&h&&h.hp<=atkOf(u)&&!h.ward&&!h.shadow)v=h;else v=kill[0]||null
   await strike(f,u,d,v)}}}
 async function enemyTurn(){if(turn!==p||busy||ending)return;busy=true;begin(c);latest='相手の番';render();await pause(calm()?0:350);
  if(c.hand.length>1&&c.max<5){let i=c.hand.findIndex((x,i)=>c.hand.indexOf(x)<i);await chargeUI(c,i>=0?i:c.hand.length-1)}
@@ -428,8 +428,11 @@ async function gaugeUp(f){let h=heroOf(f);if(!h||f.stage!==0||f.gauge>=ASCEND.ev
 
 // ---- 壁ルール：相手の場に仲間がいる間、神殿・主神・本陣は攻撃できない（攻撃のみ。スキル・呪文のダメージは対象外）----
 // すり抜け＝ハヤテ全形態・瀬渡りのカワセミ神（雨の間）・水面抜きの対象
-function t_pierce(f,u){return !!u&&((u.hero&&f.id===3)||(u.id==='water-2'&&weather==='雨')||!!u.pierce)}
-function walled(f,u,d){return !!u&&mates(d).length>0&&!t_pierce(f,u)}
+// すり抜け：神殿を無視して主神を攻撃できる＝風翼解放ハヤテ・蒼翼神ハヤテ（進化後）・雨の間の瀬渡りのカワセミ神・水面抜きの対象
+function t_pierce(f,u){return !!u&&((u.hero&&f.id===3&&f.stage>=1)||(u.id==='water-2'&&weather==='雨')||!!u.pierce)}
+// 相手の神殿が残っている間は、主神を通常攻撃の対象にできない（攻撃できるのは相手の仲間と神殿）
+function heroLocked(f,u,d){return !!u&&d.shrines.length>0&&!t_pierce(f,u)}
+function walled(f,u,d){return heroLocked(f,u,d)}
 
 // ---- 場のカードの拡大表示：タップで大きく。今の攻撃力・体力・状態・効果の全文・用語。自分の神なら「この神で攻撃する」 ----
 function unitStatus(f,u){let t=[],mine=f===p;if(u.hero&&f.stage===0)t.push('進化ゲージ '+f.gauge+'/'+ASCEND.evolve.gauge);
@@ -457,3 +460,13 @@ function surrenderUI(){if(ending)return;document.querySelectorAll('.handzoom').f
  o.innerHTML='<div class="hz-in"><div class="hz-text"><h3>降参しますか？</h3><p class="hz-eff">バトルをやめて、この試合は負けになります（報酬はありません）。</p></div><div class="hz-acts"><button class="hz-btn danger" data-a="yes">降参する</button><button class="hz-btn gold" data-a="no">バトルを続ける</button></div></div>';
  o.onclick=e=>{let b=e.target.closest('button');if(e.target!==o&&!b)return;o.remove();if(b&&b.dataset.a==='yes')surrender()};document.body.appendChild(o)}
 function surrender(){if(ending)return;skillMode=null;attacker=-1;attackMode=false;document.querySelectorAll('.handzoom,.reveal').forEach(x=>x.remove());ending='敗北';lastReward={won:false,surrender:true};render()}
+
+// ==== 最終決戦：神殿がすべて割れた側は、主神が攻撃対象になる。主神の体力が0になった側の負け ====
+function finalCheck(){for(const s of [p,c]){if(!s||ending||s.shrines.length||s.finalShown)continue;s.finalShown=true;let b=document.createElement('div');b.className='finalbanner';
+ b.innerHTML='<b>最終決戦！</b><small>'+(s===c?'相手の神殿がすべて割れた。相手の主神をねらえ！':'自分の神殿がすべて割れた。主神を守りきれ！')+'</small>';document.body.appendChild(b);setTimeout(()=>b.remove(),2200)}}
+// 仲間のコスト（正本 2026-11-25）。呪文は変更なし
+const ALLY_COST={1:3,6:3,4:3,7:3,8:4,9:3,11:4,'sky-1':2,'sky-2':4,'earth-1':3,'earth-2':4,'fire-1':2,'fire-2':3,'water-1':2,'water-2':3,'mystic-1':3,'mystic-2':5};
+for(const [k,v] of Object.entries(ALLY_COST))if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[k])EXP_CARDS[k].cost=v;
+function costOf(k){if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[k])return EXP_CARDS[k].cost;if(/^g\d+$/.test(k))return ALLY_COST[+k.slice(1)]||1;return moves[k]?moves[k][1]:1}
+
+(function(){const r0=render;render=function(){r0.apply(this,arguments);try{finalCheck()}catch(e){}}})();
