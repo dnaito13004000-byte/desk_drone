@@ -35,7 +35,7 @@ const GOD_CARDS={
   {rank:'SR',name:'幽狐神オボロ',atk:4,hp:12,skill:'幽冥',cost:1,fx:{fox:2,shadow:true,shadowRevive:true},text:'幽冥：影写しが自分のターンのはじめに復活する。狐火は−{fox}'}]}
 };
 const HERO_IDS=[2,5,0,3,10];
-const STAGE_FILES=['01-child-N.png','02-awakened-R.png','03-final-SR.png'];
+const STAGE_FILES=['01-child-N.webp','02-awakened-R.webp','03-final-SR.webp'];
 // layout.json と同じ内容（cards/layout.json が読めればそちらで上書きする）
 let CARD_LAYOUT={canvasPx:[591,887],outerBoundsPx:{attack:[16.5,761.5,97,97],health:[477.5,761.5,97,97],effect:[118,744,355,113],evolution:[58,703,475,31]},safeTextBoundsPx:{attack:[37,788,56,44],health:[498,788,56,44],effect:[132,756,327,89],evolution:[78,708,435,21]}};
 try{fetch('cards/layout.json').then(r=>r.ok?r.json():null).then(j=>{if(j&&j.safeTextBoundsPx){CARD_LAYOUT=j;document.querySelectorAll('.gc').forEach(placeBoxes);fitCards()}}).catch(()=>{})}catch(e){}
@@ -49,7 +49,7 @@ function pct(b){let [W,H]=CARD_LAYOUT.canvasPx;return 'left:'+(b[0]/W*100)+'%;to
 // 主神カード1枚。live＝対戦中の値（攻撃力・現在/最大体力）
 function gcard(id,st,live,cls='',short=false){let s=stageOf(id,st),B=CARD_LAYOUT.safeTextBoundsPx,
   atk=live?live.atk:s.atk,hp=live?'<b class="cur">'+Math.max(0,live.hp)+'</b><small>/'+live.max+'</small>':s.hp,weak=live&&live.weak;
- return '<span class="gc '+cls+'" data-id="'+id+'" data-st="'+st+'"><img src="'+cardImg(id,st)+'" alt="'+s.name+'" draggable="false">'
+ return '<span class="gc '+cls+'" data-id="'+id+'" data-st="'+st+'"><img src="'+cardImg(id,st)+'" alt="'+s.name+'" draggable="false" decoding="async" loading="lazy">'
  +statIcon('atk',atk,weak)
  +statIcon('hp',live?Math.max(0,live.hp):s.hp,false,live?live.max:null)
  +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+(short?s.skill+(s.cost&&(s.fx.bolt||s.fx.heal||s.fx.fox)&&st===0?'（神力'+s.cost+'）':''):stageText(id,st))+'</i></span>'
@@ -130,7 +130,7 @@ function ucard(key,o={}){if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[key])retur
  else{name=spellName(key);img=hdArt(key);band='呪文';eff=cardShort(key)}
  let hp=null;
  return '<span class="gc uc uc-'+kind+' r-'+r+' '+(o.cls||'')+'" data-k="'+key+'"><span class="uc-frame"></span>'
- +'<span class="uc-art" style="'+pct(FRAME_PX.art)+'"><img src="'+img+'" alt="" draggable="false"></span>'
+ +'<span class="uc-art" style="'+pct(FRAME_PX.art)+'"><img src="'+img+'" alt="" draggable="false" decoding="async" loading="lazy"></span>'
  +costBadge(o)
  +(o.rank?'<span class="uc-rk">'+r+'</span>':'')
  +'<span class="uc-nameband" style="'+pct(FRAME_PX.nameBand)+'"></span><span class="uc-panel" style="'+pct(FRAME_PX.panel)+'"></span>'
@@ -298,7 +298,7 @@ function colorChip(k){let c=colorOf(k);return '<i class="colchip c-'+(COLORS.ind
 function cardCost(k){if(EXP_CARDS[k])return EXP_CARDS[k].cost;if(typeof k==='number')return (typeof ALLY_COST!=='undefined'&&ALLY_COST[k])||1;return moves[k]?moves[k][1]:1}
 // 拡張カードの表示：完成カード絵＋剣・ハートの器に数字（仲間）＋効果帯に全文＋細帯にコスト
 function expCard(k,o={}){let e=EXP_CARDS[k],B=CARD_LAYOUT.safeTextBoundsPx,ally=e.kind==='ally';
- return '<span class="gc uc uc-exp '+(ally?'uc-ally':'uc-spell')+' r-'+e.r+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/expansion/'+k+'.webp" alt="'+e.name+'" draggable="false">'
+ return '<span class="gc uc uc-exp '+(ally?'uc-ally':'uc-spell')+' r-'+e.r+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/expansion/'+k+'.webp" alt="'+e.name+'" draggable="false" decoding="async" loading="lazy">'
  +(ally?(o.live?statIcon('atk',o.live.atk,o.live.weak)+statIcon('hp',Math.max(0,o.live.hp),false,o.live.max):statIcon('atk',e.atk)+statIcon('hp',e.hp)):'')
  +'<span class="gb evo" data-k="evolution" style="'+pct(B.evolution)+'"><i class="fit one" data-r=".9">コスト'+e.cost+'</i></span>'
  +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+e.text+'</i></span>'
