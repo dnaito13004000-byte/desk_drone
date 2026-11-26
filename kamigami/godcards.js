@@ -49,7 +49,7 @@ function pct(b){let [W,H]=CARD_LAYOUT.canvasPx;return 'left:'+(b[0]/W*100)+'%;to
 // 主神カード1枚。live＝対戦中の値（攻撃力・現在/最大体力）
 function gcard(id,st,live,cls='',short=false){let s=stageOf(id,st),B=CARD_LAYOUT.safeTextBoundsPx,
   atk=live?live.atk:s.atk,hp=live?'<b class="cur">'+Math.max(0,live.hp)+'</b>':s.hp,weak=live&&live.weak;
- return '<span class="gc '+cls+'" data-id="'+id+'" data-st="'+st+'"><img src="'+cardImg(id,st)+'" alt="'+s.name+'" draggable="false" loading="lazy">'+rubyBand(s.name)
+ return '<span class="gc '+cls+'" data-id="'+id+'" data-st="'+st+'"><img src="'+cardImg(id,st)+'" alt="'+s.name+'" draggable="false" loading="lazy">'+rubyBand(s.name,true)
  +statIcon('atk',atk,weak)
  +statIcon('hp',live?Math.max(0,live.hp):s.hp,false,live?live.max:null)
  +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+(short?s.skill+(s.cost&&(s.fx.bolt||s.fx.heal||s.fx.fox)&&st===0?'（神力'+s.cost+'）':''):stageText(id,st))+'</i></span>'
@@ -124,7 +124,7 @@ function ucard(key,o={}){if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[key])retur
  if(kind==='hero'){let st=o.stage!=null?o.stage:0,h=gcard(id,st,o.live||null,(o.cls||'')+(o.rank?' r-hero':''),o.short);return o.showCost?h.replace(/<\/span>$/,costBadge(o)+'</span>'):h}
  let O=CARD_LAYOUT.outerBoundsPx||{attack:[16.5,761.5,97,97],health:[477.5,761.5,97,97],effect:[118,744,355,113],evolution:[58,703,475,31]},S=CARD_LAYOUT.safeTextBoundsPx,
   r=cardRarity(kind==='ally'?id:key),name,img,band,eff,stats=null;
- if(kind==='ally'){let g=allyStats(id);name=titles[id]+' '+names[id];img=hdArt('g'+id);band='仲間 · '+types[id];
+ if(kind==='ally'){let g=allyStats(id);name=titles[id]+' '+names[id];img=hdArt('g'+id);band=types[id]||'';
   eff=cardShort(id);
   stats=o.live?o.live:g?{atk:g[0],hp:g[1]}:null}// 数値が未確定の仲間は「?」を出さず、数値欄ごと出さない
  else{name=spellName(key);img=hdArt(key);band='呪文';eff=cardShort(key)}
@@ -333,4 +333,4 @@ function rubyP(name){let r=readingOf(name)||heroReading(name);return r?'<p class
 function nameOfCard(id){if(typeof id==='number')return titles[id]+names[id];if(EXP_CARDS[id])return EXP_CARDS[id].name;return spellName(id)}
 
 // 絵に名前が描かれたカード（主神・拡張・初期呪文）：名前帯のすぐ上に読みの帯を重ねる（2026-11-27）
-function rubyBand(name){let r=readingOf(name);return r?'<span class="gb ruby" style="'+pct([96,566,399,30])+'"><i class="fit one" data-r=".92">'+r+'</i></span>':''}
+function rubyBand(name,hero){let r=readingOf(name);return r?'<span class="gb ruby" style="'+pct(hero?[96,522,399,30]:[96,566,399,30])+'"><i class="fit one" data-r=".92">'+r+'</i></span>':''}

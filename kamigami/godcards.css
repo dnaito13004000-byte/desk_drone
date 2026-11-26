@@ -521,3 +521,10 @@ small.al-ruby{margin:0 0 1px}
 .gc.uc.uc-exp{overflow:visible}
 /* 拡大画面の高さは「見えている範囲」（dvh）基準 */
 .handzoom{height:100vh;height:100dvh;max-height:100dvh}
+
+/* ==== 種別ラベルはカードの一番上のタブに統一（仲間も呪文・主神と同じ位置・形）2026-11-27 ==== */
+.gc.uc-ally::before{content:'仲間';position:absolute;z-index:3;left:50%;top:-7px;transform:translateX(-50%);padding:1px 8px;border-radius:99px;font-size:9px;font-weight:800;letter-spacing:.2em;color:#0f2a2a;background:linear-gradient(#e6fbf6,#8fd3c4);box-shadow:0 0 0 1px #1d4a44,0 2px 4px rgba(0,0,0,.4);pointer-events:none;white-space:nowrap}
+.gc.big.uc-ally::before{font-size:12px;top:-9px;padding:2px 12px}
+.gc.uc.uc-ally{overflow:visible}
+.gc.uc.uc-ally:not(.uc-exp)>.uc-frame,.gc.uc.uc-ally:not(.uc-exp){border-radius:3.5%/2.4%}
+.pile-grave .gc::before,.gravepanel .gc::before{display:none}
