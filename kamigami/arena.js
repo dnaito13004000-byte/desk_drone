@@ -108,7 +108,7 @@ function endTurnUI(){if(turn!==p||busy||ending)return;if(!canAttackAny()){enemyT
  let o=document.createElement('div');o.className='handzoom confirm';o.setAttribute('role','dialog');
  o.innerHTML='<div class="hz-in"><div class="hz-text"><h3>まだ攻撃できる味方がいます。</h3><p class="hz-eff">ターン終了しますか？</p></div><div class="hz-acts"><button class="hz-btn" data-a="end">ターン終了する</button><button class="hz-btn gold" data-a="back">もどって攻撃する</button></div></div>';
  o.onclick=e=>{let b=e.target.closest('button');if(e.target!==o&&!b)return;o.remove();if(b&&b.dataset.a==='end')enemyTurn();else if(b){attackMode=true;render()}};document.body.appendChild(o)}
-function resolveStrike(f,u,d,v){let x=fxOf(f,u),wasWeak=v&&weakened(v)?Math.min(v.weak,v.atk):0;u.att=(u.att||0)+1;u.used=u.att>=maxAttacks(f,u);let bonus=f.burst?1:0;f.burst=false;f.overflowHit=null;let hit=false;
+function resolveStrike(f,u,d,v){let x=fxOf(f,u),wasWeak=v&&weakened(v)?Math.min(v.weak,v.atk):0;u.att=(u.att||0)+1;u.used=u.att>=maxAttacks(f,u)||!v||!!v.hero;let bonus=f.burst?1:0;f.burst=false;f.overflowHit=null;let hit=false;
  let pow=atkOf(u)+bonus+(u.id==='earth-1'&&u.hp>=u.max?1:0)-(u.att===2&&x.second?x.second:0);pow=Math.max(0,pow);
  if(v){let dmg=pow+(x.extra||0),note='';
   if(v.shadow){v.shadow=false;dmg=0;note='（影写しで0）'}else if(v.ward&&dmg>0){v.ward=false;dmg=0;note='（守護で0）'}
@@ -218,7 +218,7 @@ async function strike(f,u,d,v){let node=document.getElementById('u'+u.uid),tgt=d
  if(keep){let now=[...document.querySelectorAll('#shrine'+d.id+' .back')];now.forEach((c,i)=>{if(keep[i]==null)return;let dx2=keep[i]-c.getBoundingClientRect().left;if(Math.abs(dx2)>.5)c.animate([{transform:'translateX('+dx2+'px)'},{transform:'none'}],{duration:340,easing:'cubic-bezier(.2,.8,.3,1)'})})}
  f.hitInfo=null;await shrineReveal(f,u,d);await shrineReveal(d,u,f)}
 const c_=()=>c;
-async function target(uid){let v0=c.units.find(x=>x.uid===uid);if(skillMode&&skillMode.side==='foe'&&v0&&turn===p&&!busy){if(skillMode.spell)await castSpell(p,skillMode.i,v0);else await useSkill(p,v0);return}if(attacker<0&&v0){inspect(c,v0);return}let u=selectedGod(attacker),v=c.units.find(x=>x.uid===uid);if(!u||u.used||sickOf(p,u)||turn!==p||busy||ending||(uid&&!v))return;if(!v&&!c.shrines.length){latest='相手の神殿はもうありません。相手の主神を攻撃しましょう（最終決戦）';render();return}if(v&&v.hero&&heroLocked(p,u,c)){latest='神殿が残っている間は、主神を攻撃できません';render();return}if(v&&v.dodge&&!u.hero){latest=names[v.id]+'は仲間の攻撃の対象にならない（空蝉の歩法）';render();return}busy=true;await strike(p,u,c,v);busy=false;if(!canAttackAny())attackMode=false;render()}
+async function target(uid){let v0=c.units.find(x=>x.uid===uid);if(skillMode&&skillMode.side==='foe'&&v0&&turn===p&&!busy){if(skillMode.spell)await castSpell(p,skillMode.i,v0);else await useSkill(p,v0);return}if(attacker<0&&v0){inspect(c,v0);return}let u=selectedGod(attacker),v=c.units.find(x=>x.uid===uid);if(!u||u.used||sickOf(p,u)||turn!==p||busy||ending||(uid&&!v))return;if(!v&&!c.shrines.length){latest='相手の神殿はもうありません。相手の主神を攻撃しましょう（最終決戦）';render();return}if(v&&v.hero&&heroLocked(p,u,c)){latest='神殿が残っている間は、主神を攻撃できません';render();return}if((!v||v.hero)&&!firstHit(u)){latest='2回目の攻撃は、相手の仲間にしかできません';render();return}if(v&&v.dodge&&!u.hero){latest=names[v.id]+'は仲間の攻撃の対象にならない（空蝉の歩法）';render();return}busy=true;await strike(p,u,c,v);busy=false;if(!canAttackAny())attackMode=false;render()}
 async function enemyTurn(){if(turn!==p||busy||ending)return;busy=true;begin(c);latest='相手の番';render();await pause(350);
  if(c.hand.length>1&&c.max<5){let i=c.hand.findIndex((x,i)=>c.hand.indexOf(x)<i);await chargeUI(c,i>=0?i:c.hand.length-1)}
  if(canAwaken(c)||canEvolve(c)){await ascendUI(c);await pause(250)}
@@ -238,7 +238,7 @@ const marks={ready:'<svg viewBox="0 0 100 24"><ellipse cx="50" cy="12" rx="46" r
  picked:'<svg viewBox="0 0 100 24"><ellipse cx="50" cy="12" rx="47" ry="10" fill="#ffd76a33" stroke="#ffd76a" stroke-width="3.5"/><ellipse cx="50" cy="12" rx="36" ry="6.5" fill="none" stroke="#fff4c8" stroke-width="1.5"/></svg>',
  target:'<svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M2 22V2h22M76 2h22v20M98 78v20H76M24 98H2V78" fill="none" stroke="#ffb08a" stroke-width="4" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></svg>'};
 function soldiers(f){return f.units.map(u=>{let ally=f===p,mine=turn===p&&!ending,hero=!!u.hero&&!!GOD_CARDS[u.id],awake=hero&&f.evolved,sk=skillMode&&mine&&!busy,
- st=sk?((skillMode.side==='ally')===ally?'target':''):ally?(attacker===u.uid?'picked':mine&&!u.used&&!busy&&sickOf(f,u)?'sick':mine&&!u.used&&!busy?(attackMode?'ready glow':'ready'):mine&&u.used?'used':''):(attacker>=0&&(!u.hero||!heroLocked(p,selectedGod(attacker),c))?'target':attacker>=0?'walled':''),w=Math.max(0,u.hp)/u.max*100+'%',fresh=awake&&!f.awakeShown;if(fresh){f.awakeShown=true;setTimeout(()=>sfx('awaken'),0)}
+ st=sk?((skillMode.side==='ally')===ally?'target':''):ally?(attacker===u.uid?'picked':mine&&!u.used&&!busy&&sickOf(f,u)?'sick':mine&&!u.used&&!busy?(attackMode?'ready glow':'ready'):mine&&u.used?'used':''):(attacker>=0&&(!u.hero||(!heroLocked(p,selectedGod(attacker),c)&&firstHit(selectedGod(attacker))))?'target':attacker>=0?'walled':''),w=Math.max(0,u.hp)/u.max*100+'%',fresh=awake&&!f.awakeShown;if(fresh){f.awakeShown=true;setTimeout(()=>sfx('awaken'),0)}
  let face=hero?gcard(u.id,f.stage,{atk:atkOf(u),hp:u.hp,max:u.max,weak:u.weak},'',true).replace(/<\/span>$/,costBadge({cost:1})+'</span>')
   :ucard(u.id,{live:{atk:atkOf(u),hp:u.hp,max:u.max,weak:u.weak}});
  let tagline=hero?'<span class="gtag'+(f.gaugeFlash&&Date.now()-f.gaugeFlash<1600?' flash':'')+'">'+(f.stage===0?'進化 '+Array.from({length:ASCEND.evolve.gauge},(_,i)=>'<i class="'+(i<f.gauge?'on':'')+(f.gaugeFlash&&Date.now()-f.gaugeFlash<1600&&i===f.gauge-1?' new':'')+'"></i>').join(''):f.stage===1?'覚醒 <i class="'+(f.shrineBroken?'on':'')+'"></i>'+(f.shrineBroken?'可':'神殿待ち'):'最終')+'</span>':'';
@@ -250,7 +250,7 @@ function heroActs(){if(turn!==p||busy||ending||!heroOf(p))return '';let o='',k=s
  else if(p.stage===1)o+=btn('覚醒 · 神力'+ASCEND.awaken.cost+(p.shrineBroken?'':'（神殿が割れたら）'),'ascendUI(p)',!canAwaken(p),canAwaken(p)?'gold':'');
  return o}
 function inspect(f,u){unitZoom(f,u)}
-function shrine(f){let n=f.shrines.length,foe=f===c,aim=foe&&attacker>=0&&f.shrines.length>0;return '<button class="shrine'+(aim?' target':'')+'" id="shrine'+f.id+'" aria-label="'+(foe?'相手':'自分')+'の神殿 残り'+n+(aim?' 攻撃する':'')+'" '+(foe?'onclick="target(0)"':'')+'><span class="pile">'+(n?Array.from({length:n},(_,i)=>'<i class="back" style="--i:'+i+'"></i>').join(''):'<i class="keep">主神むき出し</i>')+'</span><span class="cnt"><small>神殿</small><b>'+n+'</b></span></button>'}
+function shrine(f){let n=f.shrines.length,foe=f===c,aim=foe&&attacker>=0&&f.shrines.length>0&&firstHit(selectedGod(attacker));return '<button class="shrine'+(aim?' target':'')+'" id="shrine'+f.id+'" aria-label="'+(foe?'相手':'自分')+'の神殿 残り'+n+(aim?' 攻撃する':'')+'" '+(foe?'onclick="target(0)"':'')+'><span class="pile">'+(n?Array.from({length:n},(_,i)=>'<i class="back" style="--i:'+i+'"></i>').join(''):'<i class="keep">主神むき出し</i>')+'</span><span class="cnt"><small>神殿</small><b>'+n+'</b></span></button>'}
 function backs(n){return '<span class="ohand" style="--n:'+Math.min(n,7)+'">'+Array.from({length:Math.min(n,7)},(_,i)=>'<i style="--i:'+i+'"></i>').join('')+'</span>'}
 // 神力ゾーン：最初の1は神殿の灯（丸）、神力に置いたカードは裏向きのミニカード。使った分は暗くなる
 let landing=null;
@@ -396,6 +396,7 @@ async function aiPlay(f,post){for(let j=0;j<8&&!ending;j++){let best=null;
 async function aiAttack(f){let d=foeOf(f);for(let u of [...f.units]){for(let n=0;n<4&&!ending&&!u.used&&u.hp>0&&!sickOf(f,u)&&f.units.includes(u);n++){let ok=v=>!(v.dodge&&!u.hero),v;
   let h=heroOf(d),kill=mates(d).filter(x=>ok(x)&&x.hp<=atkOf(u)&&!x.shadow&&!x.ward);
   if(!d.shrines.length)v=h;else if(!heroLocked(f,u,d)&&h&&h.hp<=atkOf(u)&&!h.ward&&!h.shadow)v=h;else v=kill[0]||null
+  if((!v||v.hero)&&!firstHit(u)){v=kill[0]||null;if(!v)break}
   await strike(f,u,d,v)}}}
 async function enemyTurn(){if(turn!==p||busy||ending)return;busy=true;begin(c);latest='相手の番';render();await pause(calm()?0:350);
  if(c.hand.length>1&&c.max<5){let i=c.hand.findIndex((x,i)=>c.hand.indexOf(x)<i);await chargeUI(c,i>=0?i:c.hand.length-1)}
@@ -579,3 +580,9 @@ fitHandZoom=function(o){let card=o&&o.querySelector('.hz-card');if(!card)return;
 
 // ==== 正本合わせ（2026-11-27 夜間点検）：覚醒の神鏡＝コスト2、神位継承の巻＝コスト3（コスト表に無く1扱いになっていた）====
 moves.mirror=['覚醒の神鏡',2,'自分の主神の進化ゲージを+1する。'];moves.scroll=['神位継承の巻',3,'味方の仲間1体の攻撃力と体力を+2する。'];
+
+// ==== ルール（2026-11-27）====
+// 2回攻撃できる効果も、2回目は相手の仲間にしか攻撃できない。神殿・主神を攻撃したら、そのターンの攻撃はそれで終わり（resolveStrike）
+function firstHit(u){return !u||!(u.att>0)}
+// 後攻は進化ゲージを1つ持って始める（必要数3は変えない）。対戦はいつもあなたが先攻なので、後攻＝相手
+{const s3=start;start=function(){let r=s3.apply(this,arguments);try{if(c&&!window.__tutorial)c.gauge=Math.max(c.gauge||0,1)}catch(e){}return r}}
