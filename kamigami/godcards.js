@@ -103,7 +103,7 @@ if(document.fonts){document.fonts.ready.then(queueFit);document.fonts.addEventLi
 
 // 詳細：大きいカード＋効果文と進化条件を大きな文字で
 function godDetail(id,st,live){closeGodDetail();let s=stageOf(id,st),d=document.createElement('div');d.className='gdetail';d.setAttribute('role','dialog');d.setAttribute('aria-label',s.name+'の詳細');
- d.innerHTML='<div class="gd-in">'+gcard(id,st,live,'big')+'<div class="gd-text"><p class="gd-rank">'+GOD_CARDS[id].type+' ／ '+s.rank+'</p><h3>'+s.name+'</h3>'
+ d.innerHTML='<div class="gd-in">'+gcard(id,st,live,'big')+'<div class="gd-text"><p class="gd-rank">'+GOD_CARDS[id].type+' ／ '+s.rank+'</p>'+rubyP(s.name)+'<h3>'+s.name+'</h3>'
  +'<p class="gd-stat">⚔\uFE0E 攻撃力 '+(live?live.atk:s.atk)+'　♥ 体力 '+(live?Math.max(0,live.hp)+' / '+live.max:s.hp)+'</p>'
  +'<p class="gd-eff">'+stageText(id,st)+'</p><p class="gd-evo">'+ruleText(st)+'</p>'+termList(stageText(id,st)+(st<2?(st===0?'進化ゲージ 進化 ':'覚醒 神殿'):''))
  +(st<2?'<p class="gd-next">次の形態：'+stageOf(id,st+1).name+'（攻'+stageOf(id,st+1).atk+' / 体'+stageOf(id,st+1).hp+'）</p>':'')
@@ -217,7 +217,7 @@ function cardInfo(k){let m=/^g(\d+)$/.exec(k);if(m)k=+m[1];if(typeof k==='number
  closeGodDetail();let ally=typeof k==='number',t=CARD_TABLE[k]||{},g=ally?allyStats(k):null,full=cardFull(k),name=ally?titles[k]+' '+names[k]:spellName(k);
  let note=t.later?'<p class="gd-next">'+(ally?'この仲間は、今の対戦デッキにはまだ入っていません。':'この呪文は、今の対戦デッキにはまだ入っていません。')+'</p>':'';
  let d=document.createElement('div');d.className='gdetail tdetail';d.setAttribute('role','dialog');d.setAttribute('aria-label',name+'の詳細');
- d.innerHTML='<div class="gd-in">'+ucard(ally?k:k,{cls:'big'})+'<div class="gd-text"><p class="gd-rank">'+(ally?'仲間 ／ '+types[k]:'呪文 ／ コスト'+(moves[k]?moves[k][1]:1))+' ／ '+(t.r||'N')+'</p><h3>'+name+'</h3>'
+ d.innerHTML='<div class="gd-in">'+ucard(ally?k:k,{cls:'big'})+'<div class="gd-text"><p class="gd-rank">'+(ally?'仲間 ／ '+types[k]:'呪文 ／ コスト'+(moves[k]?moves[k][1]:1))+' ／ '+(t.r||'N')+'</p>'+rubyP(name)+'<h3>'+name+'</h3>'
  +(g?'<p class="gd-stat">⚔︎ 攻撃力 '+g[0]+'　♥ 体力 '+g[1]+'</p>':'')
  +'<p class="gd-eff">'+full+'</p>'+note+termList(full+(ally?'仲間':''))
  +'<button class="gd-close" onclick="closeGodDetail()">閉じる</button></div></div>';
@@ -305,7 +305,7 @@ function expCard(k,o={}){let e=EXP_CARDS[k],B=CARD_LAYOUT.safeTextBoundsPx,ally=
  +(o.showCost?costBadge(o):'')+'</span>'}
 function expInfo(k){closeGodDetail();let e=EXP_CARDS[k],ally=e.kind==='ally';
  let d=document.createElement('div');d.className='gdetail tdetail';d.setAttribute('role','dialog');d.setAttribute('aria-label',e.name+'の詳細');
- d.innerHTML='<div class="gd-in">'+expCard(k,{cls:'big'})+'<div class="gd-text"><p class="gd-rank">'+(ally?'仲間':'呪文')+' ／ '+e.color+' ／ コスト'+e.cost+' ／ '+e.r+'</p><h3>'+e.name+'</h3>'
+ d.innerHTML='<div class="gd-in">'+expCard(k,{cls:'big'})+'<div class="gd-text"><p class="gd-rank">'+(ally?'仲間':'呪文')+' ／ '+e.color+' ／ コスト'+e.cost+' ／ '+e.r+'</p>'+rubyP(e.name)+'<h3>'+e.name+'</h3>'
  +(ally?'<p class="gd-stat">⚔︎ 攻撃力 '+e.atk+'　♥ 体力 '+e.hp+'</p>':'')+'<p class="gd-eff">'+e.text+'</p>'
  +(CARD_TABLE[k].later?'<p class="gd-next">このカードは、今の対戦デッキにはまだ入っていません。</p>':'')+termList(e.text+(ally?'仲間':''))
  +'<button class="gd-close" onclick="closeGodDetail()">閉じる</button></div></div>';
@@ -324,3 +324,9 @@ function starterCard(k,o={}){let B=CARD_LAYOUT.safeTextBoundsPx,t=CARD_TABLE[k]|
 // 対戦用の gods には入れない（入れると対戦デッキ・AIの標準デッキに入り、バランス測定の前提が変わるため）
 const ALLY_SHOW={4:[2,5]};// 氷神ユキネ：正本 U／コスト3／攻2／体5
 function allyStats(id){return (typeof gods!=='undefined'&&gods[id])||ALLY_SHOW[id]||null}
+
+// ---- カード名の読み（図鑑・詳細モーダル用。対戦中の小さいカードには付けない）----
+const READING={'幼神ライガ':'ヨウシンライガ','雷鼓解放ライガ':'ライコカイホウライガ','天穿雷神ライガ':'テンセンライジンライガ','幼神コダマ':'ヨウシンコダマ','樹脈解放コダマ':'ジュミャクカイホウコダマ','万象樹神コダマ':'バンショウジュシンコダマ','幼神カグラ':'ヨウシンカグラ','炎拳解放カグラ':'エンケンカイホウカグラ','熔獅神カグラ':'ヨウシシンカグラ','幼神ハヤテ':'ヨウシンハヤテ','風翼解放ハヤテ':'フウヨクカイホウハヤテ','蒼翼神ハヤテ':'ソウヨクシンハヤテ','幼神オボロ':'ヨウシンオボロ','影紋解放オボロ':'エイモンカイホウオボロ','幽狐神オボロ':'ユウコシンオボロ','雨神シズク':'アマガミシズク','岩神ガンザ':'イワガミガンザ','氷神ユキネ':'ヒョウシンユキネ','潮神ナギ':'ウシオガミナギ','陽神アカツキ':'ヨウシンアカツキ','月神ツクヨ':'ツキガミツクヨ','星神スバル':'ホシガミスバル','雲紡ぎのアヤ':'クモツムギノアヤ','霹靂を喰う天狗':'ヘキレキヲクウテング','石臼の荒神':'イシウスノアラガミ','古根の角王':'ココンノツノオウ','火走りのイタチ神':'ヒバシリノイタチガミ','双炉の鍛冶神':'ソウロノカジシン','潮先の鷺神':'シオサキノサギガミ','瀬渡りのカワセミ神':'セワタリノカワセミガミ','面削りの童神':'メンケズリノドウシン','逆夢の獏神':'サカユメノバクシン','嵐呼の雷獣':'アラシヨブノライジュウ','不動の山神':'フドウノヤマガミ','爆炎の剣神':'バクエンノケンシン','疾風の忍神':'シップウノニンシン','薄暮の呪い手':'ハクボノノロイテ','霙神':'ミゾレガミ','稲光':'イナビカリ','苗神':'ナエガミ','火達磨':'ヒダルマ','飛沫神':'シブキガミ','写し神':'ウツシガミ','雨乞い':'アマゴイ','雲払い':'クモバライ','招雷':'ショウライ','守護':'シュゴ','神託':'シンタク','種まき':'タネマキ','覚醒の神鏡':'カクセイノシンキョウ','神位継承の巻':'シンイケイショウノマキ','雨脚の矢':'アマアシノヤ','雲間の返照':'クモマノヘンショウ','天柱落とし':'テンチュウオトシ','岩盤返し':'ガンバンガエシ','実りの分け前':'ミノリノワケマエ','山門の進軍':'サンモンノシングン','火挟み':'ヒバサミ','二の太刀':'ニノタチ','落日の火葬鐘':'ラクジツノカソウショウ','追い潮':'オイシオ','水面抜き':'ミナモヌキ','航跡を読む':'コウセキヲヨム','大地の恵み':'ダイチノメグミ','火付け':'ヒツケ','引き潮':'ヒキシオ','心読み':'ココロヨミ','影の縫い返し':'カゲノヌイカエシ','空蝉の歩法':'ウツセミノホホウ','逆さ月の宣告':'サカサツキノセンコク'};
+function readingOf(name){return READING[String(name||'').replace(/[\s　]/g,'')]||''}
+function rubyP(name){let r=readingOf(name);return r?'<p class="gd-ruby">'+r+'</p>':''}
+function nameOfCard(id){if(typeof id==='number')return titles[id]+names[id];if(EXP_CARDS[id])return EXP_CARDS[id].name;return spellName(id)}

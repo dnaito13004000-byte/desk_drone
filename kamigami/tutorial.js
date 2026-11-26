@@ -4,7 +4,7 @@
 // 光らせる場所は「いま押すべき1か所」を毎回計算する（カードの拡大が開いていればその中のボタン、など）
 const zoomKey=()=>{let z=document.querySelector('.handzoom:not(.confirm):not(.breach):not(.unitzoom)');return z&&sel>=0?p.hand[sel]:null};
 function playTarget(k,then,btn){let zk=zoomKey();if(zk===k)return btn||'.handzoom .hz-btn.gold';if(zk||document.querySelector('.handzoom.unitzoom,.gdetail'))return '.handzoom [data-a=close],.gdetail .gd-close';if(skillMode&&skillMode.spell===k&&then)return then();return handSel(k)}
-function attackTargetFor(getU){if(busy)return null;if(document.querySelector('.handzoom.unitzoom'))return '.handzoom [data-a=atk]:not([disabled]),.handzoom [data-a=close]';let u=getU();if(!u)return null;if(attacker===u.uid)return c.shrines.length?'#shrine'+c.id:'#u'+heroOf(c).uid;if(attacker>=0||attackMode)return '#u'+u.uid;return '.atkbtn'}
+function attackTargetFor(getU){if(document.querySelector('.handzoom.breach [data-a=ok]'))return '.handzoom.breach [data-a=ok]';if(busy)return null;if(document.querySelector('.handzoom.unitzoom'))return '.handzoom [data-a=atk]:not([disabled]),.handzoom [data-a=close]';let u=getU();if(!u)return null;if(attacker===u.uid)return c.shrines.length?'#shrine'+c.id:'#u'+heroOf(c).uid;if(attacker>=0||attackMode)return '#u'+u.uid;return '.atkbtn'}
 const myHero=()=>heroOf(p),myGanza=()=>p.units.find(u=>u.id===6);
 async function autoAttack(u){document.querySelectorAll('.handzoom').forEach(x=>x.remove());if(!u)return;attackMode=false;attacker=u.uid;u.used=false;await target(c.shrines.length?0:heroOf(c).uid)}
 const TUT_STEPS=[
@@ -26,7 +26,7 @@ const TUT_STEPS=[
  {hl:()=>'#u'+myHero().uid,say:'神殿を1枚割りました！ 割られた神殿のカードは、持ち主がコストなしで使えます（<b>破殿解放</b>）。<br>そしてライガの<b>進化ゲージ</b>がたまりました（攻撃を当てるたびに1増え、3で満タン）。'},
  {hl:()=>document.querySelector('.handzoom.confirm')?'.handzoom [data-a=end]':'.ends button.end',say:'このターンはここまで。「<b>ターン終了</b>」を押しましょう。',wait:()=>turn===c,
   auto:async()=>{document.querySelectorAll('.handzoom').forEach(x=>x.remove());if(turn===p&&!busy)enemyTurn()}},
- {hl:()=>document.querySelector('.handzoom.breach')?'.handzoom.breach .hz-btn.gold:not([disabled]),.handzoom.breach [data-a=hand]':null,say:'相手の番です……。相手もあなたの神殿を狙ってきます。<br>神殿を割られたら、出てきたカードを「使う」か「手札に加える」か選べます。',wait:()=>turn===p&&!busy&&!document.querySelector('.handzoom'),noNext:true},
+ {hl:()=>document.querySelector('.handzoom.ask')?'.handzoom.ask .hz-btn':document.querySelector('.handzoom.breach')?'.handzoom.breach .hz-btn.gold:not([disabled]),.handzoom.breach [data-a=hand]':null,say:'相手の番です……。相手もあなたの神殿を狙ってきます。<br>神殿を割られたら、出てきたカードを「使う」か「手札に加える」か選べます。',wait:()=>turn===p&&!busy&&!document.querySelector('.handzoom'),noNext:true},
  {hl:()=>'button[onclick="ascendUI(p)"]',say:'あなたの番です。神力が回復しました。<br>進化ゲージが満タンなので、神力3で<b>主神を進化</b>できます。光っている「<b>進化</b>」を押しましょう！',wait:()=>p.stage>=1&&!busy,
   auto:async()=>{document.querySelectorAll('.handzoom').forEach(x=>x.remove());p.gauge=Math.max(p.gauge,ASCEND.evolve.gauge);p.mp=Math.max(p.mp,ASCEND.evolve.cost);await ascendUI(p)}},
  {enter:()=>{let h=heroOf(c),me=heroOf(p);if(h&&me)h.hp=Math.min(h.hp,Math.max(1,atkOf(me)));render()},hl:()=>'#u'+myHero().uid,say:'ライガが<b>解放形態</b>に進化しました！ 攻撃力と体力が上がり、スキルも強くなります。<br>さらに神殿が割られたあとなら、もう一段階「<b>覚醒</b>」もできます。'},
@@ -68,7 +68,7 @@ function tutorialResult(){let won=ending==='勝利';if(TUT)tutEnd(false);save.tu
 function tutPos(s,mid){let p0=s.pos||(s.top?'low':mid==null?'top':mid<innerHeight*0.5?'low':'top');TUT.el.classList.toggle('low',p0==='low');TUT.el.classList.toggle('mid',p0==='mid')}
 
 // ---- 指示以外は押せないようにする（説明の箱のボタンと、光っている所だけ反応） ----
-function tutGuard(e){if(!TUT)return;let t=e.target;if(t.closest&&t.closest('.tut-box'))return;
+function tutGuard(e){if(!TUT)return;let t=e.target;if(t.closest&&t.closest('.tut-box'))return;if(t.closest&&t.closest('.handzoom.breach')&&document.querySelector('.handzoom.breach [data-a=ok]'))return;if(t.closest&&t.closest('.handzoom.ask'))return;
  let st=TUT_STEPS[TUT.i],sel=st&&st.wait&&st.hl&&st.hl(),a=sel&&[...document.querySelectorAll(sel)].find(x=>x.getClientRects().length);if(a&&(a===t||a.contains(t)))return;
  e.preventDefault();e.stopPropagation();if(e.type==='click'){TUT.el&&TUT.el.classList.remove('nudge');void (TUT.el&&TUT.el.offsetWidth);TUT.el&&TUT.el.classList.add('nudge')}}
 const TUT_EVENTS=['click','pointerdown','pointerup','mousedown','mouseup','touchstart','touchend','dragstart','dblclick','contextmenu'];

@@ -435,3 +435,35 @@ button.res-cell{background:none;border:0;padding:0;cursor:pointer;font:inherit;c
 .foehand .fh-card{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:#f3e7c4}
 .foehand .fh-card .gc{width:100%;height:auto}
 .copypick{display:flex;flex-direction:column;gap:8px}
+
+/* ==== プロンプトAV ==== */
+/* 読み（図鑑・詳細） */
+.gd-ruby{margin:0 0 -2px;font-size:11px;letter-spacing:.12em;color:#cdbb8a;opacity:.9}
+.al-ruby{display:block;font-size:9px;line-height:1.3;letter-spacing:.06em;color:#cdbb8a;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+small.al-ruby{margin:0 0 1px}
+/* 種別で枠を区別：主神＝金枠＋飾り、呪文＝紫の枠と「呪文」札。仲間は今のまま */
+.gc[data-st]{border-radius:3.5%/2.4%;box-shadow:0 0 0 2px #f6d77a,0 0 0 4px #6b4a10,0 0 14px 3px rgba(255,196,70,.5)}
+.gc[data-st]::after{content:'';position:absolute;inset:-5px;pointer-events:none;border-radius:5%/3.4%;
+ background:linear-gradient(#ffe9a6,#ffe9a6) left top/16% 3px no-repeat,linear-gradient(#ffe9a6,#ffe9a6) left top/3px 11% no-repeat,
+ linear-gradient(#ffe9a6,#ffe9a6) right top/16% 3px no-repeat,linear-gradient(#ffe9a6,#ffe9a6) right top/3px 11% no-repeat,
+ linear-gradient(#ffe9a6,#ffe9a6) left bottom/16% 3px no-repeat,linear-gradient(#ffe9a6,#ffe9a6) left bottom/3px 11% no-repeat,
+ linear-gradient(#ffe9a6,#ffe9a6) right bottom/16% 3px no-repeat,linear-gradient(#ffe9a6,#ffe9a6) right bottom/3px 11% no-repeat;filter:drop-shadow(0 0 2px rgba(255,210,90,.9))}
+.gc[data-st]::before{content:'主神';position:absolute;z-index:3;left:50%;top:-7px;transform:translateX(-50%);padding:1px 8px;border-radius:99px;font-size:9px;font-weight:800;letter-spacing:.2em;color:#3a2506;background:linear-gradient(#fff1b8,#e0b44c);box-shadow:0 0 0 1px #6b4a10,0 2px 4px rgba(0,0,0,.4);pointer-events:none;white-space:nowrap}
+.gc.uc-spell{border-radius:3.5%/2.4%;box-shadow:0 0 0 2px #a48cff,0 0 0 4px #2a1d5c,0 0 10px 2px rgba(140,110,255,.45)}
+.gc.uc-spell::before{content:'呪文';position:absolute;z-index:3;left:50%;top:-7px;transform:translateX(-50%);padding:1px 8px;border-radius:99px;font-size:9px;font-weight:800;letter-spacing:.2em;color:#fff;background:linear-gradient(#9d86ff,#5b3fc4);box-shadow:0 0 0 1px #2a1d5c,0 2px 4px rgba(0,0,0,.4);pointer-events:none;white-space:nowrap}
+.gc.big::before{font-size:12px;top:-9px;padding:2px 12px}
+/* 対戦の場の主神は進化バーと重なるので札は出さない（金枠は出す） */
+.arena .unit .gc[data-st]::before{display:none}
+/* 山札の残り枚数 */
+.stat.deckc{display:inline-flex;align-items:center;gap:3px}.stat.deckc svg{width:14px;height:14px;color:#c9b27a}
+.deckchip{position:absolute;left:6px;bottom:6px;z-index:4;display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:99px;background:rgba(6,14,16,.72);border:1px solid rgba(201,178,122,.45);color:#f3e7c4;font-size:11px;pointer-events:none}
+.deckchip svg{width:14px;height:14px;color:#c9b27a}.deckchip b{font-size:14px}
+.zone.mine{position:relative}
+/* 対戦ログ */
+.logbtn{margin-left:6px;padding:3px 10px;border-radius:99px;border:1px solid rgba(201,178,122,.55);background:rgba(10,20,22,.6);color:#f3e7c4;font-size:12px}
+.logpanel{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px}
+.logpanel .lp-in{width:min(460px,100%);max-height:84vh;display:flex;flex-direction:column;gap:10px;background:#0d1a1c;border:1px solid rgba(201,178,122,.5);border-radius:14px;padding:14px;color:#f3e7c4}
+.logpanel h3{margin:0;font-size:16px}
+.logpanel .lp-list{list-style:none;margin:0;padding:0;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.logpanel li{font-size:13px;line-height:1.5;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.04)}
+.logpanel li small{display:block;font-size:10px;color:#cdbb8a}

@@ -424,13 +424,14 @@ function breachBox(f,k){let o=document.createElement('div');o.className='handzoo
  document.body.appendChild(o);return o}
 async function breachOne(f,k){await gaugeUp(f);let mine=f===p&&!window.__autoP,can=freeLegal(f,k);
  if(!mine){let t;if(can&&SP[k]&&SP[k].tgt){t=aiTarget(f,k);if(!t||t==='none')t=spTargets(f,k)[0]}
-  let o=calm()?null:breachBox(f,k);if(o){o.querySelector('.hz-acts').innerHTML='<p class="breach-ai">'+(can?'相手は「使う」を選んだ':'相手の手札に加わった')+'</p>';fitHandZoom(o);await pause(1100);o.remove()}
+  let o=calm()?null:breachBox(f,k);if(o){o.querySelector('.hz-acts').innerHTML='<p class="breach-ai">'+(can?'相手は「使う」を選んだ':'相手の手札に加わった')+'</p>';fitHandZoom(o);await breachAck(o)}
   if(!(can&&await freeUse(f,k,t)))f.hand.push(k);render();return}
  let o=breachBox(f,k),acts=o.querySelector('.hz-acts');
  let choice=await new Promise(res=>{
   let main=()=>{let why=can?'':freeWhy(f,k);acts.innerHTML='<button class="hz-btn gold" data-a="use"'+(can?'':' disabled')+'>使う（コストなし）</button><button class="hz-btn" data-a="hand">手札に加える</button>'+(why?'<small class="hz-why">'+why+'</small>':'');fitHandZoom(o)};
   let pickT=()=>{let L=spTargets(f,k);acts.innerHTML='<p class="breach-q">'+(SP[k].tgt.startsWith('foe')?'対象の敵を選ぶ':'対象の味方を選ぶ')+'</p>'+L.map((u,j)=>'<button class="hz-btn tgt" data-t="'+j+'">'+(titles[u.id]&&u.hero?'':'')+names[u.id]+'　<small>攻'+atkOf(u)+' / 体'+Math.max(0,u.hp)+'</small></button>').join('')+'<button class="hz-btn ghost" data-a="back">もどる</button>';acts._L=L;fitHandZoom(o)};
   main();
+  let wd=setInterval(()=>{if(!o.isConnected){clearInterval(wd);res(['hand'])}},400);let res0=res;res=v=>{clearInterval(wd);res0(v)};
   acts.onclick=e=>{let b=e.target.closest('button');if(!b||b.disabled)return;if(b.dataset.a==='hand')res(['hand']);else if(b.dataset.a==='back')main();else if(b.dataset.a==='use'){if(SP[k]&&SP[k].tgt)pickT();else res(['use'])}else if(b.dataset.t!=null)res(['use',acts._L[+b.dataset.t]])}});
  o.remove();
  if(choice[0]==='use'&&await freeUse(f,k,choice[1])){await waitAsk()}else{f.hand.push(k);latest=cardLabel(k)+'を手札に加えた';render()}}
@@ -504,9 +505,30 @@ function showFoeHand(list){let o=document.createElement('div');o.className='hand
 // ==== フリーズ対策（2026-11-26）====
 // 登場時の選択（雲紡ぎのアヤの天候・写し神の写す相手）は、答えが出るまで次の処理を待つ
 let pendingAsk=null;
-function waitAsk(){return pendingAsk||Promise.resolve()}
+function waitAsk(){if(!pendingAsk)return Promise.resolve();let pa=pendingAsk;
+ // 答え待ちの画面が答えないまま閉じられた場合も、止まらずに先へ進む
+ return new Promise(res=>{let fin=()=>{clearInterval(t);res()};pa.then(fin);let t0=Date.now(),t=setInterval(()=>{if(Date.now()-t0>600&&!document.querySelector('.handzoom.ask')){pendingAsk=null;fin()}},300)})}
 // 相手の番の途中で想定外のエラーが起きても、止まらずにあなたの番へ戻す
 {const core=enemyTurn;enemyTurn=async function(){try{return await core()}catch(e){console.error('enemyTurn',e);
  document.querySelectorAll('.handzoom.breach').forEach(x=>x.remove());breaching=false;pendingAsk=null;
  for(const s of [p,c])if(s){s.units=s.units.filter(y=>y.hp>0||y.hero)}
  if(!ending&&turn===c){round++;begin(p)}busy=false;skillMode=null;attacker=-1;attackMode=false;render()}}}
+
+// ==== プロンプトAV：相手の破殿解放はOKで閉じる・対戦ログ・山札の残り枚数 ====
+function breachAck(o){if(window.__autoP)return pause(1100).then(()=>o.remove());
+ return new Promise(res=>{let a=o.querySelector('.hz-acts');a.insertAdjacentHTML('beforeend','<button class="hz-btn gold" data-a="ok">OK</button>');fitHandZoom(o);
+  let done=()=>{if(!o.isConnected)return;o.remove();res()};o.onclick=done;if(typeof TUT!=='undefined'&&TUT)setTimeout(done,6000)})}
+let BLOG=[],blogLast='';
+{const s0=start;start=function(){BLOG=[];blogLast='';return s0.apply(this,arguments)}}
+function blogNote(){let t=String(latest||'').trim();if(!t||t===blogLast||/^手札から仲間を召喚するか/.test(t))return;
+ let who=turn===p?'あなたの番':'相手の番';
+ if(blogLast&&t.startsWith(blogLast)&&BLOG.length)BLOG[BLOG.length-1].t=t;else BLOG.push({r:round,who,t});blogLast=t;if(BLOG.length>300)BLOG.shift()}
+function showLog(){document.querySelectorAll('.logpanel').forEach(x=>x.remove());let o=document.createElement('div');o.className='logpanel';o.setAttribute('role','dialog');o.setAttribute('aria-label','対戦ログ');
+ o.innerHTML='<div class="lp-in"><h3>対戦ログ</h3><ol class="lp-list">'+(BLOG.length?[...BLOG].reverse().map(e=>'<li><small>'+e.r+'ターン目・'+e.who+'</small>'+e.t+'</li>').join(''):'<li>まだ記録はありません</li>')+'</ol><button class="hz-btn gold">閉じる</button></div>';
+ o.onclick=e=>{if(e.target===o||e.target.closest('button'))o.remove()};document.body.appendChild(o)}
+function deckIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="12" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="4" y="5" width="12" height="16" rx="2" fill="currentColor" opacity=".85"/></svg>'}
+{const r1=render;render=function(){r1.apply(this,arguments);try{if(ending||typeof p==='undefined'||!p)return;blogNote();
+ let ar=document.querySelector('.arena.duel');if(!ar)return;
+ let h=ar.querySelector('header.opp');if(h&&!h.querySelector('.deckc')){let m=h.querySelector('.stat');(m||h).insertAdjacentHTML(m?'afterend':'beforeend','<span class="stat deckc" title="相手の山札の残り">'+deckIcon()+'<small>山札</small><b>'+c.deck.length+'</b></span>')}
+ let z=ar.querySelector('.zone.mine');if(z&&!z.querySelector('.deckchip'))z.insertAdjacentHTML('beforeend','<span class="deckchip" title="自分の山札の残り">'+deckIcon()+'<small>山札</small><b>'+p.deck.length+'</b></span>');
+ let mid=ar.querySelector('.mid');if(mid&&!mid.querySelector('.logbtn'))mid.querySelector('.round').insertAdjacentHTML('afterend','<button class="logbtn" onclick="showLog()" aria-label="対戦ログを見る">ログ</button>')}catch(e){}}}

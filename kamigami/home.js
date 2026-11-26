@@ -159,13 +159,13 @@ function album(){tag.textContent='';
  let cnt=id=>save.cards.filter(c=>c[0]===id).length,gotGods=HERO_IDS.filter(id=>cnt(id)).length,gotForms=HERO_IDS.reduce((a,i)=>a+['N','R','SR'].filter(f=>ownForm(i,f)).length,0),
   mates=[...SET_ALL.allies,...SET_ALL.spells],gotMates=mates.filter(id=>cnt(id)).length,
   cell=id=>{let n=cnt(id),q=JSON.stringify(id).replace(/"/g,"'");return n
-   ?'<button class="al-cell" onclick="zoomCard('+q+')">'+card([id],'mini')+'<span class="al-meta"><i class="rr r-'+cardRarity(id)+'">'+cardRarity(id)+'</i>'+colorChip(id)+'<em>×'+n+'</em></span></button>'
+   ?'<button class="al-cell" onclick="zoomCard('+q+')"><span class="al-ruby">'+(readingOf(nameOfCard(id))||'&nbsp;')+'</span>'+card([id],'mini')+'<span class="al-meta"><i class="rr r-'+cardRarity(id)+'">'+cardRarity(id)+'</i>'+colorChip(id)+'<em>×'+n+'</em></span></button>'
    :'<div class="al-cell none"><div class="tcard mini unknown"><div class="tc-in"><span>'+cardNo(id)+'</span><b>？</b><small>未入手</small></div></div><span class="al-meta">'+colorChip(id)+'<em>×0</em></span></div>'};
  app.innerHTML='<div class="scene albumscreen"><div class="sc-bg dim"></div><div class="sc-frame"></div>'
  +'<header class="sc-head"><button class="btn-back" onclick="home()">‹ ホーム</button><b>神々の図鑑</b><span>'+gotForms+' / 15形態</span></header>'
  +'<div class="al-scroll"><h2 class="al-set"><small>主神</small>神々<span>'+gotForms+' / 15形態（5神×3形態）</span></h2><div class="al-gods">'
  +HERO_IDS.map(i=>{let k=['N','R','SR'].filter(f=>ownForm(i,f)).length;return '<p class="al-godrow">'+GOD_CARDS[i].type+'　'+GOD_CARDS[i].name+(k?'<em class="own">'+k+' / 3形態</em>':'<em class="no">未入手</em>')+'</p>'
-  +['N','R','SR'].map((f,st)=>{let own=ownForm(i,f);return '<button class="'+(own?'':'locked')+'" onclick="godDetail('+i+','+st+')">'+gcard(i,st,null,'mini')+'<span>'+f+'　'+stageOf(i,st).name+'<b class="'+(own?'fown':'fno')+'">'+(own?'所持':'未所持')+'</b></span></button>'}).join('')}).join('')+'</div>'
+  +['N','R','SR'].map((f,st)=>{let own=ownForm(i,f);return '<button class="'+(own?'':'locked')+'" onclick="godDetail('+i+','+st+')">'+gcard(i,st,null,'mini')+'<span><small class="al-ruby">'+readingOf(stageOf(i,st).name)+'</small>'+f+'　'+stageOf(i,st).name+'<b class="'+(own?'fown':'fno')+'">'+(own?'所持':'未所持')+'</b></span></button>'}).join('')}).join('')+'</div>'
  +alControls()+'<h2 class="al-set"><small>雷鳴の社</small>仲間<span>'+SET_ALL.allies.filter(id=>cnt(id)).length+' / '+SET_ALL.allies.length+'種</span></h2><div class="al-grid">'+(alList(SET_ALL.allies).map(cell).join('')||'<p class="al-empty">この色の仲間はいません</p>')+'</div>'
  +'<h2 class="al-set"><small>雷鳴の社</small>呪文<span>'+SET_ALL.spells.filter(id=>cnt(id)).length+' / '+SET_ALL.spells.length+'種</span></h2><div class="al-grid">'+(alList(SET_ALL.spells).map(cell).join('')||'<p class="al-empty">この色の呪文はありません</p>')+'</div>'
  +'<p class="al-foot">'+(UNLIMITED_PACKS?'<span class="test-tag">実証実験版</span>　'+save.cards.length+'枚所持　<button class="btn-back" id="rsbtn" onclick="resetCollection()">図鑑をリセット</button><br>':'')+'レアリティはカードごとに決まっています。主神は形態違いをまとめて1種と数えます。</p></div>'
