@@ -124,7 +124,7 @@ function ucard(key,o={}){if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[key])retur
  if(kind==='hero'){let st=o.stage!=null?o.stage:0,h=gcard(id,st,o.live||null,(o.cls||'')+(o.rank?' r-hero':''),o.short);return o.showCost?h.replace(/<\/span>$/,costBadge(o)+'</span>'):h}
  let O=CARD_LAYOUT.outerBoundsPx||{attack:[16.5,761.5,97,97],health:[477.5,761.5,97,97],effect:[118,744,355,113],evolution:[58,703,475,31]},S=CARD_LAYOUT.safeTextBoundsPx,
   r=cardRarity(kind==='ally'?id:key),name,img,band,eff,stats=null;
- if(kind==='ally'){let g=gods[id];name=titles[id]+' '+names[id];img=hdArt('g'+id);band='仲間 · '+types[id];
+ if(kind==='ally'){let g=allyStats(id);name=titles[id]+' '+names[id];img=hdArt('g'+id);band='仲間 · '+types[id];
   eff=cardShort(id);
   stats=o.live?o.live:g?{atk:g[0],hp:g[1]}:null}// 数値が未確定の仲間は「?」を出さず、数値欄ごと出さない
  else{name=spellName(key);img=hdArt(key);band='呪文';eff=cardShort(key)}
@@ -151,7 +151,7 @@ const CARD_TABLE={
  // 仲間（7）　※効果は正本の記載だけ（技名だけの旧案「返し潮」などは廃止）
  1:{r:'U',short:'召喚したターンから攻撃できる'},              // シズク＝U（指定）
  6:{r:'U',short:'特殊能力なし'},              // ★ガンザ
- 4:{r:'U',short:'特殊能力なし',later:true},                  // ★ユキネ
+ 4:{r:'U',short:'登場時 敵1体が次の相手ターン攻撃不可',full:'登場したとき、敵の仲間1体は次の相手のターンに攻撃できない。',later:true},                  // ★ユキネ
  7:{r:'N',short:'雨のとき攻撃力+1',full:'天候が「雨」のとき、攻撃力が+1される。',later:true},       // ★ナギ
  8:{r:'R',short:'晴れのとき攻撃力+1',full:'天候が「晴れ」のとき、攻撃力が+1される。',later:true},   // ★アカツキ
  9:{r:'R',short:'特殊能力なし',later:true},                  // ★ツクヨ
@@ -214,7 +214,7 @@ function cardFull(k){let t=CARD_TABLE[k]||{};if(t.full)return t.full;let id=type
  if(id!=null&&+id===1)return '召喚したターンから攻撃できる（速攻）。';if(id!=null)return '特殊能力なし。';return moves[k]?moves[k][2]:''}
 // どの画面からでも呼べる詳細：k は図鑑ID（数値／呪文名）でも対戦の手札キー（g2 など）でもよい
 function cardInfo(k){let m=/^g(\d+)$/.exec(k);if(m)k=+m[1];if(typeof k==='number'&&GOD_CARDS[k]){godDetail(k,0);return}if(EXP_CARDS[k]){expInfo(k);return}
- closeGodDetail();let ally=typeof k==='number',t=CARD_TABLE[k]||{},g=ally?gods[k]:null,full=cardFull(k),name=ally?titles[k]+' '+names[k]:spellName(k);
+ closeGodDetail();let ally=typeof k==='number',t=CARD_TABLE[k]||{},g=ally?allyStats(k):null,full=cardFull(k),name=ally?titles[k]+' '+names[k]:spellName(k);
  let note=t.later?'<p class="gd-next">'+(ally?'この仲間は、今の対戦デッキにはまだ入っていません。':'この呪文は、今の対戦デッキにはまだ入っていません。')+'</p>':'';
  let d=document.createElement('div');d.className='gdetail tdetail';d.setAttribute('role','dialog');d.setAttribute('aria-label',name+'の詳細');
  d.innerHTML='<div class="gd-in">'+ucard(ally?k:k,{cls:'big'})+'<div class="gd-text"><p class="gd-rank">'+(ally?'仲間 ／ '+types[k]:'呪文 ／ コスト'+(moves[k]?moves[k][1]:1))+' ／ '+(t.r||'N')+'</p><h3>'+name+'</h3>'
@@ -319,3 +319,8 @@ function starterCard(k,o={}){let B=CARD_LAYOUT.safeTextBoundsPx,t=CARD_TABLE[k]|
  +'<span class="gb evo" data-k="evolution" style="'+pct(B.evolution)+'"><i class="fit one" data-r=".9">コスト'+cost+'</i></span>'
  +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+(t.full||cardShort(k))+'</i></span>'
  +(o.showCost?costBadge(Object.assign({},o,{cost})):'')+'</span>'}
+
+// ---- 仲間の数値（表示用）：対戦用の gods に無い仲間（まだ対戦デッキに入らない later 扱い）も、正本で確定した数値は図鑑・詳細に出す ----
+// 対戦用の gods には入れない（入れると対戦デッキ・AIの標準デッキに入り、バランス測定の前提が変わるため）
+const ALLY_SHOW={4:[2,5]};// 氷神ユキネ：正本 U／コスト3／攻2／体5
+function allyStats(id){return (typeof gods!=='undefined'&&gods[id])||ALLY_SHOW[id]||null}

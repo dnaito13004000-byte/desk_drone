@@ -52,7 +52,7 @@ const isGod=id=>typeof id==='number';
 function cardNo(id){let i=SET1.cards.indexOf(id);return i<0?'':'雷鳴-'+String(i+1).padStart(3,'0')}
 function cardArt(id,r){return isGod(id)?(id===2&&r==='SR'&&portraits[12]?portraits[12]:portraits[id]):art(id)}
 function cardName(id){return isGod(id)?titles[id]+' '+names[id]:spellName(id)}
-function cardText(id){if(GOD_CARDS[id])return stageText(id,0);let t=CARD_TABLE[id]||{},full=cardFull(id),e=EXP_CARDS[id],g=isGod(id)?gods[id]:e&&e.kind==='ally'?[e.atk,e.hp]:null;
+function cardText(id){if(GOD_CARDS[id])return stageText(id,0);let t=CARD_TABLE[id]||{},full=cardFull(id),e=EXP_CARDS[id],g=isGod(id)?allyStats(id):e&&e.kind==='ally'?[e.atk,e.hp]:null;
  return (g?'攻撃力'+g[0]+' / 体力'+g[1]+'。':'')+full+(t.later?'<br><small>（今の対戦デッキにはまだ入っていません）</small>':'')}
 const BOLT='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 1 4 14h7l-2 9 11-14h-7z" fill="currentColor"/></svg>';
 
