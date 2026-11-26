@@ -563,3 +563,16 @@ addEventListener('resize',()=>{try{fanHand()}catch(e){}});
 {const f0=fitHandZoom;fitHandZoom=function(o){f0(o);if(o&&!o.__refit){o.__refit=1;let again=()=>{if(o.isConnected)f0(o)};requestAnimationFrame(again);setTimeout(again,250);try{document.fonts&&document.fonts.ready.then(again)}catch(e){}o.querySelectorAll('img').forEach(im=>{if(!im.complete)im.addEventListener('load',again,{once:true})})}}}
 addEventListener('resize',()=>{document.querySelectorAll('.handzoom').forEach(o=>{try{fitHandZoom(o)}catch(e){}})});
 if(window.visualViewport)visualViewport.addEventListener('resize',()=>{document.querySelectorAll('.handzoom').forEach(o=>{try{fitHandZoom(o)}catch(e){}})});
+
+// ==== 拡大表示のカードサイズ：種別（呪文・仲間・主神）に関係なく同じ計算に統一（2026-11-27）====
+// 見えている高さ（visualViewport／dvh）から、上端の札・ボタン・説明欄の最低限を引いてカードの高さを決め、縦横比で幅を出す。
+// 説明文の長さではカードの大きさを変えない（長いときは説明欄だけスクロール）
+fitHandZoom=function(o){let card=o&&o.querySelector('.hz-card');if(!card)return;let txt=o.querySelector('.hz-text'),acts=o.querySelector('.hz-acts'),hd=o.querySelector('.breach-head');
+ let VH=Math.min(window.visualViewport?visualViewport.height:innerHeight,innerHeight,o.clientHeight||9999),VW=Math.min(window.visualViewport?visualViewport.width:innerWidth,innerWidth);
+ let cs=getComputedStyle(o),padY=(parseFloat(cs.paddingTop)||12)+(parseFloat(cs.paddingBottom)||12),TAB=14,GAP=10,land=VW>VH&&VH<520;
+ let actsH=Math.max(acts?acts.offsetHeight:0,land?0:150),headH=hd&&!land?hd.offsetHeight+GAP:0,PANEL_MIN=land?0:96;
+ let avail=VH-padY-TAB-headH;
+ let cardH=land?avail:Math.min(avail-actsH-PANEL_MIN-GAP*2,avail*.64);
+ let w=Math.max(96,Math.min(cardH*591/887,land?VW*.36:VW*.66,300));card.style.width=w+'px';card.style.paddingTop=TAB+'px';
+ if(txt){let left=land?(VH-padY-actsH-GAP*2-(hd?hd.offsetHeight:0)):(avail-w*887/591-actsH-GAP*2);txt.style.maxHeight=Math.max(64,left)+'px';txt.style.overflowY='auto'}};
+{const f1=fitHandZoom;fitHandZoom=function(o){f1(o);if(o&&!o.__refit2){o.__refit2=1;let again=()=>{if(o.isConnected)f1(o)};requestAnimationFrame(again);setTimeout(again,250);try{document.fonts&&document.fonts.ready.then(again)}catch(e){}o.querySelectorAll('img').forEach(im=>{if(!im.complete)im.addEventListener('load',again,{once:true})})}}}
