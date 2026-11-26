@@ -515,3 +515,9 @@ small.al-ruby{margin:0 0 1px}
 .handzoom{display:flex!important;flex-direction:column;align-items:center;justify-content:flex-start;height:100%;height:100dvh;box-sizing:border-box;-webkit-overflow-scrolling:touch}
 .handzoom>.hz-in{margin:auto;flex:none}
 .handzoom .hz-card{padding-top:12px}
+
+/* 上端の「呪文／主神」札が切れる原因：絵柄カード（.gc.uc）は overflow:hidden で外側を切っていた。
+   絵柄カードは画像自体が角丸なので切り抜き不要 → はみ出しを見せる */
+.gc.uc.uc-exp{overflow:visible}
+/* 拡大画面の高さは「見えている範囲」（dvh）基準 */
+.handzoom{height:100vh;height:100dvh;max-height:100dvh}
