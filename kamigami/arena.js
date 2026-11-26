@@ -88,9 +88,9 @@ function whyNot(f,k){if(legal(f,k))return '';let need=costOf(k)-f.mp;if(need>0)r
  if(isSum(k))return '場がいっぱい（3体まで）';if(k==='bolt')return weather!=='雨'?'天候が「雨」のときだけ使える':'攻撃できる敵がいない';if(k==='guard')return '守る味方がいない';if(k==='draw')return '山札がない';return '今は使えない'}
 function closeHandZoom(){document.querySelectorAll('.handzoom:not(.ask):not(.breach)').forEach(x=>x.remove());sel=-1;render()}
 function handZoom(i){if(document.querySelector('.handzoom.ask,.handzoom.breach'))return;document.querySelectorAll('.handzoom').forEach(x=>x.remove());let k=p.hand[i];if(!k)return;
- let g=isSum(k),key=g?sumId(k):k,full=g?(gods[key]?'攻撃力'+gods[key][0]+' / 体力'+gods[key][1]+'。':'')+cardFull(key):cardFull(k),why=whyNot(p,k),name=g?titles[key]+' '+names[key]:spellName(k);
+ let g=isSum(k),key=g?sumId(k):k,isHero=g&&typeof key==='number'&&!!GOD_CARDS[key],full=isHero?stageText(key,p.stage):g?cardFull(key):cardFull(k),why=whyNot(p,k),name=g?titles[key]+' '+names[key]:spellName(k);
  let o=document.createElement('div');o.className='handzoom';o.setAttribute('role','dialog');o.setAttribute('aria-label',name+'の拡大表示');
- o.innerHTML='<div class="hz-in"><div class="hz-card">'+ucard(k,{showCost:true,cost:costOf(k),cantPay:p.mp<costOf(k)})+'</div><div class="hz-text"><p class="hz-kind">'+(g?'仲間 ／ '+types[key]:'呪文')+' ／ コスト'+costOf(k)+'　<small>いまの神力 '+p.mp+'</small></p>'+rubyP(name)+'<h3>'+name+'</h3><p class="hz-eff">'+full+'</p>'+(termList(full+(g?'仲間':''))?'<details class="hz-terms"><summary>用語の説明</summary>'+termList(full+(g?'仲間':''))+'</details>':'')+'</div>'
+ o.innerHTML='<div class="hz-in"><div class="hz-card">'+ucard(k,{showCost:true,cost:costOf(k),cantPay:p.mp<costOf(k)})+'</div><div class="hz-text"><p class="hz-kind">'+(isHero?'主神':g?'仲間':'呪文')+' ／ '+(colorOf(key)||'色なし')+' ／ コスト'+costOf(k)+'　<small>いまの神力 '+p.mp+'</small></p><p class="hz-eff">'+full+'</p>'+(termList(full+(g?'仲間':''))?'<details class="hz-terms"><summary>用語の説明</summary>'+termList(full+(g?'仲間':''))+'</details>':'')+'</div>'
  +'<div class="hz-acts"><button class="hz-btn gold" data-a="use"'+(why?' disabled':'')+'>'+(g?'召喚する':'使う')+'</button>'+(why?'<small class="hz-why">'+why+'</small>':'')
  +'<button class="hz-btn" data-a="charge"'+(p.charged?' disabled':'')+'>'+(p.charged?'置いた（1ターン1枚）':'神力に置く')+'</button><button class="hz-btn ghost" data-a="close">閉じる</button></div></div>';
  o.onclick=e=>{if(e.target===o){closeHandZoom();return}let b=e.target.closest('button');if(!b||b.disabled)return;let a=b.dataset.a;o.remove();
@@ -98,7 +98,7 @@ function handZoom(i){if(document.querySelector('.handzoom.ask,.handzoom.breach')
   else if(a==='charge'){sel=-1;chargeUI(p,i)}else closeHandZoom()};
  document.body.appendChild(o);fitHandZoom(o);o.querySelector('details')?.addEventListener('toggle',()=>fitHandZoom(o))}
 // スクロールせずに1画面に収める：文字とボタンの高さを引いた残りでカードの大きさを決める
-function fitHandZoom(o){let card=o.querySelector('.hz-card'),txt=o.querySelector('.hz-text'),acts=o.querySelector('.hz-acts');if(!card)return;let hd=o.querySelector('.breach-head'),H=innerHeight-(hd&&!(innerWidth>innerHeight&&innerHeight<520)?hd.offsetHeight+10:0),W=innerWidth,land=W>innerHeight&&innerHeight<520,cs=getComputedStyle(o),pad=(parseFloat(cs.paddingTop)||14)+(parseFloat(cs.paddingBottom)||14)+16,gap=10;
+function fitHandZoom(o){let card=o.querySelector('.hz-card'),txt=o.querySelector('.hz-text'),acts=o.querySelector('.hz-acts');if(!card)return;let hd=o.querySelector('.breach-head'),H=(o.clientHeight||innerHeight)-(hd&&!(innerWidth>innerHeight&&innerHeight<520)?hd.offsetHeight+10:0),W=innerWidth,land=W>innerHeight&&innerHeight<520,cs=getComputedStyle(o),pad=(parseFloat(cs.paddingTop)||14)+(parseFloat(cs.paddingBottom)||14)+16,gap=10;
  txt.style.maxHeight='';if(land){let w=Math.min(W*.36,(H-pad)*591/887);card.style.width=Math.max(110,w)+'px';txt.style.maxHeight=Math.max(60,innerHeight-pad-acts.offsetHeight-gap*2-(hd?hd.offsetHeight:0))+'px';return}
  let rest=H-pad-txt.offsetHeight-acts.offsetHeight-gap*2,w=Math.min(W*.66,300,rest*591/887);if(w<130){w=130;txt.style.maxHeight=Math.max(90,H-pad-acts.offsetHeight-gap*2-130*887/591)+'px'}card.style.width=w+'px'}
 addEventListener('resize',()=>{let o=document.querySelector('.handzoom:not(.confirm)');if(o)fitHandZoom(o)});
@@ -242,7 +242,7 @@ function soldiers(f){return f.units.map(u=>{let ally=f===p,mine=turn===p&&!endin
  let face=hero?gcard(u.id,f.stage,{atk:atkOf(u),hp:u.hp,max:u.max,weak:u.weak},'',true).replace(/<\/span>$/,costBadge({cost:1})+'</span>')
   :ucard(u.id,{live:{atk:atkOf(u),hp:u.hp,max:u.max,weak:u.weak}});
  let tagline=hero?'<span class="gtag'+(f.gaugeFlash&&Date.now()-f.gaugeFlash<1600?' flash':'')+'">'+(f.stage===0?'進化 '+Array.from({length:ASCEND.evolve.gauge},(_,i)=>'<i class="'+(i<f.gauge?'on':'')+(f.gaugeFlash&&Date.now()-f.gaugeFlash<1600&&i===f.gauge-1?' new':'')+'"></i>').join(''):f.stage===1?'覚醒 <i class="'+(f.shrineBroken?'on':'')+'"></i>'+(f.shrineBroken?'可':'神殿待ち'):'最終')+'</span>':'';
- return '<button id="u'+u.uid+'" aria-label="'+(hero?stageOf(u.id,f.stage).name:titles[u.id]+' '+names[u.id])+' 攻撃'+atkOf(u)+' 体力'+u.hp+'/'+u.max+(st==='picked'?' 選択中':st==='target'?' 対象にする':st==='used'?' 行動済み':'')+'" class="unit '+st+' herocard'+(arrived===u.uid?' summon':'')+(awake?' awake':'')+(fresh?' awaking':'')+(hero&&f.burst?' charged':'')+(u.ward?' warded':'')+'" onclick="'+(ally?'pick':'target')+'('+u.uid+')"><span class="mark m-'+st+'">'+(st==='target'?marks.target:'')+'</span>'+face+(u.ward?'<em class="ribbon ward">守護</em>':'')+(ally&&mine&&sickOf(f,u)&&!u.used?'<em class="sickmark">召喚酔い</em>':'')+(u.hero?'<span class="lives'+(f.shrines.length?'':' none')+'" title="命＝神殿の残り" aria-label="命（神殿）残り'+f.shrines.length+'">'+(f.shrines.length?Array.from({length:f.shrines.length},()=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5c6 1.5 14 1.5 20 0v2.6c-1 .3-2 .5-3 .6V10h-2V8.4c-1.3.1-2.7.2-4 .2s-2.7-.1-4-.2V10H7V8.2c-1-.1-2-.3-3-.6zM4 10h16v2h-2.5v9h-2.2v-9H8.7v9H6.5v-9H4z" fill="currentColor"/></svg>').join(''):'命なし')+'</span>':'')+tagline+(fresh?'<i class="lightburst"></i>':'')+'</button>'}).join('')}
+ return '<button id="u'+u.uid+'" aria-label="'+(hero?stageOf(u.id,f.stage).name:titles[u.id]+' '+names[u.id])+' 攻撃'+atkOf(u)+' 体力'+u.hp+(st==='picked'?' 選択中':st==='target'?' 対象にする':st==='used'?' 行動済み':'')+'" class="unit '+st+' herocard'+(arrived===u.uid?' summon':'')+(awake?' awake':'')+(fresh?' awaking':'')+(hero&&f.burst?' charged':'')+(u.ward?' warded':'')+'" onclick="'+(ally?'pick':'target')+'('+u.uid+')"><span class="mark m-'+st+'">'+(st==='target'?marks.target:'')+'</span>'+face+(u.ward?'<em class="ribbon ward">守護</em>':'')+(ally&&mine&&sickOf(f,u)&&!u.used?'<em class="sickmark">召喚酔い</em>':'')+(u.hero?'<span class="lives'+(f.shrines.length?'':' none')+'" title="命＝神殿の残り" aria-label="命（神殿）残り'+f.shrines.length+'">'+(f.shrines.length?Array.from({length:f.shrines.length},()=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5c6 1.5 14 1.5 20 0v2.6c-1 .3-2 .5-3 .6V10h-2V8.4c-1.3.1-2.7.2-4 .2s-2.7-.1-4-.2V10H7V8.2c-1-.1-2-.3-3-.6zM4 10h16v2h-2.5v9h-2.2v-9H8.7v9H6.5v-9H4z" fill="currentColor"/></svg>').join(''):'命なし')+'</span>':'')+tagline+(fresh?'<i class="lightburst"></i>':'')+'</button>'}).join('')}
 function costOf(k){return isSum(k)?1:(moves[k]?moves[k][1]:1)}
 function heroActs(){if(turn!==p||busy||ending||!heroOf(p))return '';let o='',k=skillOf(p);
  if(k)o+=btn(p.skillUsed?k.name+'（使用済み）':k.name+' · 神力'+k.cost,'skillMode=skillOf(p);attacker=-1;render()',!canSkill(p));
@@ -420,8 +420,8 @@ function freeWhy(f,k){f.mp+=costOf(k);let w=whyNot(f,k);f.mp-=costOf(k);return w
 async function freeUse(f,k,t){let before=snap();f.hand.push(k);let i=f.hand.length-1;f.mp+=costOf(k);let ok=play(f,i,t);
  if(!ok){f.mp-=costOf(k);return false}latest='破殿解放！ '+latest;render();await diffFx(before);render();return true}
 function breachBox(f,k){let o=document.createElement('div');o.className='handzoom breach';o.setAttribute('role','dialog');o.setAttribute('aria-label','破殿解放 '+cardLabel(k));
- let mine=f===p,full=isSum(k)?(gods[sumId(k)]?'攻撃力'+gods[sumId(k)][0]+' / 体力'+gods[sumId(k)][1]+'。':'')+cardFull(sumId(k)):cardFull(k);
- o.innerHTML='<div class="hz-in"><p class="breach-head"><b>破殿解放</b><small>'+(mine?'自分':'相手')+'の神殿が割れた</small></p><div class="hz-card">'+ucard(k,{})+'</div><div class="hz-text"><h3>'+cardLabel(k)+'</h3><p class="hz-eff">'+full+'</p></div><div class="hz-acts"></div></div>';
+ let mine=f===p,full=isSum(k)?cardFull(sumId(k)):cardFull(k);
+ o.innerHTML='<div class="hz-in"><p class="breach-head"><b>破殿解放</b><small>'+(mine?'自分':'相手')+'の神殿が割れた</small></p><div class="hz-card">'+ucard(k,{})+'</div><div class="hz-text"><p class="hz-kind">'+(isSum(k)?'仲間':'呪文')+' ／ '+(colorOf(isSum(k)?sumId(k):k)||'色なし')+' ／ コスト'+costOf(k)+'</p><p class="hz-eff">'+full+'</p></div><div class="hz-acts"></div></div>';
  document.body.appendChild(o);return o}
 async function breachOne(f,k){await gaugeUp(f);let mine=f===p&&!window.__autoP,can=freeLegal(f,k);
  if(!mine){let t;if(can&&SP[k]&&SP[k].tgt){t=aiTarget(f,k);if(!t||t==='none')t=spTargets(f,k)[0]}
@@ -465,8 +465,7 @@ function unitZoom(f,u){if(document.querySelector('.handzoom.ask,.handzoom.breach
  let face=hero?gcard(u.id,f.stage,live,''):ucard(typeof u.id==='number'?u.id:u.id,{live});
  let can=f===p&&turn===p&&!busy&&!ending&&!u.used&&u.hp>0&&!sickOf(p,u);
  let o=document.createElement('div');o.className='handzoom unitzoom';o.setAttribute('role','dialog');o.setAttribute('aria-label',name+'の詳細');
- o.innerHTML='<div class="hz-in"><div class="hz-card">'+face+'</div><div class="hz-text"><p class="hz-kind">'+(f===p?'自分':'相手')+'の'+(hero?'主神':'仲間')+' ／ '+(hero?GOD_CARDS[u.id].type:colorOf(u.id)||'')+'</p>'+rubyP(name)+'<h3>'+name+'</h3>'
- +'<p class="uz-stat">⚔︎ 攻撃力 <b>'+atkOf(u)+'</b>'+(atkOf(u)!==u.atk?'<small>（元 '+u.atk+'）</small>':'')+'　♥ 体力 <b>'+Math.max(0,u.hp)+'</b> / '+u.max+'</p>'
+ o.innerHTML='<div class="hz-in"><div class="hz-card">'+face+'</div><div class="hz-text"><p class="hz-kind">'+(f===p?'自分':'相手')+'の'+(hero?'主神':'仲間')+' ／ '+(hero?GOD_CARDS[u.id].type:colorOf(u.id)||'色なし')+(hero?'':' ／ コスト'+cardCost(typeof u.id==='number'?u.id:u.id))+'</p>'
  +(st.length?'<ul class="uz-st">'+st.map(x=>'<li>'+x+'</li>').join('')+'</ul>':'')+'<p class="hz-eff">'+full+'</p>'
  +(termList(full+(hero?'':'仲間'))?'<details class="hz-terms"><summary>用語の説明</summary>'+termList(full+(hero?'':'仲間'))+'</details>':'')+'</div>'
  +'<div class="hz-acts">'+(f===p?'<button class="hz-btn gold" data-a="atk"'+(can?'':' disabled')+'>この神で攻撃する</button>':'')+'<button class="hz-btn'+(f===p?'':' gold')+'" data-a="close">閉じる</button>'
@@ -559,3 +558,8 @@ addEventListener('resize',()=>{try{fanHand()}catch(e){}});
  if(zf&&!zf.querySelector('.piles'))zf.insertAdjacentHTML('beforeend','<div class="piles foe">'+pileHtml(c)+'</div>');
  if(zm&&!zm.querySelector('.piles'))zm.insertAdjacentHTML('beforeend','<div class="piles mine">'+pileHtml(p)+'</div>');
  fanHand()}catch(e){console.error(e)}}}
+
+// 拡大表示：表示後にフォント・画像が読み込まれて高さが変わっても収まるよう、もう一度合わせ直す（2026-11-27）
+{const f0=fitHandZoom;fitHandZoom=function(o){f0(o);if(o&&!o.__refit){o.__refit=1;let again=()=>{if(o.isConnected)f0(o)};requestAnimationFrame(again);setTimeout(again,250);try{document.fonts&&document.fonts.ready.then(again)}catch(e){}o.querySelectorAll('img').forEach(im=>{if(!im.complete)im.addEventListener('load',again,{once:true})})}}}
+addEventListener('resize',()=>{document.querySelectorAll('.handzoom').forEach(o=>{try{fitHandZoom(o)}catch(e){}})});
+if(window.visualViewport)visualViewport.addEventListener('resize',()=>{document.querySelectorAll('.handzoom').forEach(o=>{try{fitHandZoom(o)}catch(e){}})});

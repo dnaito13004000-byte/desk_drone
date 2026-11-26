@@ -509,3 +509,9 @@ small.al-ruby{margin:0 0 1px}
 /* 拡大表示：カードの上の「主神／呪文」札が切れないよう余白、カード全体が収まるように */
 .handzoom .hz-card{padding-top:10px;box-sizing:content-box}
 .handzoom .gd-ruby{margin:0 0 -4px;text-align:left}
+
+/* 拡大表示の上端が切れる対策（Safari は place-items:safe center が効かず、はみ出した上側がスクロールで戻れない）
+   → 縦の flex ＋ margin:auto で中央寄せ。高さが足りないときは上から並び、上端は欠けない */
+.handzoom{display:flex!important;flex-direction:column;align-items:center;justify-content:flex-start;height:100%;height:100dvh;box-sizing:border-box;-webkit-overflow-scrolling:touch}
+.handzoom>.hz-in{margin:auto;flex:none}
+.handzoom .hz-card{padding-top:12px}
