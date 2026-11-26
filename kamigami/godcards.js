@@ -49,7 +49,7 @@ function pct(b){let [W,H]=CARD_LAYOUT.canvasPx;return 'left:'+(b[0]/W*100)+'%;to
 // 主神カード1枚。live＝対戦中の値（攻撃力・現在/最大体力）
 function gcard(id,st,live,cls='',short=false){let s=stageOf(id,st),B=CARD_LAYOUT.safeTextBoundsPx,
   atk=live?live.atk:s.atk,hp=live?'<b class="cur">'+Math.max(0,live.hp)+'</b>':s.hp,weak=live&&live.weak;
- return '<span class="gc '+cls+'" data-id="'+id+'" data-st="'+st+'"><img src="'+cardImg(id,st)+'" alt="'+s.name+'" draggable="false" loading="lazy">'
+ return '<span class="gc '+cls+'" data-id="'+id+'" data-st="'+st+'"><img src="'+cardImg(id,st)+'" alt="'+s.name+'" draggable="false" loading="lazy">'+rubyBand(s.name)
  +statIcon('atk',atk,weak)
  +statIcon('hp',live?Math.max(0,live.hp):s.hp,false,live?live.max:null)
  +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+(short?s.skill+(s.cost&&(s.fx.bolt||s.fx.heal||s.fx.fox)&&st===0?'（神力'+s.cost+'）':''):stageText(id,st))+'</i></span>'
@@ -136,7 +136,7 @@ function ucard(key,o={}){if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[key])retur
  +'<span class="uc-nameband" style="'+pct(FRAME_PX.nameBand)+'"></span><span class="uc-panel" style="'+pct(FRAME_PX.panel)+'"></span>'
  +'<span class="uc-evo" style="'+pct(O.evolution)+'"></span><span class="uc-eff" style="'+pct(O.effect)+'"></span>'
  
- +'<span class="gb name" data-k="nameText" style="'+pct(FRAME_PX.nameText)+'"><i class="fit one" data-r=".78">'+name+'</i></span>'
+ +(readingOf(name)?'<span class="gb ruby rb-in" style="'+pct([60,604,471,22])+'"><i class="fit one" data-r=".9">'+readingOf(name)+'</i></span><span class="gb name" data-k="nameText" style="'+pct([48,628,495,52])+'"><i class="fit one" data-r=".78">'+name+'</i></span>':'<span class="gb name" data-k="nameText" style="'+pct(FRAME_PX.nameText)+'"><i class="fit one" data-r=".78">'+name+'</i></span>')
  +'<span class="gb evo" data-k="evolution" style="'+pct(S.evolution)+'"><i class="fit one" data-r=".9">'+band+'</i></span>'
  +'<span class="gb eff" data-k="effect" style="'+pct(S.effect)+'"><i class="fit ml">'+eff+'</i></span>'
  +(stats?statIcon('atk',stats.atk,stats.weak)+statIcon('hp',o.live?Math.max(0,stats.hp):stats.hp,false,o.live?stats.max:null):'')
@@ -298,7 +298,7 @@ function colorChip(k){let c=colorOf(k);return '<i class="colchip c-'+(COLORS.ind
 function cardCost(k){if(EXP_CARDS[k])return EXP_CARDS[k].cost;if(typeof k==='number')return (typeof ALLY_COST!=='undefined'&&ALLY_COST[k])||1;return moves[k]?moves[k][1]:1}
 // 拡張カードの表示：完成カード絵＋剣・ハートの器に数字（仲間）＋効果帯に全文＋細帯にコスト
 function expCard(k,o={}){let e=EXP_CARDS[k],B=CARD_LAYOUT.safeTextBoundsPx,ally=e.kind==='ally';
- return '<span class="gc uc uc-exp '+(ally?'uc-ally':'uc-spell')+' r-'+e.r+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/expansion/'+k+'.webp" alt="'+e.name+'" draggable="false" loading="lazy">'
+ return '<span class="gc uc uc-exp '+(ally?'uc-ally':'uc-spell')+' r-'+e.r+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/expansion/'+k+'.webp" alt="'+e.name+'" draggable="false" loading="lazy">'+rubyBand(e.name)
  +(ally?(o.live?statIcon('atk',o.live.atk,o.live.weak)+statIcon('hp',Math.max(0,o.live.hp),false,o.live.max):statIcon('atk',e.atk)+statIcon('hp',e.hp)):'')
  +'<span class="gb evo" data-k="evolution" style="'+pct(B.evolution)+'"><i class="fit one" data-r=".9">コスト'+e.cost+'</i></span>'
  +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+e.text+'</i></span>'
@@ -315,7 +315,7 @@ TERMS.push(['最終決戦','神殿がすべて割れた側は、主神が攻撃�
 // ---- 初期呪文8種：枠つき完成イラスト（2026-11-25差し替え）。名前帯はアート側、コスト・効果文は既存の重ね表示で載せる ----
 const STARTER_ART={rain:'amagoi',sun:'kumobarai',bolt:'shourai',guard:'shugo',draw:'shintaku',seed:'tanemaki',mirror:'kakusei_kagami',scroll:'shini_keishou'};
 function starterCard(k,o={}){let B=CARD_LAYOUT.safeTextBoundsPx,t=CARD_TABLE[k]||{},cost=o.cost!=null?o.cost:(typeof costOf==='function'?costOf(k):1);
- return '<span class="gc uc uc-exp uc-spell r-'+(t.r||'N')+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/starter/'+STARTER_ART[k]+'.webp" alt="'+spellName(k)+'" draggable="false" loading="lazy">'
+ return '<span class="gc uc uc-exp uc-spell r-'+(t.r||'N')+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/starter/'+STARTER_ART[k]+'.webp" alt="'+spellName(k)+'" draggable="false" loading="lazy">'+rubyBand(spellName(k))
  +'<span class="gb evo" data-k="evolution" style="'+pct(B.evolution)+'"><i class="fit one" data-r=".9">コスト'+cost+'</i></span>'
  +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+(t.full||cardShort(k))+'</i></span>'
  +(o.showCost?costBadge(Object.assign({},o,{cost})):'')+'</span>'}
@@ -328,5 +328,9 @@ function allyStats(id){return (typeof gods!=='undefined'&&gods[id])||ALLY_SHOW[i
 // ---- カード名の読み（図鑑・詳細モーダル用。対戦中の小さいカードには付けない）----
 const READING={'幼神ライガ':'ヨウシンライガ','雷鼓解放ライガ':'ライコカイホウライガ','天穿雷神ライガ':'テンセンライジンライガ','幼神コダマ':'ヨウシンコダマ','樹脈解放コダマ':'ジュミャクカイホウコダマ','万象樹神コダマ':'バンショウジュシンコダマ','幼神カグラ':'ヨウシンカグラ','炎拳解放カグラ':'エンケンカイホウカグラ','熔獅神カグラ':'ヨウシシンカグラ','幼神ハヤテ':'ヨウシンハヤテ','風翼解放ハヤテ':'フウヨクカイホウハヤテ','蒼翼神ハヤテ':'ソウヨクシンハヤテ','幼神オボロ':'ヨウシンオボロ','影紋解放オボロ':'エイモンカイホウオボロ','幽狐神オボロ':'ユウコシンオボロ','雨神シズク':'アマガミシズク','岩神ガンザ':'イワガミガンザ','氷神ユキネ':'ヒョウシンユキネ','潮神ナギ':'ウシオガミナギ','陽神アカツキ':'ヨウシンアカツキ','月神ツクヨ':'ツキガミツクヨ','星神スバル':'ホシガミスバル','雲紡ぎのアヤ':'クモツムギノアヤ','霹靂を喰う天狗':'ヘキレキヲクウテング','石臼の荒神':'イシウスノアラガミ','古根の角王':'ココンノツノオウ','火走りのイタチ神':'ヒバシリノイタチガミ','双炉の鍛冶神':'ソウロノカジシン','潮先の鷺神':'シオサキノサギガミ','瀬渡りのカワセミ神':'セワタリノカワセミガミ','面削りの童神':'メンケズリノドウシン','逆夢の獏神':'サカユメノバクシン','嵐呼の雷獣':'アラシヨブノライジュウ','不動の山神':'フドウノヤマガミ','爆炎の剣神':'バクエンノケンシン','疾風の忍神':'シップウノニンシン','薄暮の呪い手':'ハクボノノロイテ','霙神':'ミゾレガミ','稲光':'イナビカリ','苗神':'ナエガミ','火達磨':'ヒダルマ','飛沫神':'シブキガミ','写し神':'ウツシガミ','雨乞い':'アマゴイ','雲払い':'クモバライ','招雷':'ショウライ','守護':'シュゴ','神託':'シンタク','種まき':'タネマキ','覚醒の神鏡':'カクセイノシンキョウ','神位継承の巻':'シンイケイショウノマキ','雨脚の矢':'アマアシノヤ','雲間の返照':'クモマノヘンショウ','天柱落とし':'テンチュウオトシ','岩盤返し':'ガンバンガエシ','実りの分け前':'ミノリノワケマエ','山門の進軍':'サンモンノシングン','火挟み':'ヒバサミ','二の太刀':'ニノタチ','落日の火葬鐘':'ラクジツノカソウショウ','追い潮':'オイシオ','水面抜き':'ミナモヌキ','航跡を読む':'コウセキヲヨム','大地の恵み':'ダイチノメグミ','火付け':'ヒツケ','引き潮':'ヒキシオ','心読み':'ココロヨミ','影の縫い返し':'カゲノヌイカエシ','空蝉の歩法':'ウツセミノホホウ','逆さ月の宣告':'サカサツキノセンコク'};
 function readingOf(name){return READING[String(name||'').replace(/[\s　]/g,'')]||''}
-function rubyP(name){let r=readingOf(name);return r?'<p class="gd-ruby">'+r+'</p>':''}
+function heroReading(name){let n=String(name||'').replace(/[\s　]/g,'');for(const id of Object.keys(GOD_CARDS)){let i=+id;if(typeof titles!=='undefined'&&titles[i]+names[i]===n){let st=0;try{if(typeof p!=='undefined'&&p&&p.id===i)st=p.stage;else if(typeof c!=='undefined'&&c&&c.id===i)st=c.stage}catch(e){}return readingOf(stageOf(i,st).name)}}return ''}
+function rubyP(name){let r=readingOf(name)||heroReading(name);return r?'<p class="gd-ruby">'+r+'</p>':''}
 function nameOfCard(id){if(typeof id==='number')return titles[id]+names[id];if(EXP_CARDS[id])return EXP_CARDS[id].name;return spellName(id)}
+
+// 絵に名前が描かれたカード（主神・拡張・初期呪文）：名前帯のすぐ上に読みの帯を重ねる（2026-11-27）
+function rubyBand(name){let r=readingOf(name);return r?'<span class="gb ruby" style="'+pct([96,566,399,30])+'"><i class="fit one" data-r=".92">'+r+'</i></span>':''}

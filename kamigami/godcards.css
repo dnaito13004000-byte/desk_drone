@@ -499,3 +499,13 @@ small.al-ruby{margin:0 0 1px}
 .gravepanel .gv-list{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;overflow:auto}
 .gravepanel .gv-card .gc::before{font-size:8px}
 @media (max-height:700px){.pile-deck,.pile-grave{width:32px;height:48px}.piles{gap:5px}}
+
+/* ==== 読み（ルビ）：対戦中のカードにも表示（2026-11-27）==== */
+.gc .gb.ruby{z-index:2;border-radius:99px;background:rgba(8,10,20,.72);box-shadow:0 0 0 1px rgba(232,200,120,.35)}
+.gc .gb.ruby .fit{color:#f3e2b0;font-family:"Hiragino Sans","Noto Sans JP",sans-serif;font-weight:700;letter-spacing:.08em}
+.gc .gb.ruby.rb-in{background:none;box-shadow:none}.gc .gb.ruby.rb-in .fit{color:#5b4a2a;text-shadow:none}
+/* 図鑑・詳細には別に読みの行があるので、カード本体のルビは出さない */
+.al-cell .gc .gb.ruby,.al-gods .gc .gb.ruby,.gdetail .gc .gb.ruby,.dk-cell .gc .gb.ruby,.dk-hero .gc .gb.ruby,.pile-grave .gc .gb.ruby{display:none}
+/* 拡大表示：カードの上の「主神／呪文」札が切れないよう余白、カード全体が収まるように */
+.handzoom .hz-card{padding-top:10px;box-sizing:content-box}
+.handzoom .gd-ruby{margin:0 0 -4px;text-align:left}

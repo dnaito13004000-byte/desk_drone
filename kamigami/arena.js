@@ -90,7 +90,7 @@ function closeHandZoom(){document.querySelectorAll('.handzoom:not(.ask):not(.bre
 function handZoom(i){if(document.querySelector('.handzoom.ask,.handzoom.breach'))return;document.querySelectorAll('.handzoom').forEach(x=>x.remove());let k=p.hand[i];if(!k)return;
  let g=isSum(k),key=g?sumId(k):k,full=g?(gods[key]?'攻撃力'+gods[key][0]+' / 体力'+gods[key][1]+'。':'')+cardFull(key):cardFull(k),why=whyNot(p,k),name=g?titles[key]+' '+names[key]:spellName(k);
  let o=document.createElement('div');o.className='handzoom';o.setAttribute('role','dialog');o.setAttribute('aria-label',name+'の拡大表示');
- o.innerHTML='<div class="hz-in"><div class="hz-card">'+ucard(k,{showCost:true,cost:costOf(k),cantPay:p.mp<costOf(k)})+'</div><div class="hz-text"><p class="hz-kind">'+(g?'仲間 ／ '+types[key]:'呪文')+' ／ コスト'+costOf(k)+'　<small>いまの神力 '+p.mp+'</small></p><h3>'+name+'</h3><p class="hz-eff">'+full+'</p>'+(termList(full+(g?'仲間':''))?'<details class="hz-terms"><summary>用語の説明</summary>'+termList(full+(g?'仲間':''))+'</details>':'')+'</div>'
+ o.innerHTML='<div class="hz-in"><div class="hz-card">'+ucard(k,{showCost:true,cost:costOf(k),cantPay:p.mp<costOf(k)})+'</div><div class="hz-text"><p class="hz-kind">'+(g?'仲間 ／ '+types[key]:'呪文')+' ／ コスト'+costOf(k)+'　<small>いまの神力 '+p.mp+'</small></p>'+rubyP(name)+'<h3>'+name+'</h3><p class="hz-eff">'+full+'</p>'+(termList(full+(g?'仲間':''))?'<details class="hz-terms"><summary>用語の説明</summary>'+termList(full+(g?'仲間':''))+'</details>':'')+'</div>'
  +'<div class="hz-acts"><button class="hz-btn gold" data-a="use"'+(why?' disabled':'')+'>'+(g?'召喚する':'使う')+'</button>'+(why?'<small class="hz-why">'+why+'</small>':'')
  +'<button class="hz-btn" data-a="charge"'+(p.charged?' disabled':'')+'>'+(p.charged?'置いた（1ターン1枚）':'神力に置く')+'</button><button class="hz-btn ghost" data-a="close">閉じる</button></div></div>';
  o.onclick=e=>{if(e.target===o){closeHandZoom();return}let b=e.target.closest('button');if(!b||b.disabled)return;let a=b.dataset.a;o.remove();
@@ -98,7 +98,7 @@ function handZoom(i){if(document.querySelector('.handzoom.ask,.handzoom.breach')
   else if(a==='charge'){sel=-1;chargeUI(p,i)}else closeHandZoom()};
  document.body.appendChild(o);fitHandZoom(o);o.querySelector('details')?.addEventListener('toggle',()=>fitHandZoom(o))}
 // スクロールせずに1画面に収める：文字とボタンの高さを引いた残りでカードの大きさを決める
-function fitHandZoom(o){let card=o.querySelector('.hz-card'),txt=o.querySelector('.hz-text'),acts=o.querySelector('.hz-acts');if(!card)return;let hd=o.querySelector('.breach-head'),H=innerHeight-(hd&&!(innerWidth>innerHeight&&innerHeight<520)?hd.offsetHeight+10:0),W=innerWidth,land=W>innerHeight&&innerHeight<520,pad=24,gap=10;
+function fitHandZoom(o){let card=o.querySelector('.hz-card'),txt=o.querySelector('.hz-text'),acts=o.querySelector('.hz-acts');if(!card)return;let hd=o.querySelector('.breach-head'),H=innerHeight-(hd&&!(innerWidth>innerHeight&&innerHeight<520)?hd.offsetHeight+10:0),W=innerWidth,land=W>innerHeight&&innerHeight<520,cs=getComputedStyle(o),pad=(parseFloat(cs.paddingTop)||14)+(parseFloat(cs.paddingBottom)||14)+16,gap=10;
  txt.style.maxHeight='';if(land){let w=Math.min(W*.36,(H-pad)*591/887);card.style.width=Math.max(110,w)+'px';txt.style.maxHeight=Math.max(60,innerHeight-pad-acts.offsetHeight-gap*2-(hd?hd.offsetHeight:0))+'px';return}
  let rest=H-pad-txt.offsetHeight-acts.offsetHeight-gap*2,w=Math.min(W*.66,300,rest*591/887);if(w<130){w=130;txt.style.maxHeight=Math.max(90,H-pad-acts.offsetHeight-gap*2-130*887/591)+'px'}card.style.width=w+'px'}
 addEventListener('resize',()=>{let o=document.querySelector('.handzoom:not(.confirm)');if(o)fitHandZoom(o)});
@@ -336,7 +336,7 @@ function legal(f,k){if(!k||f.mp<costOf(k))return false;if(isSum(k))return f.unit
 function whyNot(f,k){if(legal(f,k))return '';let need=costOf(k)-f.mp;if(need>0)return '神力があと'+need+'足りない';if(isSum(k))return '場がいっぱい（3体まで）';let s=SP[k]||{};if(s.can&&!s.can(f))return s.why||'今は使えない';if(s.tgt)return s.why||'使える対象がいない';return '今は使えない'}
 // 登場時の効果
 function onEnter(f,u){let d=foeOf(f);
- if(u.id==='sky-1'){if(f===p)pendingAsk=new Promise(r=>setTimeout(()=>askWeather(r),0));else{let want=f.id===2||f.hand.includes('bolt')||f.units.some(x=>x.id==='sky-2'&&!x.trig2)?(weather==='雨'?'晴れ':'雨'):null;if(want){sky(want);latest+='　天候を'+want+'にした'}}}
+ if(u.id==='sky-1'){if(f===p&&!window.__autoP)pendingAsk=new Promise(r=>setTimeout(()=>askWeather(r),0));else{let want=f.id===2||f.hand.includes('bolt')||f.units.some(x=>x.id==='sky-2'&&!x.trig2)?(weather==='雨'?'晴れ':'雨'):null;if(want){sky(want);latest+='　天候を'+want+'にした'}}}
  if(u.id===11){let n=f.hand.length;drawN(f,1);if(f.hand.length>n)latest+='　星神スバル：山札から1枚引いた'}
  if(u.id==='earth-7'){let h=heroOf(f);if(h&&h.hp>0&&h.hp<h.max){h.hp=Math.min(h.max,h.hp+1);latest+='　苗神：'+names[h.id]+'を1回復';healed(f)}}
  if(u.id==='mystic-7'){let L=mates(d);if(!L.length)latest+='　写し神：敵の仲間がいないので攻撃力0のまま';else if(f===p&&!window.__autoP)pendingAsk=new Promise(r=>setTimeout(()=>askCopy(u,r),0));else{let t=[...L].sort((a,b)=>atkOf(b)-atkOf(a))[0];copyAtk(u,t)}}
@@ -465,7 +465,7 @@ function unitZoom(f,u){if(document.querySelector('.handzoom.ask,.handzoom.breach
  let face=hero?gcard(u.id,f.stage,live,''):ucard(typeof u.id==='number'?u.id:u.id,{live});
  let can=f===p&&turn===p&&!busy&&!ending&&!u.used&&u.hp>0&&!sickOf(p,u);
  let o=document.createElement('div');o.className='handzoom unitzoom';o.setAttribute('role','dialog');o.setAttribute('aria-label',name+'の詳細');
- o.innerHTML='<div class="hz-in"><div class="hz-card">'+face+'</div><div class="hz-text"><p class="hz-kind">'+(f===p?'自分':'相手')+'の'+(hero?'主神':'仲間')+' ／ '+(hero?GOD_CARDS[u.id].type:colorOf(u.id)||'')+'</p><h3>'+name+'</h3>'
+ o.innerHTML='<div class="hz-in"><div class="hz-card">'+face+'</div><div class="hz-text"><p class="hz-kind">'+(f===p?'自分':'相手')+'の'+(hero?'主神':'仲間')+' ／ '+(hero?GOD_CARDS[u.id].type:colorOf(u.id)||'')+'</p>'+rubyP(name)+'<h3>'+name+'</h3>'
  +'<p class="uz-stat">⚔︎ 攻撃力 <b>'+atkOf(u)+'</b>'+(atkOf(u)!==u.atk?'<small>（元 '+u.atk+'）</small>':'')+'　♥ 体力 <b>'+Math.max(0,u.hp)+'</b> / '+u.max+'</p>'
  +(st.length?'<ul class="uz-st">'+st.map(x=>'<li>'+x+'</li>').join('')+'</ul>':'')+'<p class="hz-eff">'+full+'</p>'
  +(termList(full+(hero?'':'仲間'))?'<details class="hz-terms"><summary>用語の説明</summary>'+termList(full+(hero?'':'仲間'))+'</details>':'')+'</div>'
