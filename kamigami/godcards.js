@@ -8,10 +8,10 @@ const STAGE_RULE=[
  '進化：ゲージ{gauge}＋神力{cost}',   // N形態に表示
  '覚醒：神殿が割れた後＋神力{cost}',  // R形態に表示
  '最終形態'];                        // SR形態に表示
-// fx の意味：bolt=雷撃のダメージ（神力cost・敵1体）／heal=芽吹きの回復量（神力cost・味方1体）／fox=狐火で下げる攻撃力（神力cost・敵1体）
+// fx の意味：bolt=雷撃のダメージ（神力cost・敵1体）／heal=芽吹きの回復量（神力cost・味方1体）／fox=冥火で下げる攻撃力（神力cost・敵1体）
 //  overflow=攻撃の余ったダメージが敵の主神へ／regen=自分のターンのはじめに味方全体を回復／extra=攻撃した相手への追加ダメージ
 //  attacks=1ターンの攻撃回数／second=2回目の攻撃力の減少量／haste=出たターンから攻撃／pierce='hero'（主神と神殿へすり抜け）・'all'
-//  shadow=影写し（自分への攻撃を1回ダメージ0）／shadowRevive=影写しが自分のターンのはじめに復活
+//  shadow=影分身（自分への攻撃を1回ダメージ0）／shadowRevive=影分身が自分のターンのはじめに復活
 const GOD_CARDS={
  2:{key:'raiga',name:'ライガ',type:'天象',stages:[
   {rank:'N',name:'幼神ライガ',atk:3,hp:8,skill:'雷撃',cost:1,fx:{bolt:2},text:'雷撃（神力{cost}）：敵1体に{bolt}ダメージ'},
@@ -30,9 +30,9 @@ const GOD_CARDS={
   {rank:'R',name:'風翼解放ハヤテ',atk:4,hp:8,skill:'風渡り',fx:{haste:true,pierce:'hero'},text:'風渡り：出たターンから攻撃できる。すり抜け（神殿を無視して主神を攻撃できる）'},
   {rank:'SR',name:'蒼翼神ハヤテ',atk:5,hp:11,skill:'天翔',fx:{haste:true,pierce:'all'},text:'天翔：出たターンから攻撃できる。すり抜け（神殿を無視して主神を攻撃できる）'}]},
  10:{key:'oboro',name:'オボロ',type:'神秘',stages:[
-  {rank:'N',name:'幼神オボロ',atk:2,hp:7,skill:'狐火',cost:1,fx:{fox:1},text:'狐火（神力{cost}）：敵1体の攻撃力を、その敵が場を離れるまで−{fox}'},
-  {rank:'R',name:'影紋解放オボロ',atk:3,hp:9,skill:'影写し',cost:1,fx:{fox:1,shadow:true},text:'影写し：自分への攻撃を1回だけ影に受けさせる（ダメージ0）'},
-  {rank:'SR',name:'幽狐神オボロ',atk:4,hp:12,skill:'幽冥',cost:1,fx:{fox:2,shadow:true,shadowRevive:true},text:'幽冥：影写しが自分のターンのはじめに復活する。狐火は−{fox}'}]}
+  {rank:'N',name:'幼神オボロ',atk:2,hp:7,skill:'冥火',cost:1,fx:{fox:1},text:'冥火（神力{cost}）：敵1体の攻撃力を、その敵が場を離れるまで−{fox}'},
+  {rank:'R',name:'魔紋解放オボロ',atk:3,hp:9,skill:'影分身',cost:1,fx:{fox:1,shadow:true},text:'影分身：自分への攻撃を1回だけ影に受けさせる（ダメージ0）'},
+  {rank:'SR',name:'幽冥魔神オボロ',atk:4,hp:12,skill:'幽冥',cost:1,fx:{fox:2,shadow:true,shadowRevive:true},text:'幽冥：影分身が自分のターンのはじめに復活する。冥火は−{fox}'}]}
 };
 const HERO_IDS=[2,5,0,3,10];
 const STAGE_FILES=['01-child-N.webp','02-awakened-R.webp','03-final-SR.webp'];
@@ -47,11 +47,11 @@ function ruleText(st){return tpl(STAGE_RULE[st],st===0?ASCEND.evolve:ASCEND.awak
 function cardImg(id,st){return 'cards/'+GOD_CARDS[id].key+'/'+STAGE_FILES[st]}
 function pct(b){let [W,H]=CARD_LAYOUT.canvasPx;return 'left:'+(b[0]/W*100)+'%;top:'+(b[1]/H*100)+'%;width:'+(b[2]/W*100)+'%;height:'+(b[3]/H*100)+'%'}
 // 主神カード1枚。live＝対戦中の値（攻撃力・現在/最大体力）
-function gcard(id,st,live,cls='',short=false){let s=stageOf(id,st),B=CARD_LAYOUT.safeTextBoundsPx,
+function gcard(id,st,live,cls='',short=false){let s=stageOf(id,st),VL=VESSEL_LAYOUT[id],B=VL?VL.safe:CARD_LAYOUT.safeTextBoundsPx;if(VL)cls+=' vessel';
   atk=live?live.atk:s.atk,hp=live?'<b class="cur">'+Math.max(0,live.hp)+'</b>':s.hp,weak=live&&live.weak;
  return '<span class="gc '+cls+'" data-id="'+id+'" data-st="'+st+'"><img src="'+cardImg(id,st)+'" alt="'+s.name+'" draggable="false" loading="lazy">'+rubyBand(s.name,true)
- +statIcon('atk',atk,weak)
- +statIcon('hp',live?Math.max(0,live.hp):s.hp,false,live?live.max:null)
+ +statIcon('atk',atk,weak,null,VL&&VL.outer)
+ +statIcon('hp',live?Math.max(0,live.hp):s.hp,false,live?live.max:null,VL&&VL.outer)
  +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+(short?s.skill+(s.cost&&(s.fx.bolt||s.fx.heal||s.fx.fox)&&st===0?'（神力'+s.cost+'）':''):stageText(id,st))+'</i></span>'
  +'<span class="gb evo" data-k="evolution" style="'+pct(B.evolution)+'"><i class="fit one" data-r=".9">'+ruleText(st)+'</i></span></span>'}
 function placeBoxes(gc){let B=CARD_LAYOUT.safeTextBoundsPx;gc.querySelectorAll('.gb').forEach(b=>{if(B[b.dataset.k])b.setAttribute('style',pct(B[b.dataset.k]))})}
@@ -188,7 +188,7 @@ SPELL_ART.seed='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.
 // 位置は layout.json のプレートの外枠（outerBoundsPx）。数字は白＋濃い縁取り。
 const ICON_SWORD='<svg class="sic" viewBox="0 0 64 64" aria-hidden="true"><g transform="rotate(-45 32 32)"><path d="M29 4h6l2 34h-10z" fill="#e9eef5" stroke="#1a1410" stroke-width="2.4" stroke-linejoin="round"/><path d="M32 6v30" stroke="#9aa6b4" stroke-width="1.6"/><path d="M18 38h28v5H18z" fill="#d9a536" stroke="#1a1410" stroke-width="2.4" stroke-linejoin="round"/><path d="M29 43h6v11h-6z" fill="#6b4a24" stroke="#1a1410" stroke-width="2.4"/><circle cx="32" cy="57" r="3.6" fill="#d9a536" stroke="#1a1410" stroke-width="2.2"/></g></svg>';
 const ICON_HEART='<svg class="sic" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 57C14 43 5 33 5 21A14 14 0 0 1 32 15a14 14 0 0 1 27 6c0 12-9 22-27 36z" fill="#e2445c" stroke="#1a1410" stroke-width="3" stroke-linejoin="round"/><path d="M15 18c3-5 9-6 12-3" stroke="#ffb3c0" stroke-width="3" fill="none" stroke-linecap="round"/></svg>';
-function statIcon(kind,v,weak,max){let O=CARD_LAYOUT.outerBoundsPx||{attack:[16.5,761.5,97,97],health:[477.5,761.5,97,97]},box=kind==='atk'?O.attack:O.health,
+function statIcon(kind,v,weak,max,OV){let O=OV||CARD_LAYOUT.outerBoundsPx||{attack:[16.5,761.5,97,97],health:[477.5,761.5,97,97]},box=kind==='atk'?O.attack:O.health,
   num=(v==null||v==='—')?'?':v,text=max!=null?'<b class="cur">'+num+'</b>':num;
  return '<span class="gstat '+kind+(weak?' weak':'')+'" style="'+pct(box)+'">'+(kind==='atk'?ICON_SWORD:ICON_HEART)
  +'<span class="gb '+kind+'" data-k="'+kind+'Num" style="left:6%;top:18%;width:88%;height:64%"><i class="fit one" data-r=".95">'+text+'</i></span></span>'}
@@ -326,7 +326,7 @@ const ALLY_SHOW={4:[2,5]};// 氷神ユキネ：正本 U／コスト3／攻2／�
 function allyStats(id){return (typeof gods!=='undefined'&&gods[id])||ALLY_SHOW[id]||null}
 
 // ---- カード名の読み（図鑑・詳細モーダル用。対戦中の小さいカードには付けない）----
-const READING={'幼神ライガ':'ヨウシンライガ','雷鼓解放ライガ':'ライコカイホウライガ','天穿雷神ライガ':'テンセンライジンライガ','幼神コダマ':'ヨウシンコダマ','樹脈解放コダマ':'ジュミャクカイホウコダマ','万象樹神コダマ':'バンショウジュシンコダマ','幼神カグラ':'ヨウシンカグラ','炎拳解放カグラ':'エンケンカイホウカグラ','熔獅神カグラ':'ヨウシシンカグラ','幼神ハヤテ':'ヨウシンハヤテ','風翼解放ハヤテ':'フウヨクカイホウハヤテ','蒼翼神ハヤテ':'ソウヨクシンハヤテ','幼神オボロ':'ヨウシンオボロ','影紋解放オボロ':'エイモンカイホウオボロ','幽狐神オボロ':'ユウコシンオボロ','雨神シズク':'アマガミシズク','岩神ガンザ':'イワガミガンザ','氷神ユキネ':'ヒョウシンユキネ','潮神ナギ':'ウシオガミナギ','陽神アカツキ':'ヨウシンアカツキ','月神ツクヨ':'ツキガミツクヨ','星神スバル':'ホシガミスバル','雲紡ぎのアヤ':'クモツムギノアヤ','霹靂を喰う天狗':'ヘキレキヲクウテング','石臼の荒神':'イシウスノアラガミ','古根の角王':'ココンノツノオウ','火走りのイタチ神':'ヒバシリノイタチガミ','双炉の鍛冶神':'ソウロノカジシン','潮先の鷺神':'シオサキノサギガミ','瀬渡りのカワセミ神':'セワタリノカワセミガミ','面削りの童神':'メンケズリノドウシン','逆夢の獏神':'サカユメノバクシン','嵐呼の雷獣':'アラシヨブノライジュウ','不動の山神':'フドウノヤマガミ','爆炎の剣神':'バクエンノケンシン','疾風の忍神':'シップウノニンシン','薄暮の呪い手':'ハクボノノロイテ','霙神':'ミゾレガミ','稲光':'イナビカリ','苗神':'ナエガミ','火達磨':'ヒダルマ','飛沫神':'シブキガミ','写し神':'ウツシガミ','雨乞い':'アマゴイ','雲払い':'クモバライ','招雷':'ショウライ','守護':'シュゴ','神託':'シンタク','種まき':'タネマキ','覚醒の神鏡':'カクセイノシンキョウ','神位継承の巻':'シンイケイショウノマキ','雨脚の矢':'アマアシノヤ','雲間の返照':'クモマノヘンショウ','天柱落とし':'テンチュウオトシ','岩盤返し':'ガンバンガエシ','実りの分け前':'ミノリノワケマエ','山門の進軍':'サンモンノシングン','火挟み':'ヒバサミ','二の太刀':'ニノタチ','落日の火葬鐘':'ラクジツノカソウショウ','追い潮':'オイシオ','水面抜き':'ミナモヌキ','航跡を読む':'コウセキヲヨム','大地の恵み':'ダイチノメグミ','火付け':'ヒツケ','引き潮':'ヒキシオ','心読み':'ココロヨミ','影の縫い返し':'カゲノヌイカエシ','空蝉の歩法':'ウツセミノホホウ','逆さ月の宣告':'サカサツキノセンコク'};
+const READING={'幼神ライガ':'ヨウシンライガ','雷鼓解放ライガ':'ライコカイホウライガ','天穿雷神ライガ':'テンセンライジンライガ','幼神コダマ':'ヨウシンコダマ','樹脈解放コダマ':'ジュミャクカイホウコダマ','万象樹神コダマ':'バンショウジュシンコダマ','幼神カグラ':'ヨウシンカグラ','炎拳解放カグラ':'エンケンカイホウカグラ','熔獅神カグラ':'ヨウシシンカグラ','幼神ハヤテ':'ヨウシンハヤテ','風翼解放ハヤテ':'フウヨクカイホウハヤテ','蒼翼神ハヤテ':'ソウヨクシンハヤテ','幼神オボロ':'ヨウシンオボロ','魔紋解放オボロ':'マモンカイホウオボロ','幽冥魔神オボロ':'ユウメイマジンオボロ','雨神シズク':'アマガミシズク','岩神ガンザ':'イワガミガンザ','氷神ユキネ':'ヒョウシンユキネ','潮神ナギ':'ウシオガミナギ','陽神アカツキ':'ヨウシンアカツキ','月神ツクヨ':'ツキガミツクヨ','星神スバル':'ホシガミスバル','雲紡ぎのアヤ':'クモツムギノアヤ','霹靂を喰う天狗':'ヘキレキヲクウテング','石臼の荒神':'イシウスノアラガミ','古根の角王':'ココンノツノオウ','火走りのイタチ神':'ヒバシリノイタチガミ','双炉の鍛冶神':'ソウロノカジシン','潮先の鷺神':'シオサキノサギガミ','瀬渡りのカワセミ神':'セワタリノカワセミガミ','面削りの童神':'メンケズリノドウシン','逆夢の獏神':'サカユメノバクシン','嵐呼の雷獣':'アラシヨブノライジュウ','不動の山神':'フドウノヤマガミ','爆炎の剣神':'バクエンノケンシン','疾風の忍神':'シップウノニンシン','薄暮の呪い手':'ハクボノノロイテ','霙神':'ミゾレガミ','稲光':'イナビカリ','苗神':'ナエガミ','火達磨':'ヒダルマ','飛沫神':'シブキガミ','写し神':'ウツシガミ','雨乞い':'アマゴイ','雲払い':'クモバライ','招雷':'ショウライ','守護':'シュゴ','神託':'シンタク','種まき':'タネマキ','覚醒の神鏡':'カクセイノシンキョウ','神位継承の巻':'シンイケイショウノマキ','雨脚の矢':'アマアシノヤ','雲間の返照':'クモマノヘンショウ','天柱落とし':'テンチュウオトシ','岩盤返し':'ガンバンガエシ','実りの分け前':'ミノリノワケマエ','山門の進軍':'サンモンノシングン','火挟み':'ヒバサミ','二の太刀':'ニノタチ','落日の火葬鐘':'ラクジツノカソウショウ','追い潮':'オイシオ','水面抜き':'ミナモヌキ','航跡を読む':'コウセキヲヨム','大地の恵み':'ダイチノメグミ','火付け':'ヒツケ','引き潮':'ヒキシオ','心読み':'ココロヨミ','影の縫い返し':'カゲノヌイカエシ','空蝉の歩法':'ウツセミノホホウ','逆さ月の宣告':'サカサツキノセンコク'};
 function readingOf(name){return READING[String(name||'').replace(/[\s　]/g,'')]||''}
 function heroReading(name){let n=String(name||'').replace(/[\s　]/g,'');for(const id of Object.keys(GOD_CARDS)){let i=+id;if(typeof titles!=='undefined'&&titles[i]+names[i]===n){let st=0;try{if(typeof p!=='undefined'&&p&&p.id===i)st=p.stage;else if(typeof c!=='undefined'&&c&&c.id===i)st=c.stage}catch(e){}return readingOf(stageOf(i,st).name)}}return ''}
 function rubyP(name){let r=readingOf(name)||heroReading(name);return r?'<p class="gd-ruby">'+r+'</p>':''}
@@ -349,3 +349,9 @@ function rubyBand(name,hero){let r=readingOf(name);return r?'<span class="gb rub
  fitBox.now=flush}
 
 // バランス調整（2026-11-27 夜間点検）：潮先の鷺神 攻撃力2→3。奔流の勝率が全色最下位（約18%）で、単独で効果が確認できた唯一の±1調整のため
+
+// ==== 「器」形式の主神カード（名前・レア度・上端の札は絵に描き込み済み、数値・効果文・進化条件の欄は空欄）2026-11-27 ====
+// オボロ3形態：新しい枠の空欄に合わせて、重ね表示の位置と大きさを変える（数値・効果は変えない）
+const VESSEL_LAYOUT={10:{
+ safe:{effect:[146,742,304,80],evolution:[96,697,404,18]},
+ outer:{attack:[36,744,92,92],health:[466,744,92,92]}}};

@@ -41,9 +41,9 @@ async function ascendUI(f){if(!(canEvolve(f)||canAwaken(f))||(f===p&&busy))retur
  if(el&&!calm()){el.classList.add('ascending');let lb=document.createElement('i');lb.className='lightburst';el.appendChild(lb);
   await el.animate([{filter:'brightness(3) saturate(.3)',transform:'scale(1.15)'},{transform:'perspective(600px) rotateY(90deg)',offset:.4},{transform:'perspective(600px) rotateY(-10deg)',offset:.6},{filter:'brightness(1)',transform:'none'}],{duration:played?600:1100,easing:'ease-out'}).finished}
  busy=f===c;render()}
-// 主神の技（雷撃・芽吹き・狐火）：1ターンに1回、神力を払って対象を選ぶ
+// 主神の技（雷撃・芽吹き・冥火）：1ターンに1回、神力を払って対象を選ぶ
 let skillMode=null;
-function skillOf(f){let h=heroOf(f);if(!h)return null;let s=stageOf(f.id,f.stage),x=s.fx,name=x.bolt?'雷撃':x.heal?'芽吹き':x.fox?'狐火':null;
+function skillOf(f){let h=heroOf(f);if(!h)return null;let s=stageOf(f.id,f.stage),x=s.fx,name=x.bolt?'雷撃':x.heal?'芽吹き':x.fox?'冥火':null;
  if(!name)return null;return {name,kind:x.bolt?'bolt':x.heal?'heal':'fox',n:x.bolt||x.heal||x.fox,cost:s.cost||1,side:x.heal?'ally':'foe'}}
 function canSkill(f){let k=skillOf(f);return !!k&&!f.skillUsed&&f.mp>=k.cost}
 async function useSkill(f,v){let k=skillOf(f),d=f===p?c:p;if(!k||!canSkill(f)||!v)return;f.mp-=k.cost;f.skillUsed=true;skillMode=null;let wasBusy=busy;busy=true;
@@ -52,7 +52,7 @@ async function useSkill(f,v){let k=skillOf(f),d=f===p?c:p;if(!k||!canSkill(f)||!
  else if(k.kind==='heal'){let before=v.hp;v.hp=Math.min(v.max,v.hp+k.n);if(v.hp>before)healed(f);latest=k.name+'！ '+names[v.id]+'の体力を'+(v.hp-before)+'回復';if(r&&!calm()){burst('leaf',r.x,r.y);pop('+'+(v.hp-before),r.x,body(el,.2).y,1,'heal');drain(el,v);await pause(420)}}
  else{v.weak=k.n;v.weakBy=null;latest=k.name+'！ '+names[v.id]+'の攻撃力−'+k.n+'（場を離れるまで）';if(r&&!calm()){burst('water',r.x,r.y);pop('攻−'+k.n,r.x,body(el,.2).y,1,'guard');await pause(420)}}
  busy=wasBusy;render();await shrineReveal(f,null,d)}
-// 自分のターンのはじめ：樹脈・千樹の回復、影写しの復活（狐火・面削りの攻撃力低下は、その敵が場を離れるまで残る）
+// 自分のターンのはじめ：樹脈・千樹の回復、影分身の復活（冥火・面削りの攻撃力低下は、その敵が場を離れるまで残る）
 function turnStart(f){let h=heroOf(f),x=heroFx(f),o=f===p?c:p,tag=f===p?'p':'c';f.skillUsed=false;
  o.units.forEach(u=>{if(u.weakBy===tag){u.weak=0;u.weakBy=null}});
  if(!h)return;if(x.regen){let up=false;f.units.forEach(u=>{let b=u.hp;u.hp=Math.min(u.max,u.hp+x.regen);if(u.hp>b)up=true});f.regenFx=x.regen;if(up)healed(f)}
@@ -111,7 +111,7 @@ function endTurnUI(){if(turn!==p||busy||ending)return;if(!canAttackAny()){enemyT
 function resolveStrike(f,u,d,v){let x=fxOf(f,u),wasWeak=v&&weakened(v)?Math.min(v.weak,v.atk):0;u.att=(u.att||0)+1;u.used=u.att>=maxAttacks(f,u)||!v||!!v.hero;let bonus=f.burst?1:0;f.burst=false;f.overflowHit=null;let hit=false;
  let pow=atkOf(u)+bonus+(u.id==='earth-1'&&u.hp>=u.max?1:0)-(u.att===2&&x.second?x.second:0);pow=Math.max(0,pow);
  if(v){let dmg=pow+(x.extra||0),note='';
-  if(v.shadow){v.shadow=false;dmg=0;note='（影写しで0）'}else if(v.ward&&dmg>0){v.ward=false;dmg=0;note='（守護で0）'}
+  if(v.shadow){v.shadow=false;dmg=0;note='（影分身で0）'}else if(v.ward&&dmg>0){v.ward=false;dmg=0;note='（守護で0）'}
   let before=v.hp;v.hp-=dmg;hit=dmg>0;if(dmg>0)v.hitThisTurn=true;
   if(x.overflow&&v.hp<0&&!v.hero){let hh=heroOf(d);if(hh){let over=hurt(hh,-v.hp);f.overflowHit={uid:hh.uid,n:over};note+='　余り'+over+'が'+names[hh.id]+'へ'}}
   let ca=hurt(u,atkOf(v));if(!ca&&atkOf(v)>0)note+='（守護で反撃0）';latest=names[u.id]+' → '+names[v.id]+'　'+dmg+'ダメージ・反撃 '+ca+note;f.hitInfo={v:dmg,u:ca};if(ca>0)u.hitThisTurn=true;settle(d,f)}
@@ -202,7 +202,7 @@ async function strike(f,u,d,v){let node=document.getElementById('u'+u.uid),tgt=d
  // 加速して突っ込む
  await node.animate([{transform:back},{transform:hit}],{duration:150,easing:'cubic-bezier(.7,0,1,.55)',fill:'forwards'}).finished;line.remove();
  if(v){let dmg=f.hitInfo?f.hitInfo.v:was.v-v.hp;sfx('hit');burst(fxKind[u.id]||'bolt',to.x,to.y);await hitstop(80);
-  shake(dmg);struck(tgt);pop(dmg?'−'+dmg:'影写し',to.x,body(tgt,.2).y,dmg,dmg?'':'guard');drain(tgt,v);
+  shake(dmg);struck(tgt);pop(dmg?'−'+dmg:'影分身',to.x,body(tgt,.2).y,dmg,dmg?'':'guard');drain(tgt,v);
   if(f.overflowHit){let oe=document.getElementById('u'+f.overflowHit.uid),og=d.units.concat([]).find(z=>z.uid===f.overflowHit.uid)||{hp:0,max:1,id:d.id,atk:0};if(oe){let orr=body(oe,.45);await pause(120);burst('bolt',orr.x,orr.y);struck(oe);pop('−'+f.overflowHit.n,orr.x,body(oe,.2).y,f.overflowHit.n);drain(oe,heroOf(d)||og);if(!heroOf(d))oe.classList.add('ko')}}
   await pause(280);let cd0=f.hitInfo?f.hitInfo.u:was.u-u.hp;if(cd0>0){let cd=cd0,me=body(node,.5);sfx('hit');burst(fxKind[v.id]||'rock',me.x+dx,me.y+dy);shake(cd*.6);struck(node);pop('−'+cd,me.x+dx,body(node,.2).y+dy,cd*.8,'counter');drain(node,u)}}
  else if(lost>0){sfx('hit');hitCards.forEach(crack);burst(fxKind[u.id]||'bolt',b.x,b.y);await hitstop(90);shake(2+lost);
@@ -457,7 +457,7 @@ function walled(f,u,d){return heroLocked(f,u,d)}
 // ---- 場のカードの拡大表示：タップで大きく。今の攻撃力・体力・状態・効果の全文・用語。自分の神なら「この神で攻撃する」 ----
 function unitStatus(f,u){let t=[],mine=f===p;if(u.hero&&f.stage===0)t.push('進化ゲージ '+f.gauge+'/'+ASCEND.evolve.gauge);
  if(sickOf(f,u)&&turn===f)t.push('召喚酔い（次の自分のターンから攻撃できる）');if(u.used&&turn===f)t.push('このターンは攻撃済み');
- if(u.ward)t.push('守護：次に受けるダメージは0');if(u.shadow)t.push('影写し：次に受けるダメージは0');if(weakened(u))t.push('攻撃力−'+u.weak+'（弱っている）');
+ if(u.ward)t.push('守護：次に受けるダメージは0');if(u.shadow)t.push('影分身：次に受けるダメージは0');if(weakened(u))t.push('攻撃力−'+u.weak+'（弱っている）');
  if(u.dodge)t.push('空蝉：敵の仲間の攻撃対象にならない');if(t_pierce(f,u))t.push('すり抜け：仲間を無視して主神・神殿を攻撃できる');
  if((u.tmpAtk||0)>0)t.push('このターン攻撃力+'+u.tmpAtk);if(u.setAtk!=null)t.push('このターン攻撃力は'+u.setAtk);if((u.extraAtt||0)>0)t.push('このターンもう1回攻撃できる');
  if(u.hero)t.push('命（神殿）残り'+f.shrines.length);return t}

@@ -528,3 +528,6 @@ small.al-ruby{margin:0 0 1px}
 .gc.uc.uc-ally{overflow:visible}
 .gc.uc.uc-ally:not(.uc-exp)>.uc-frame,.gc.uc.uc-ally:not(.uc-exp){border-radius:3.5%/2.4%}
 .pile-grave .gc::before,.gravepanel .gc::before{display:none}
+
+/* 器形式の主神カード：上端の「主神」札は絵にあるので、CSSの札は出さない */
+.gc.vessel[data-st]::before{display:none}

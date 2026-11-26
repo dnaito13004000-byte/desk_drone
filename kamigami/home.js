@@ -71,7 +71,7 @@ function home(){if(save.starterPending){starter();return}tag.textContent='';choo
  +'<button class="tile" aria-label="パック開封" onclick="pack()"><img src="art/tab-pack.webp" alt="">'+(save.pending.length?'<em>開封中</em>':packsLeft()?'<em>'+packLabel()+'</em>':'')+'</button>'
  +'<button class="tile" aria-label="図鑑" onclick="album()"><img src="art/tab-album.webp" alt=""></button></nav>'
 +'<div class="choose" id="choose" hidden><div class="ch-in"><h2>使う主神を選ぶ</h2>'+(typeof deckValid==='function'&&deckValid(save.deck)?'<button class="ch-my" onclick="window.__myDeckNext=true;start('+save.deck.hero+')"><b>マイデッキで対戦</b><small>'+GOD_CARDS[save.deck.hero].type+' '+GOD_CARDS[save.deck.hero].name+'・'+save.deck.cards.length+'枚</small></button><p class="ch-or">または、標準デッキで</p>':'')+'<div class="ch-list five">'
- +HERO_IDS.map(i=>[i,GOD_CARDS[i].type,stageOf(i,0).name+'（攻'+stageOf(i,0).atk+' / 体'+stageOf(i,0).hp+'）']).map(([i,t,h])=>'<button class="ch-god" onclick="start('+i+')">'+gcard(i,0,null,'mini')+'<span><small>'+t+'</small><em>'+({2:'雷撃で敵を撃つ',5:'芽吹きで味方を癒す',0:'火の拳で押し切る',3:'すぐ攻めに出られる',10:'狐火で敵を弱める'})[i]+'</em></span></button>').join('')
+ +HERO_IDS.map(i=>[i,GOD_CARDS[i].type,stageOf(i,0).name+'（攻'+stageOf(i,0).atk+' / 体'+stageOf(i,0).hp+'）']).map(([i,t,h])=>'<button class="ch-god" onclick="start('+i+')">'+gcard(i,0,null,'mini')+'<span><small>'+t+'</small><em>'+({2:'雷撃で敵を撃つ',5:'芽吹きで味方を癒す',0:'火の拳で押し切る',3:'すぐ攻めに出られる',10:'冥火で敵を弱める'})[i]+'</em></span></button>').join('')
  +'</div><button class="btn-navy" onclick="chooseGod(false)">もどる</button></div></div></div>'}
 function chooseGodFromPack(){home();chooseGod()}
 function chooseGod(open=true){let c=document.getElementById('choose');if(c){c.hidden=!open;if(open)requestAnimationFrame(()=>fitCards(c))}}
