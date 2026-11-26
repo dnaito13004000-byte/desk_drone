@@ -160,11 +160,11 @@ const CARD_TABLE={
  rain:{r:'N',short:'天候を雨にする',full:'天候を「雨」にする。'},
  sun:{r:'N',short:'天候を晴れにする',full:'天候を「晴れ」にする。'},
  bolt:{r:'R',short:'雨のとき 敵1体に2ダメージ',full:'天候が「雨」のときだけ使える。敵1体に2ダメージ。'},
- guard:{r:'U',short:'味方の次のダメージを0',full:'味方1体を選ぶ。その味方が次に受けるダメージを0にする。'},
- draw:{r:'N',short:'山札から2枚引く',full:'山札からカードを2枚引く。'},
- seed:{r:'N',short:'神力を2回復',full:'神力を2回復する。'},
- mirror:{r:'R',name:'覚醒の神鏡',short:'主神の進化ゲージ+1',full:'自分の主神の進化ゲージを1増やす（最大3）。',later:true},
- scroll:{r:'R',name:'神位継承の巻',short:'仲間1体の攻撃力・体力+2',full:'味方の仲間1体を選ぶ。その仲間の攻撃力と体力を+2する。',later:true}
+ guard:{r:'U',short:'味方の次のダメージを0',full:'味方1体は、次に受けるダメージが0になる。'},
+ draw:{r:'N',short:'山札から2枚引く',full:'山札を2枚引く。'},
+ seed:{r:'N',short:'神力を2回復',full:'自分の神力を2回復する。'},
+ mirror:{r:'R',name:'覚醒の神鏡',short:'主神の進化ゲージ+1',full:'自分の主神の進化ゲージを+1する。',later:true},
+ scroll:{r:'R',name:'神位継承の巻',short:'仲間1体の攻撃力・体力+2',full:'味方の仲間1体の攻撃力と体力を+2する。',later:true}
 };
 const SET_ALL={no:1,name:'雷鳴の社',heroes:[2,5,0,3,10],allies:[1,6,4,7,8,9,11],spells:['rain','sun','bolt','guard','draw','seed','mirror','scroll']};
 SET_ALL.cards=[...SET_ALL.heroes,...SET_ALL.allies,...SET_ALL.spells];
@@ -251,7 +251,7 @@ const EXP_CARDS={
  'fire-3':{name:'火挟み',color:'烈火',kind:'spell',r:'N',cost:1,atk:null,hp:null,text:'敵1体に1ダメージ。このターン、その敵がすでに攻撃でダメージを受けていれば、代わりに2ダメージ。'},
  'fire-4':{name:'二の太刀',color:'烈火',kind:'spell',r:'U',cost:2,atk:null,hp:null,text:'このターンにちょうど1回攻撃した味方の仲間1体は、このターンもう1回攻撃できる。'},
  'fire-5':{name:'落日の火葬鐘',color:'烈火',kind:'spell',r:'R',cost:3,atk:null,hp:null,text:'このターンに味方が合計2回以上攻撃していれば使える。敵の主神に3ダメージ。'},
- 'water-1':{name:'潮先の鷺神',color:'奔流',kind:'ally',r:'N',cost:1,atk:2,hp:3,text:'このターンに呪文を使っていれば、出たターンから攻撃できる。'},
+ 'water-1':{name:'潮先の鷺神',color:'奔流',kind:'ally',r:'N',cost:1,atk:3,hp:3,text:'このターンに呪文を使っていれば、出たターンから攻撃できる。'},
  'water-2':{name:'瀬渡りのカワセミ神',color:'奔流',kind:'ally',r:'R',cost:2,atk:2,hp:4,text:'雨の間、この仲間はすり抜けを持つ（神殿を無視して敵の主神を攻撃できる）。'},
  'water-3':{name:'追い潮',color:'奔流',kind:'spell',r:'U',cost:1,atk:null,hp:null,text:'このターンに出した味方の仲間1体は、このターンから攻撃できる。'},
  'water-4':{name:'水面抜き',color:'奔流',kind:'spell',r:'N',cost:2,atk:null,hp:null,text:'味方の仲間1体は、このターン、すり抜けを得る（神殿を無視して敵の主神を攻撃できる）。'},
@@ -334,3 +334,18 @@ function nameOfCard(id){if(typeof id==='number')return titles[id]+names[id];if(E
 
 // 絵に名前が描かれたカード（主神・拡張・初期呪文）：名前帯のすぐ上に読みの帯を重ねる（2026-11-27）
 function rubyBand(name,hero){let r=readingOf(name);return r?'<span class="gb ruby" style="'+pct(hero?[96,522,399,30]:[96,566,399,30])+'"><i class="fit one" data-r=".92">'+r+'</i></span>':''}
+
+// ==== 文字の詰め直しを軽く（2026-11-27 夜間点検）====
+// 1) 同じ文字・同じ箱の大きさ・同じ種類なら、前回の結果をそのまま使う（測り直さない）
+// 2) 呼ばれた分はまとめて処理：先に全部の箱の大きさを読み、そのあと書き込む（レイアウトの計算を1回にまとめる）
+// 3) すでに同じ大きさで詰めた文字は飛ばす。見た目の結果は従来と同じ
+{const fitOrig=fitBox,FIT_CACHE=new Map(),pend=new Set();let queued=false;
+ const keyOf=(el)=>{let box=el.parentElement;if(!box||!el.isConnected)return null;let cs=getComputedStyle(box),w=parseFloat(cs.width)||box.clientWidth,h=parseFloat(cs.height)||box.clientHeight;if(!w||!h)return null;
+  let t=el.dataset.t!=null?el.dataset.t:el.textContent;return el.className+'|'+(el.dataset.r||'')+'|'+box.className+'|'+t+'|'+w.toFixed(1)+'x'+h.toFixed(1)};
+ const flush=()=>{queued=false;let list=[...pend];pend.clear();let keys=list.map(keyOf),miss=[];
+  list.forEach((el,i)=>{let k=keys[i];if(!k||el.__fk===k)return;let c=FIT_CACHE.get(k);if(c){if(c.dt!=null)el.dataset.t=c.dt;if(el.innerHTML!==c.html)el.innerHTML=c.html;el.style.cssText=c.css;el.__fk=k}else miss.push([el,k])});
+  for(const [el,k] of miss){fitOrig(el);FIT_CACHE.set(k,{html:el.innerHTML,css:el.style.cssText,dt:el.dataset.t});el.__fk=k;if(FIT_CACHE.size>3000)FIT_CACHE.clear()}};
+ fitBox=function(el){pend.add(el);if(!queued){queued=true;queueMicrotask(flush)}};
+ fitBox.now=flush}
+
+// バランス調整（2026-11-27 夜間点検）：潮先の鷺神 攻撃力2→3。奔流の勝率が全色最下位（約18%）で、単独で効果が確認できた唯一の±1調整のため

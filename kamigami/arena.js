@@ -576,3 +576,6 @@ fitHandZoom=function(o){let card=o&&o.querySelector('.hz-card');if(!card)return;
  let w=Math.max(96,Math.min(cardH*591/887,land?VW*.36:VW*.66,300));card.style.width=w+'px';card.style.paddingTop=TAB+'px';
  if(txt){let left=land?(VH-padY-actsH-GAP*2-(hd?hd.offsetHeight:0)):(avail-w*887/591-actsH-GAP*2);txt.style.maxHeight=Math.max(64,left)+'px';txt.style.overflowY='auto'}};
 {const f1=fitHandZoom;fitHandZoom=function(o){f1(o);if(o&&!o.__refit2){o.__refit2=1;let again=()=>{if(o.isConnected)f1(o)};requestAnimationFrame(again);setTimeout(again,250);try{document.fonts&&document.fonts.ready.then(again)}catch(e){}o.querySelectorAll('img').forEach(im=>{if(!im.complete)im.addEventListener('load',again,{once:true})})}}}
+
+// ==== 正本合わせ（2026-11-27 夜間点検）：覚醒の神鏡＝コスト2、神位継承の巻＝コスト3（コスト表に無く1扱いになっていた）====
+moves.mirror=['覚醒の神鏡',2,'自分の主神の進化ゲージを+1する。'];moves.scroll=['神位継承の巻',3,'味方の仲間1体の攻撃力と体力を+2する。'];

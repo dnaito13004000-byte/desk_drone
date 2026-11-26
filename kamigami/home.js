@@ -170,10 +170,12 @@ function album(){tag.textContent='';
  +'<h2 class="al-set"><small>雷鳴の社</small>呪文<span>'+SET_ALL.spells.filter(id=>cnt(id)).length+' / '+SET_ALL.spells.length+'種</span></h2><div class="al-grid">'+(alList(SET_ALL.spells).map(cell).join('')||'<p class="al-empty">この色の呪文はありません</p>')+'</div>'
  +'<p class="al-foot">'+(UNLIMITED_PACKS?'<span class="test-tag">実証実験版</span>　'+save.cards.length+'枚所持　<button class="btn-back" id="rsbtn" onclick="resetCollection()">図鑑をリセット</button><br>':'')+'レアリティはカードごとに決まっています。主神は形態違いをまとめて1種と数えます。</p></div>'
  +(zoom?zoomHtml():'')+'</div>'}
-function zoomCard(id){zoom={id};album()}
+function zoomCard(id){zoom={id};let sc=document.querySelector('.albumscreen');if(sc){sc.querySelectorAll('.al-zoom').forEach(x=>x.remove());sc.insertAdjacentHTML('beforeend',zoomHtml());return}album()}
+// 図鑑の拡大を閉じる：図鑑全体を描き直さず、拡大だけ外す（見た目は同じ）
+function closeZoom(){zoom=null;let z=document.querySelectorAll('.albumscreen .al-zoom');if(z.length){z.forEach(x=>x.remove());return}album()}
 function zoomHtml(){let {id}=zoom,r=cardRarity(id);
- return '<div class="al-zoom" onclick="if(event.target===this){zoom=null;album()}">'+card([id],'big')+'<p class="zt"><b>'+cardName(id)+'</b>　<i class="rr r-'+r+'">'+RANK_NAME(r)+'</i>　'+colorChip(id)+(GOD_CARDS[id]?'':'<small class="zcost">コスト'+cardCost(id)+'</small>')+'<br><em>'+cardShort(id)+'</em><br>'+cardText(id)+'</p>'+termList(cardText(id)+(isGod(id)&&!GOD_CARDS[id]?'仲間':''))
- +'<button class="btn-navy" onclick="zoom=null;album()">閉じる</button></div>'}
+ return '<div class="al-zoom" onclick="if(event.target===this){closeZoom()}">'+card([id],'big')+'<p class="zt"><b>'+cardName(id)+'</b>　<i class="rr r-'+r+'">'+RANK_NAME(r)+'</i>　'+colorChip(id)+(GOD_CARDS[id]?'':'<small class="zcost">コスト'+cardCost(id)+'</small>')+'<br><em>'+cardShort(id)+'</em><br>'+cardText(id)+'</p>'+termList(cardText(id)+(isGod(id)&&!GOD_CARDS[id]?'仲間':''))
+ +'<button class="btn-navy" onclick="closeZoom()">閉じる</button></div>'}
 home();
 
 // ---- 遊び方・用語集（ホームの「遊び方」ボタンから） ----
