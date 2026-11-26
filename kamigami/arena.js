@@ -86,8 +86,8 @@ function cardPick(i){if(turn!==p||busy||ending||!p.hand[i])return;sel=i;attacker
 let attackMode=false;
 function whyNot(f,k){if(legal(f,k))return '';let need=costOf(k)-f.mp;if(need>0)return '神力があと'+need+'足りない';
  if(isSum(k))return '場がいっぱい（3体まで）';if(k==='bolt')return weather!=='雨'?'天候が「雨」のときだけ使える':'攻撃できる敵がいない';if(k==='guard')return '守る味方がいない';if(k==='draw')return '山札がない';return '今は使えない'}
-function closeHandZoom(){document.querySelectorAll('.handzoom').forEach(x=>x.remove());sel=-1;render()}
-function handZoom(i){document.querySelectorAll('.handzoom').forEach(x=>x.remove());let k=p.hand[i];if(!k)return;
+function closeHandZoom(){document.querySelectorAll('.handzoom:not(.ask):not(.breach)').forEach(x=>x.remove());sel=-1;render()}
+function handZoom(i){if(document.querySelector('.handzoom.ask,.handzoom.breach'))return;document.querySelectorAll('.handzoom').forEach(x=>x.remove());let k=p.hand[i];if(!k)return;
  let g=isSum(k),key=g?sumId(k):k,full=g?(gods[key]?'攻撃力'+gods[key][0]+' / 体力'+gods[key][1]+'。':'')+cardFull(key):cardFull(k),why=whyNot(p,k),name=g?titles[key]+' '+names[key]:spellName(k);
  let o=document.createElement('div');o.className='handzoom';o.setAttribute('role','dialog');o.setAttribute('aria-label',name+'の拡大表示');
  o.innerHTML='<div class="hz-in"><div class="hz-card">'+ucard(k,{showCost:true,cost:costOf(k),cantPay:p.mp<costOf(k)})+'</div><div class="hz-text"><p class="hz-kind">'+(g?'仲間 ／ '+types[key]:'呪文')+' ／ コスト'+costOf(k)+'　<small>いまの神力 '+p.mp+'</small></p><h3>'+name+'</h3><p class="hz-eff">'+full+'</p>'+(termList(full+(g?'仲間':''))?'<details class="hz-terms"><summary>用語の説明</summary>'+termList(full+(g?'仲間':''))+'</details>':'')+'</div>'
@@ -336,14 +336,14 @@ function legal(f,k){if(!k||f.mp<costOf(k))return false;if(isSum(k))return f.unit
 function whyNot(f,k){if(legal(f,k))return '';let need=costOf(k)-f.mp;if(need>0)return '神力があと'+need+'足りない';if(isSum(k))return '場がいっぱい（3体まで）';let s=SP[k]||{};if(s.can&&!s.can(f))return s.why||'今は使えない';if(s.tgt)return s.why||'使える対象がいない';return '今は使えない'}
 // 登場時の効果
 function onEnter(f,u){let d=foeOf(f);
- if(u.id==='sky-1'){if(f===p)setTimeout(askWeather,0);else{let want=f.id===2||f.hand.includes('bolt')||f.units.some(x=>x.id==='sky-2'&&!x.trig2)?(weather==='雨'?'晴れ':'雨'):null;if(want){sky(want);latest+='　天候を'+want+'にした'}}}
+ if(u.id==='sky-1'){if(f===p)pendingAsk=new Promise(r=>setTimeout(()=>askWeather(r),0));else{let want=f.id===2||f.hand.includes('bolt')||f.units.some(x=>x.id==='sky-2'&&!x.trig2)?(weather==='雨'?'晴れ':'雨'):null;if(want){sky(want);latest+='　天候を'+want+'にした'}}}
  if(u.id==='earth-7'){let h=heroOf(f);if(h&&h.hp>0&&h.hp<h.max){h.hp=Math.min(h.max,h.hp+1);latest+='　苗神：'+names[h.id]+'を1回復';healed(f)}}
- if(u.id==='mystic-7'){let L=mates(d);if(!L.length)latest+='　写し神：敵の仲間がいないので攻撃力0のまま';else if(f===p&&!window.__autoP)setTimeout(()=>askCopy(u),0);else{let t=[...L].sort((a,b)=>atkOf(b)-atkOf(a))[0];copyAtk(u,t)}}
+ if(u.id==='mystic-7'){let L=mates(d);if(!L.length)latest+='　写し神：敵の仲間がいないので攻撃力0のまま';else if(f===p&&!window.__autoP)pendingAsk=new Promise(r=>setTimeout(()=>askCopy(u,r),0));else{let t=[...L].sort((a,b)=>atkOf(b)-atkOf(a))[0];copyAtk(u,t)}}
  if(u.id==='mystic-6'){let n=0;for(const t of d.units)if(t.hp>0){t.weak=Math.max(t.weak||0,1);t.weakBy=null;n++}if(n)latest+='　薄暮の呪い手：敵全員の攻撃力−1（場を離れるまで）'}
  if(u.id==='mystic-1'){let t=[...d.units].filter(x=>x.hp>0).sort((a,b)=>(weakened(a)?1:0)-(weakened(b)?1:0)||atkOf(b)-atkOf(a))[0];if(t){t.weak=Math.max(t.weak||0,1);t.weakBy=null;latest+='　'+names[t.id]+'の攻撃力−1（場を離れるまで）'}}}
-function askWeather(){if(ending)return;let o=document.createElement('div');o.className='handzoom confirm';o.setAttribute('role','dialog');
+function askWeather(res){let done=()=>{pendingAsk=null;if(res)res()};if(ending){done();return}let o=document.createElement('div');o.className='handzoom confirm ask';o.setAttribute('role','dialog');
  o.innerHTML='<div class="hz-in"><div class="hz-text"><h3>雲紡ぎのアヤ（登場時）</h3><p class="hz-eff">天候を変えますか？　いまは「'+weather+'」</p></div><div class="hz-acts two"><button class="hz-btn gold" data-w="晴れ">☀ 晴れにする</button><button class="hz-btn gold" data-w="雨">☂ 雨にする</button><button class="hz-btn ghost" data-w="">変えない</button></div></div>';
- o.onclick=e=>{let b=e.target.closest('button');if(!b)return;o.remove();if(b.dataset.w){let before=snap();sky(b.dataset.w);latest='天候を'+b.dataset.w+'にした'+latest.replace(/^[^　]*/,'');diffFx(before).then(()=>{render();shrineReveal(p,null,c)})}};document.body.appendChild(o)}
+ o.onclick=e=>{let b=e.target.closest('button');if(!b)return;o.remove();if(b.dataset.w){let before=snap();try{sky(b.dataset.w)}catch(er){console.error(er)}latest='天候を'+b.dataset.w+'にした'+latest.replace(/^[^　]*/,'');diffFx(before).catch(()=>{}).then(()=>{render();done();if(turn===p&&!busy)shrineReveal(p,null,c)})}else{render();done()}};document.body.appendChild(o)}
 function play(f,i,t){let k=f.hand[i];if(!legal(f,k))return false;let s=SP[k];if(s&&s.tgt&&(!t||!spTargets(f,k).includes(t)))return false;
  f.mp-=costOf(k);f.hand.splice(i,1);sel=-1;latest=names[f.id]+'：'+cardLabel(k);
  if(isSum(k)){let u=mk(f,sumId(k));u.summonedTurn=round;u.bornTurn=f.turns;u.side=f.id;f.units.push(u);arrived=u.uid;sfx('summon');latest=cardLabel(k)+'を召喚！';onEnter(f,u)}
@@ -433,7 +433,7 @@ async function breachOne(f,k){await gaugeUp(f);let mine=f===p&&!window.__autoP,c
   main();
   acts.onclick=e=>{let b=e.target.closest('button');if(!b||b.disabled)return;if(b.dataset.a==='hand')res(['hand']);else if(b.dataset.a==='back')main();else if(b.dataset.a==='use'){if(SP[k]&&SP[k].tgt)pickT();else res(['use'])}else if(b.dataset.t!=null)res(['use',acts._L[+b.dataset.t]])}});
  o.remove();
- if(choice[0]==='use'&&await freeUse(f,k,choice[1])){}else{f.hand.push(k);latest=cardLabel(k)+'を手札に加えた';render()}}
+ if(choice[0]==='use'&&await freeUse(f,k,choice[1])){await waitAsk()}else{f.hand.push(k);latest=cardLabel(k)+'を手札に加えた';render()}}
 let breaching=false;
 async function shrineReveal(){if(breaching)return;breaching=true;
  try{for(let guard=0;guard<20&&!ending;guard++){let side=[p,c].find(s=>s&&s.broken&&s.broken.length);if(!side)break;let k=side.broken.shift();if(!side.broken.length)side.broken=null;await breachOne(side,k)}}
@@ -458,7 +458,7 @@ function unitStatus(f,u){let t=[],mine=f===p;if(u.hero&&f.stage===0)t.push('進�
  if(u.dodge)t.push('空蝉：敵の仲間の攻撃対象にならない');if(t_pierce(f,u))t.push('すり抜け：仲間を無視して主神・神殿を攻撃できる');
  if((u.tmpAtk||0)>0)t.push('このターン攻撃力+'+u.tmpAtk);if(u.setAtk!=null)t.push('このターン攻撃力は'+u.setAtk);if((u.extraAtt||0)>0)t.push('このターンもう1回攻撃できる');
  if(u.hero)t.push('命（神殿）残り'+f.shrines.length);return t}
-function unitZoom(f,u){document.querySelectorAll('.handzoom').forEach(x=>x.remove());let hero=u.hero&&GOD_CARDS[u.id],live={atk:atkOf(u),hp:u.hp,max:u.max,weak:u.weak};
+function unitZoom(f,u){if(document.querySelector('.handzoom.ask,.handzoom.breach'))return;document.querySelectorAll('.handzoom').forEach(x=>x.remove());let hero=u.hero&&GOD_CARDS[u.id],live={atk:atkOf(u),hp:u.hp,max:u.max,weak:u.weak};
  let name=hero?stageOf(u.id,f.stage).name:cardLabel(handKey(u.id)),full=hero?stageText(u.id,f.stage)+'<br><small>'+ruleText(f.stage)+'</small>':cardFull(u.id),st=unitStatus(f,u);
  let face=hero?gcard(u.id,f.stage,live,''):ucard(typeof u.id==='number'?u.id:u.id,{live});
  let can=f===p&&turn===p&&!busy&&!ending&&!u.used&&u.hp>0&&!sickOf(p,u);
@@ -491,12 +491,22 @@ function costOf(k){if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[k])return EXP_CA
 // ==== N追加10種の補助 ====
 // 写し神：選んだ敵の「その時点の攻撃力」を自分の元の攻撃力として固定（以後の相手の変化には追随しない）
 function copyAtk(u,t){let v=atkOf(t);u.atk=v;u.copyOf=t.id;latest+='　写し神：'+names[t.id]+'の攻撃力'+v+'を写した'}
-function askCopy(u){if(ending)return;let L=mates(c);if(!L.length||u.hp<=0)return;let o=document.createElement('div');o.className='handzoom confirm';o.setAttribute('role','dialog');
+function askCopy(u,res){let done=()=>{pendingAsk=null;if(res)res()};let L=mates(c);if(ending||!L.length||u.hp<=0){done();return}let o=document.createElement('div');o.className='handzoom confirm ask';o.setAttribute('role','dialog');
  o.innerHTML='<div class="hz-in"><div class="hz-text"><h3>写し神（登場時）</h3><p class="hz-eff">攻撃力を写す敵の仲間を選んでください</p></div><div class="hz-acts copypick">'+L.map(t=>'<button class="hz-btn gold" data-u="'+t.uid+'">'+names[t.id]+'（攻撃力'+atkOf(t)+'）</button>').join('')+'</div></div>';
- o.onclick=e=>{let b=e.target.closest('button');if(!b)return;let t=c.units.find(x=>x.uid==+b.dataset.u);if(!t)return;o.remove();copyAtk(u,t);render()};document.body.appendChild(o)}
+ o.onclick=e=>{let b=e.target.closest('button');if(!b)return;let t=c.units.find(x=>x.uid==+b.dataset.u);if(!t)return;o.remove();copyAtk(u,t);render();done()};document.body.appendChild(o)}
 // 引き潮：場から外して持ち主の手札へ。ダメージ・攻撃力低下・一時効果は消える（手札上限のルールはないのでそのまま加える）
 function bounce(d,t){d.units=d.units.filter(x=>x!==t);d.hand.push(handKey(t.id));latest+='　'+names[t.id]+'は持ち主の手札に戻った'}
 // 心読み：相手の手札を一覧表示（閉じるまで）
 function showFoeHand(list){let o=document.createElement('div');o.className='handzoom confirm foehand';o.setAttribute('role','dialog');o.setAttribute('aria-label','相手の手札');
  o.innerHTML='<div class="hz-in"><div class="hz-text"><h3>心読み：相手の手札（'+list.length+'枚）</h3></div><div class="fh-list">'+(list.length?list.map(k=>'<div class="fh-card">'+ucard(typeof k==='string'&&/^g\d+$/.test(k)?+k.slice(1):k,{})+'<b>'+(cardLabel?cardLabel(k):k)+'</b></div>').join(''):'<p class="hz-eff">相手の手札はありません</p>')+'</div><div class="hz-acts"><button class="hz-btn gold">閉じる</button></div></div>';
  o.onclick=e=>{if(e.target.closest('button'))o.remove()};document.body.appendChild(o)}
+
+// ==== フリーズ対策（2026-11-26）====
+// 登場時の選択（雲紡ぎのアヤの天候・写し神の写す相手）は、答えが出るまで次の処理を待つ
+let pendingAsk=null;
+function waitAsk(){return pendingAsk||Promise.resolve()}
+// 相手の番の途中で想定外のエラーが起きても、止まらずにあなたの番へ戻す
+{const core=enemyTurn;enemyTurn=async function(){try{return await core()}catch(e){console.error('enemyTurn',e);
+ document.querySelectorAll('.handzoom.breach').forEach(x=>x.remove());breaching=false;pendingAsk=null;
+ for(const s of [p,c])if(s){s.units=s.units.filter(y=>y.hp>0||y.hero)}
+ if(!ending&&turn===c){round++;begin(p)}busy=false;skillMode=null;attacker=-1;attackMode=false;render()}}}
