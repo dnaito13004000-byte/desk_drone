@@ -467,3 +467,35 @@ small.al-ruby{margin:0 0 1px}
 .logpanel .lp-list{list-style:none;margin:0;padding:0;overflow:auto;display:flex;flex-direction:column;gap:6px}
 .logpanel li{font-size:13px;line-height:1.5;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.04)}
 .logpanel li small{display:block;font-size:10px;color:#cdbb8a}
+
+/* 長押しで詳細：iOSの長押しメニューや文字選択を出さない */
+.dk-cell,.dk-row,.dk-hero,.al-cell,.al-gods button{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+
+/* ==== カード裏面（card_back）：伏せたカードはすべてこの絵。縦横はカードの比率に合わせて全体を表示 ==== */
+.duel .back,.duel .opp .back,.duel .zone .back,.duel .opp .ohand i,.ohand i,.flycard.back,.face.back,.pile-deck i{background:#0b1430 url(cards/card_back.webp) center/100% 100% no-repeat!important}
+.duel .zone .back{border:1px solid #9fb2d8;border-radius:4px}
+.face.back .cb-emblem{display:none}
+/* 相手の手札：画面の上端に裏面で扇形 */
+.duel .opp .ohand{position:relative;display:inline-block;height:44px;width:calc(var(--n)*15px + 30px);margin:-6px 0 -4px}
+.duel .opp .ohand i{position:absolute;top:2px;left:calc(var(--i)*15px);width:30px;height:45px;border-radius:3px;border:1px solid #9fb2d8;box-shadow:-2px 2px 5px #000a;transform-origin:50% 120%;transform:rotate(calc((var(--i) - (var(--n) - 1)/2)*7deg)) translateY(calc(-4px + (var(--i) - (var(--n) - 1)/2)*(var(--i) - (var(--n) - 1)/2)*1px))}
+/* 自分の手札：画面の下端に扇形 */
+.arena.duel .handrail.fan{display:block;position:relative;overflow:visible;padding:0;margin-top:4px}
+.arena.duel .handrail.fan>.spell{position:absolute;bottom:16px;width:var(--hw);flex:none;transform-origin:50% 140%;transform:translateY(var(--dy)) rotate(var(--rot));transition:transform .15s,box-shadow .15s}
+.arena.duel .handrail.fan>.spell.selected{transform:translateY(-14px) rotate(0deg);translate:none}
+/* 山札・墓地：自分＝右端（山札の下に墓地）、相手＝左端（墓地の下に山札） */
+.arena.duel .zone.foe,.arena.duel .zone.mine{position:relative}
+.piles{position:absolute;z-index:5;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.piles.mine{right:4px;bottom:6px}.piles.foe{left:4px;top:6px}
+.pile-deck,.pile-grave{position:relative;width:40px;height:60px;pointer-events:auto}
+.pile-deck i{position:absolute;inset:0;border-radius:4px;border:1px solid #9fb2d8;box-shadow:0 2px 4px #000a;transform:translate(calc(var(--k)*-2px),calc(var(--k)*-2px))}
+.pile-deck i.empty{background:none!important;border:1px dashed #9fb2d880;box-shadow:none}
+.pile-deck .pc{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;min-width:24px;padding:1px 5px;border-radius:99px;background:#060e10e0;border:1px solid #c9b27a;color:#fff;font-size:14px;line-height:1.2;text-align:center}
+.pile-grave{padding:0;border:1px dashed #c9b27a80;border-radius:5px;background:#00000040;overflow:visible}
+.pile-grave .gc{width:100%}
+.pile-grave .gc::before{display:none}
+.pile-grave .gc .gb,.pile-grave .gc .gstat{visibility:hidden}
+.pile-grave .gv-empty{display:grid;place-items:center;height:100%;font-size:10px;color:#cdbb8a}
+.pile-grave .gc-n{position:absolute;right:-6px;bottom:-6px;z-index:3;min-width:18px;padding:0 4px;border-radius:99px;background:#060e10;border:1px solid #c9b27a;color:#f3e7c4;font-size:11px}
+.gravepanel .gv-list{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;overflow:auto}
+.gravepanel .gv-card .gc::before{font-size:8px}
+@media (max-height:700px){.pile-deck,.pile-grave{width:32px;height:48px}.piles{gap:5px}}

@@ -1,4 +1,4 @@
-const gods={2:[3,5],1:[2,4],5:[2,6],6:[2,7]};
+const gods={2:[3,5],1:[2,4],5:[2,6],6:[2,7],7:[3,4],8:[4,6],9:[2,5],11:[3,6]};// 7ナギ・8アカツキ・9ツクヨ・11スバル＝正本（2026-11-26）
 const support=id=>({2:1,5:6,0:6,3:1,10:1})[id]??1;
 const THEME={2:['bolt','draw'],5:['seed','sun']};
 let p,c,weather,turn,sel,history,ending,round,attacker=-1,busy=false,help=false,serial=0,arrived='',latest='';
@@ -16,7 +16,7 @@ function settle(...sides){let all=new Set(sides);
  for(let k=0;k<6&&!ending;k++){let any=false;for(const s of [...all])for(const u of s.units)if(u.id==='fire-6'&&u.hp<=0&&!u.boomed){u.boomed=true;any=true;let d=foeOf(s);all.add(d);
   let t=[...d.units].filter(x=>x.hp>0&&!x.ward).sort((a,b)=>(a.hero?1:0)-(b.hero?1:0)||(a.hp<=2?-1:0)-(b.hp<=2?-1:0)||a.hp-b.hp)[0]||d.units.find(x=>x.hp>0);
   if(t){let n=hurt(t,2);latest+='　爆炎の剣神が倒れ、'+names[t.id]+'に'+n+'ダメージ'}}if(!any)break}
- for(const x of all)substitute(x);for(const x of all)x.units=x.units.filter(y=>y.hp>0||(y.hero&&ending))}
+ for(const x of all)substitute(x);for(const x of all){for(const y of x.units)if(y.hp<=0&&!y.hero){x.grave=x.grave||[];x.grave.push(handKey(y.id))}x.units=x.units.filter(y=>y.hp>0||(y.hero&&ending))}}
 // 不動の山神：自分の神殿が割れたとき（身代わりを含む）、2回復（最大体力まで）
 function shrineLost(side){for(const u of side.units)if(u.id==='earth-6'&&u.hp>0&&u.hp<u.max){let b=u.hp;u.hp=Math.min(u.max,u.hp+2);latest+='　不動の山神が'+(u.hp-b)+'回復';healed(side)}}
 // 身代わりの演出：その陣営の神殿の伏せ札を1枚割り、「神殿が身代わりになった！」を出す
@@ -27,13 +27,13 @@ async function subFx(){let list=subLog;subLog=[];if(calm())return;
   await pause(650)}}
 function heroFx(f){return GOD_CARDS[f.id]?stageOf(f.id,f.stage).fx:{}}
 function fxOf(f,u){return u&&u.hero?heroFx(f):{}}
-const atkOf=u=>Math.max(0,(u.setAtk!=null?u.setAtk:u.atk+(u.tmpAtk||0))-(u.weak||0));
+const atkOf=u=>Math.max(0,(u.setAtk!=null?u.setAtk:u.atk+(u.tmpAtk||0)+(u.id===7&&weather==='雨'?1:0)+(u.id===8&&weather==='晴れ'?1:0))-(u.weak||0));// ナギ：雨で+1／アカツキ：晴れで+1
 function maxAttacks(f,u){return (fxOf(f,u).attacks||(u&&u.id==='water-7'?2:1))+(u&&u.extraAtt||0)}
 function canEvolve(f){let h=heroOf(f);return !!h&&f.stage===0&&f.gauge>=ASCEND.evolve.gauge&&f.mp>=ASCEND.evolve.cost}
 function canAwaken(f){let h=heroOf(f);return !!h&&f.stage===1&&f.shrineBroken&&f.mp>=ASCEND.awaken.cost}
 // 進化（N→R）・覚醒（R→SR）：最大体力が増えた分だけ現在体力も増える（全回復はしない）
 function ascend(f){let h=heroOf(f),cost=f.stage===0?ASCEND.evolve.cost:ASCEND.awaken.cost;f.mp-=cost;f.stage++;let s=stageOf(f.id,f.stage),grow=s.hp-h.max;h.max=s.hp;h.hp+=grow;h.atk=s.atk;if(s.fx.shadow&&f.stage===1)h.shadow=true;
- latest=(f.stage===1?'進化！ ':'覚醒！ ')+s.name+'（攻'+s.atk+' / 体'+h.hp+'/'+h.max+'）'}
+ latest=(f.stage===1?'進化！ ':'覚醒！ ')+s.name+'（攻'+s.atk+' / 体'+h.hp+'）'}
 async function ascendUI(f){if(!(canEvolve(f)||canAwaken(f))||(f===p&&busy))return;ascend(f);busy=true;attacker=-1;skillMode=null;
  render();sfx('awaken');
  let played=await playAwakenVideo(f.id);render();
@@ -176,7 +176,7 @@ function shatter(el,n){let backs=[...el.querySelectorAll('.back')].slice(-n);bac
   fxLayer().appendChild(s);setTimeout(()=>s.remove(),900)}})}
 function num(text,x,y,cls){let n=document.createElement('div');n.className='dmg '+(cls||'');n.textContent=text;n.style.left=x+'px';n.style.top=y+'px';fxLayer().appendChild(n);setTimeout(()=>n.remove(),1100)}
 function flash(el){el.querySelector('img')?.animate([{filter:'brightness(1)',translate:'0 0'},{filter:'brightness(2.8) saturate(.4)',translate:'6px 0'},{filter:'brightness(1.4)',translate:'-5px 0'},{filter:'brightness(1)',translate:'0 0'}],{duration:340})}
-function drain(el,g){let i=el.querySelector('.hp:not(.gb)>i'),gh=el.querySelector('.hp:not(.gb)>.ghost'),w=Math.max(0,g.hp)/g.max*100+'%';if(i)i.style.width=w;if(gh)gh.style.width=w;let gs=el.querySelector('.gtag .gst');if(gs)gs.textContent='⚔'+atkOf(g)+' ♥'+Math.max(0,g.hp)+'/'+g.max;let gv=el.querySelector('.gb.hp .fit');if(gv)gv.innerHTML='<b class="cur">'+Math.max(0,g.hp)+'</b><small>/'+g.max+'</small>';let l=el.querySelector('label .st');if(l)l.innerHTML='<s>⚔'+g.atk+'</s><s>♥'+Math.max(0,g.hp)+'</s>'}
+function drain(el,g){let i=el.querySelector('.hp:not(.gb)>i'),gh=el.querySelector('.hp:not(.gb)>.ghost'),w=Math.max(0,g.hp)/g.max*100+'%';if(i)i.style.width=w;if(gh)gh.style.width=w;let gs=el.querySelector('.gtag .gst');if(gs)gs.textContent='⚔'+atkOf(g)+' ♥'+Math.max(0,g.hp);let gv=el.querySelector('.gb.hp .fit');if(gv)gv.innerHTML='<b class="cur">'+Math.max(0,g.hp)+'</b>';let l=el.querySelector('label .st');if(l)l.innerHTML='<s>⚔'+g.atk+'</s><s>♥'+Math.max(0,g.hp)+'</s>'}
 // ---- 攻撃：狙う → 少し引く → 加速して突っ込む → ヒットストップ → 揺れ・白フラッシュ・ダメージ数字 → 戻る ----
 async function hitstop(ms){let run=document.getAnimations().filter(a=>a.playState==='running');run.forEach(a=>a.pause());document.body.classList.add('hitstop');await new Promise(r=>setTimeout(r,ms));document.body.classList.remove('hitstop');run.forEach(a=>{try{a.play()}catch(e){}})}
 function shake(power){let arena=document.querySelector('.arena');if(!arena||calm())return;let A=Math.min(2+power*2.6,15),k=[];for(let i=0;i<7;i++){let f=1-i/7;k.push({transform:'translate('+((Math.random()*2-1)*A*f).toFixed(1)+'px,'+((Math.random()*2-1)*A*f).toFixed(1)+'px)'})}k.push({transform:'none'});arena.animate(k,{duration:240+power*20,easing:'linear'})}
@@ -276,7 +276,7 @@ function render(){if(ending){resultScreen();return}
  let mineTurn=turn===p&&!ending,wait=turn===c||busy,dock;
  if(skillMode&&free)dock='<div class="detail"><p><b>'+skillMode.name+'</b>　<span>神力'+skillMode.cost+'</span></p><p class="long">'+(skillMode.prompt?skillMode.prompt:skillMode.spell==='guard'?'守る味方の神カードをタップ':skillMode.side==='ally'?'回復する味方の神カードをタップ':'対象の相手の神カードをタップ')+'</p><div class="acts">'+btn('やめる','skillMode=null;render()')+'</div></div>';
  else if(selected){let hs=selected.hero&&GOD_CARDS[selected.id],nm=hs?stageOf(selected.id,p.stage).name:titles[selected.id]+' '+names[selected.id],ma=maxAttacks(p,selected);
-  dock='<div class="detail"><p><b>'+nm+'</b>　<span>⚔'+atkOf(selected)+' ♥'+selected.hp+'/'+selected.max+(ma>1?'　攻撃 '+(selected.att||0)+'/'+ma:'')+'</span></p><p class="long">攻撃先をタップ：上の相手の神カード、または相手の神殿。'+(hs?'<br><em>'+stageText(selected.id,p.stage)+'</em>':'')+'</p><div class="acts">'+btn('やめる','attacker=-1;render()')+(hs?btn('くわしく','inspect(p,selectedGod('+selected.uid+'))'):'')+heroActs()+'</div></div>'}
+  dock='<div class="detail"><p><b>'+nm+'</b>　<span>⚔'+atkOf(selected)+' ♥'+selected.hp+(ma>1?'　攻撃 '+(selected.att||0)+'/'+ma:'')+'</span></p><p class="long">攻撃先をタップ：上の相手の神カード、または相手の神殿。'+(hs?'<br><em>'+stageText(selected.id,p.stage)+'</em>':'')+'</p><div class="acts">'+btn('やめる','attacker=-1;render()')+(hs?btn('くわしく','inspect(p,selectedGod('+selected.uid+'))'):'')+heroActs()+'</div></div>'}
  else dock='<div class="detail idle"><p class="long">'+(wait?'相手の番です…':attackMode?'光っている自分の神をタップ → 攻撃先（相手の神か神殿）をタップ':'手札をタップで大きく表示／アタックか自分の神をタップで攻撃／相手の神をタップで詳細')+'</p>'+(free?'<div class="acts">'+heroActs()+'</div>':'')+'</div>';
  app.innerHTML='<div class="arena duel'+(weather==='雨'?' rain':'')+(mineTurn&&!busy?' my-turn':' their-turn')+'">'
  +'<header class="opp"><span class="who">'+titles[c.id]+' '+names[c.id]+'</span>'+backs(c.hand.length)+'<span class="stat"><small>手札</small><b>'+c.hand.length+'</b></span>'+mana(c)+'</header>'
@@ -337,6 +337,7 @@ function whyNot(f,k){if(legal(f,k))return '';let need=costOf(k)-f.mp;if(need>0)r
 // 登場時の効果
 function onEnter(f,u){let d=foeOf(f);
  if(u.id==='sky-1'){if(f===p)pendingAsk=new Promise(r=>setTimeout(()=>askWeather(r),0));else{let want=f.id===2||f.hand.includes('bolt')||f.units.some(x=>x.id==='sky-2'&&!x.trig2)?(weather==='雨'?'晴れ':'雨'):null;if(want){sky(want);latest+='　天候を'+want+'にした'}}}
+ if(u.id===11){let n=f.hand.length;drawN(f,1);if(f.hand.length>n)latest+='　星神スバル：山札から1枚引いた'}
  if(u.id==='earth-7'){let h=heroOf(f);if(h&&h.hp>0&&h.hp<h.max){h.hp=Math.min(h.max,h.hp+1);latest+='　苗神：'+names[h.id]+'を1回復';healed(f)}}
  if(u.id==='mystic-7'){let L=mates(d);if(!L.length)latest+='　写し神：敵の仲間がいないので攻撃力0のまま';else if(f===p&&!window.__autoP)pendingAsk=new Promise(r=>setTimeout(()=>askCopy(u,r),0));else{let t=[...L].sort((a,b)=>atkOf(b)-atkOf(a))[0];copyAtk(u,t)}}
  if(u.id==='mystic-6'){let n=0;for(const t of d.units)if(t.hp>0){t.weak=Math.max(t.weak||0,1);t.weakBy=null;n++}if(n)latest+='　薄暮の呪い手：敵全員の攻撃力−1（場を離れるまで）'}
@@ -362,7 +363,7 @@ async function castSpell(f,i,t){let k=f.hand[i];if(SP[k]&&SP[k].tgt&&!spTargets(
 // ---- 標準デッキ：その色の仲間 → その色の呪文 → 色なし → 足りなければ他の色の仲間（低コスト順）。同名2枚まで、20枚 ----
 function battleReady(k){if(isSum('g'+k)||typeof k==='number')return !!gods[k]&&!GOD_CARDS[k];if(isSum(k))return true;return !!SP[k]&&!SP[k].noDeck}
 function handKey(k){return typeof k==='number'?'g'+k:k}
-function standardDeck(id){let col=GOD_CARDS[id].type,pool=[...SET_ALL.allies,...SET_ALL.spells].filter(battleReady).filter(k=>!R_ALLIES_AM.includes(k)&&!N_ADD_AN.includes(k)),own=k=>save.cards.filter(x=>x[0]===k).length;
+function standardDeck(id){let col=GOD_CARDS[id].type,pool=[...SET_ALL.allies,...SET_ALL.spells].filter(battleReady).filter(k=>!R_ALLIES_AM.includes(k)&&!N_ADD_AN.includes(k)&&!LATE_BASE.includes(handKey(k))),own=k=>save.cards.filter(x=>x[0]===k).length;
  pool=pool.filter(k=>own(k)>0);let ally=k=>typeof k==='number'||isSum(k);
  let order=[...pool.filter(k=>colorOf(k)===col&&ally(k)),...pool.filter(k=>colorOf(k)===col&&!ally(k)),...pool.filter(k=>!colorOf(k)),...pool.filter(k=>colorOf(k)&&colorOf(k)!==col&&ally(k)).sort((a,b)=>costOf(handKey(a))-costOf(handKey(b)))];
  let deck=[];for(const k of order){for(let n=0;n<Math.min(2,own(k))&&deck.length<20;n++)deck.push(handKey(k));if(deck.length>=20)break}return deck}
@@ -529,6 +530,32 @@ function showLog(){document.querySelectorAll('.logpanel').forEach(x=>x.remove())
 function deckIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="12" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="4" y="5" width="12" height="16" rx="2" fill="currentColor" opacity=".85"/></svg>'}
 {const r1=render;render=function(){r1.apply(this,arguments);try{if(ending||typeof p==='undefined'||!p)return;blogNote();
  let ar=document.querySelector('.arena.duel');if(!ar)return;
- let h=ar.querySelector('header.opp');if(h&&!h.querySelector('.deckc')){let m=h.querySelector('.stat');(m||h).insertAdjacentHTML(m?'afterend':'beforeend','<span class="stat deckc" title="相手の山札の残り">'+deckIcon()+'<small>山札</small><b>'+c.deck.length+'</b></span>')}
- let z=ar.querySelector('.zone.mine');if(z&&!z.querySelector('.deckchip'))z.insertAdjacentHTML('beforeend','<span class="deckchip" title="自分の山札の残り">'+deckIcon()+'<small>山札</small><b>'+p.deck.length+'</b></span>');
  let mid=ar.querySelector('.mid');if(mid&&!mid.querySelector('.logbtn'))mid.querySelector('.round').insertAdjacentHTML('afterend','<button class="logbtn" onclick="showLog()" aria-label="対戦ログを見る">ログ</button>')}catch(e){}}}
+
+// ==== 正本合わせ（2026-11-26）：ツクヨのターン終了時回復。AIの標準デッキには、まだ4枚を入れない（LATE_BASE） ====
+const LATE_BASE=['g7','g8','g9','g11'];
+function turnEndFx(f){if(!f||ending)return;for(const u of f.units)if(u.id===9&&u.hp>0){let t=[...f.units].filter(x=>x.hp>0&&x.hp<x.max).sort((a,b)=>(b.max-b.hp)-(a.max-a.hp))[0];
+ if(t){t.hp=Math.min(t.max,t.hp+1);let m='月神ツクヨ（ターン終了時）：'+names[t.id]+'を1回復';latest+='　'+m;try{BLOG.push({r:round,who:f===p?'あなたの番':'相手の番',t:m});let el=document.getElementById('u'+t.uid);if(el&&!calm()){let r=body(el,.45);pop('+1',r.x,r.y,1,'heal')}}catch(e){}healed(f)}}}
+{const b0=begin;begin=function(f){try{if(turn&&turn!==f)turnEndFx(turn)}catch(e){console.error(e)}return b0.apply(this,arguments)}}
+
+// ==== 手札・山札・墓地の配置（ポケポケ式の置き場所。2026-11-26）====
+// 墓地：使った呪文と倒れた仲間が表向きで積まれる（対戦中だけの記録。セーブには残さない）
+{const s1=start;start=function(){let r=s1.apply(this,arguments);for(const f of [p,c])if(f)f.grave=[];return r}}
+{const p1=play;play=function(f,i,t){let k=f.hand[i],r=p1.apply(this,arguments);if(r!==false&&r!==undefined&&!isSum(k)){f.grave=f.grave||[];f.grave.push(k)}return r}}
+function pileHtml(f){let mine=f===p,n=f.deck.length,g=f.grave||[],top=g[g.length-1];
+ let deck='<div class="pile-deck '+(mine?'mine':'foe')+'" aria-label="'+(mine?'自分':'相手')+'の山札 残り'+n+'枚">'+(n?[0,1,2].slice(0,Math.min(3,n)).map(j=>'<i style="--k:'+j+'"></i>').join(''):'<i class="empty"></i>')+'<b class="pc">'+n+'</b></div>';
+ let grave='<button class="pile-grave '+(mine?'mine':'foe')+'" onclick="showGrave(\''+(mine?'p':'c')+'\')" aria-label="'+(mine?'自分':'相手')+'の墓地 '+g.length+'枚（タップで一覧）">'+(top!=null?ucard(top,{}):'<span class="gv-empty">墓地</span>')+(g.length?'<b class="gc-n">'+g.length+'</b>':'')+'</button>';
+ return mine?deck+grave:grave+deck}
+function showGrave(w){let f=w==='p'?p:c,g=f.grave||[];document.querySelectorAll('.logpanel').forEach(x=>x.remove());let o=document.createElement('div');o.className='logpanel gravepanel';o.setAttribute('role','dialog');o.setAttribute('aria-label',(f===p?'自分':'相手')+'の墓地');
+ o.innerHTML='<div class="lp-in"><h3>'+(f===p?'自分':'相手')+'の墓地（'+g.length+'枚）</h3>'+(g.length?'<div class="gv-list">'+[...g].reverse().map(k=>'<div class="gv-card">'+ucard(k,{})+'</div>').join('')+'</div>':'<p>まだ墓地にカードはありません</p>')+'<button class="hz-btn gold">閉じる</button></div>';
+ o.onclick=e=>{if(e.target===o||e.target.closest('button'))o.remove()};document.body.appendChild(o)}
+function fanHand(){let rail=document.querySelector('.arena.duel .handrail');if(!rail)return;let bs=[...rail.querySelectorAll(':scope > .spell')],n=bs.length;rail.classList.add('fan');
+ let W=rail.clientWidth||innerWidth,hv=Math.max(80,Math.min(innerHeight*.15,140)),w=Math.max(50,Math.min(innerWidth*.2,96,hv*591/887)),h=w*887/591;rail.style.setProperty('--hw',w+'px');rail.style.height=(h+20)+'px';
+ let step=n>1?Math.min(w*.8,(W-w-10)/(n-1)):0,ang=n>1?Math.min(5,26/(n-1)):0;
+ bs.forEach((b,i)=>{let d=i-(n-1)/2;b.style.left=(W/2+d*step-w/2)+'px';b.style.setProperty('--rot',(d*ang)+'deg');b.style.setProperty('--dy',(Math.min(14,d*d*1.4))+'px');b.style.zIndex=b.classList.contains('selected')?60:10+i})}
+addEventListener('resize',()=>{try{fanHand()}catch(e){}});
+{const r2=render;render=function(){r2.apply(this,arguments);try{if(ending||typeof p==='undefined'||!p)return;let ar=document.querySelector('.arena.duel');if(!ar)return;
+ let zf=ar.querySelector('.zone.foe'),zm=ar.querySelector('.zone.mine');
+ if(zf&&!zf.querySelector('.piles'))zf.insertAdjacentHTML('beforeend','<div class="piles foe">'+pileHtml(c)+'</div>');
+ if(zm&&!zm.querySelector('.piles'))zm.insertAdjacentHTML('beforeend','<div class="piles mine">'+pileHtml(p)+'</div>');
+ fanHand()}catch(e){console.error(e)}}}

@@ -38,3 +38,6 @@ function deckRender(keep){let y=keep?document.querySelector('.dk-scroll')?.scrol
  +'<footer class="dk-foot"><p class="dk-why">'+(why||(save.deck&&JSON.stringify(save.deck)===JSON.stringify(d)?'保存済みのデッキです':'保存できます'))+'</p><button class="btn-gold-s" onclick="dkSave()"'+(why?' disabled':'')+'>保存する</button><p class="dk-toast" id="dktoast"></p></footer></div>';
  if(keep){let sc=document.querySelector('.dk-scroll');if(sc)sc.scrollTop=y}}
 if(document.querySelector('.home3'))home();
+
+// 編成操作のたびに一番上へ戻らないよう、スクロール位置を保つ
+deckRender=keepScroll(deckRender,'.dk-scroll');

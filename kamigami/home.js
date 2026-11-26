@@ -203,3 +203,23 @@ function starterPick(i){let o=document.createElement('div');o.className='handzoo
   app.innerHTML='<div class="scene revealscreen"><div class="sc-bg dim"></div><div class="sc-frame"></div><header class="sc-head"><span></span><b>スタート特典</b><span></span></header>'
   +'<div class="rv-stage sr hero flip"><i class="rv-aura"></i><div class="flipper"><div class="face front" style="visibility:visible">'+card(x)+'</div></div></div><p class="rv-tip"><b class="srtxt">スーパーレア！</b><br>'+stageOf(i,2).name+'を受け取りました</p><button class="btn-gold-s" onclick="if(!save.tutorialDone&&typeof tutorialStart===\'function\')tutorialStart();else home()">はじめる</button></div>';
   sfx&&sfx('summon')};document.body.appendChild(o)}
+
+// ==== 長押しで詳細（デッキ編成・図鑑）／詳細を閉じても元のスクロール位置に戻る（2026-11-26）====
+// タップ＝今までどおり（編成の追加・削除、図鑑の拡大）、長押し0.4秒＝詳細を見るだけ（編成は変わらない）
+(function(){let t=null,sx=0,sy=0,fired=false,tgt=null;
+ const SEL='.dk-cell,.dk-row,.dk-hero,.al-cell,.al-gods button';
+ function argsOf(el){let m=/\((.*)\)/.exec(el.getAttribute('onclick')||'');if(!m)return null;return m[1].split(',').map(x=>x.trim().replace(/^'(.*)'$/,'$1').replace(/^"(.*)"$/,'$1'))}
+ function open(el){let oc=el.getAttribute('onclick')||'',a=argsOf(el);if(!a||a[0]==='')return;
+  if(/godDetail|dkHero/.test(oc)){godDetail(+a[0],a[1]!=null&&a[1]!==''?+a[1]:0);return}
+  let k=a[0];if(/^\d+$/.test(k))k=+k;cardInfo(k)}
+ const stop=()=>{clearTimeout(t);t=null};
+ addEventListener('pointerdown',e=>{fired=false;let el=e.target.closest&&e.target.closest(SEL);if(!el||!e.isPrimary){stop();return}tgt=el;sx=e.clientX;sy=e.clientY;stop();
+  t=setTimeout(()=>{t=null;fired=true;open(el);try{navigator.vibrate&&navigator.vibrate(12)}catch(_){}} ,400)},true);
+ addEventListener('pointermove',e=>{if(t&&Math.hypot(e.clientX-sx,e.clientY-sy)>10)stop()},true);
+ addEventListener('pointerup',stop,true);addEventListener('pointercancel',stop,true);addEventListener('scroll',stop,true);
+ addEventListener('touchstart',e=>{if(e.touches.length>1)stop()},{capture:true,passive:true});
+ addEventListener('click',e=>{if(fired&&tgt&&tgt.contains(e.target)){e.stopPropagation();e.preventDefault();fired=false}},true);
+ addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest(SEL))e.preventDefault()},true);
+})();
+function keepScroll(fn,sel){return function(){let el=document.querySelector(sel),y=el?el.scrollTop:null;let r=fn.apply(this,arguments);if(y!=null){let n=document.querySelector(sel);if(n)n.scrollTop=y}return r}}
+album=keepScroll(album,'.al-scroll');

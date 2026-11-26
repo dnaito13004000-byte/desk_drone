@@ -48,7 +48,7 @@ function cardImg(id,st){return 'cards/'+GOD_CARDS[id].key+'/'+STAGE_FILES[st]}
 function pct(b){let [W,H]=CARD_LAYOUT.canvasPx;return 'left:'+(b[0]/W*100)+'%;top:'+(b[1]/H*100)+'%;width:'+(b[2]/W*100)+'%;height:'+(b[3]/H*100)+'%'}
 // 主神カード1枚。live＝対戦中の値（攻撃力・現在/最大体力）
 function gcard(id,st,live,cls='',short=false){let s=stageOf(id,st),B=CARD_LAYOUT.safeTextBoundsPx,
-  atk=live?live.atk:s.atk,hp=live?'<b class="cur">'+Math.max(0,live.hp)+'</b><small>/'+live.max+'</small>':s.hp,weak=live&&live.weak;
+  atk=live?live.atk:s.atk,hp=live?'<b class="cur">'+Math.max(0,live.hp)+'</b>':s.hp,weak=live&&live.weak;
  return '<span class="gc '+cls+'" data-id="'+id+'" data-st="'+st+'"><img src="'+cardImg(id,st)+'" alt="'+s.name+'" draggable="false" loading="lazy">'
  +statIcon('atk',atk,weak)
  +statIcon('hp',live?Math.max(0,live.hp):s.hp,false,live?live.max:null)
@@ -152,10 +152,10 @@ const CARD_TABLE={
  1:{r:'U',short:'召喚したターンから攻撃できる'},              // シズク＝U（指定）
  6:{r:'U',short:'特殊能力なし'},              // ★ガンザ
  4:{r:'U',short:'登場時 敵1体が次の相手ターン攻撃不可',full:'登場したとき、敵の仲間1体は次の相手のターンに攻撃できない。',later:true},                  // ★ユキネ
- 7:{r:'N',short:'雨のとき攻撃力+1',full:'天候が「雨」のとき、攻撃力が+1される。',later:true},       // ★ナギ
- 8:{r:'R',short:'晴れのとき攻撃力+1',full:'天候が「晴れ」のとき、攻撃力が+1される。',later:true},   // ★アカツキ
- 9:{r:'R',short:'特殊能力なし',later:true},                  // ★ツクヨ
- 11:{r:'N',short:'特殊能力なし',later:true},                 // ★スバル
+ 7:{r:'U',short:'雨のとき攻撃力+1',full:'天候が「雨」のとき、攻撃力が+1される。'},       // ★ナギ
+ 8:{r:'R',short:'晴れのとき攻撃力+1',full:'天候が「晴れ」のとき、攻撃力が+1される。'},   // ★アカツキ
+ 9:{r:'R',short:'ターン終了時 一番減った味方を1回復',full:'自分のターンの終了時、体力が一番減っている味方1体を1回復する。'},                  // ★ツクヨ
+ 11:{r:'R',short:'登場時 山札から1枚引く',full:'登場したとき、山札から1枚引く。'},                 // ★スバル
  // 呪文（8）　short＝カードの帯、full＝詳細画面の全文
  rain:{r:'N',short:'天候を雨にする',full:'天候を「雨」にする。'},
  sun:{r:'N',short:'天候を晴れにする',full:'天候を「晴れ」にする。'},
@@ -189,7 +189,7 @@ SPELL_ART.seed='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.
 const ICON_SWORD='<svg class="sic" viewBox="0 0 64 64" aria-hidden="true"><g transform="rotate(-45 32 32)"><path d="M29 4h6l2 34h-10z" fill="#e9eef5" stroke="#1a1410" stroke-width="2.4" stroke-linejoin="round"/><path d="M32 6v30" stroke="#9aa6b4" stroke-width="1.6"/><path d="M18 38h28v5H18z" fill="#d9a536" stroke="#1a1410" stroke-width="2.4" stroke-linejoin="round"/><path d="M29 43h6v11h-6z" fill="#6b4a24" stroke="#1a1410" stroke-width="2.4"/><circle cx="32" cy="57" r="3.6" fill="#d9a536" stroke="#1a1410" stroke-width="2.2"/></g></svg>';
 const ICON_HEART='<svg class="sic" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 57C14 43 5 33 5 21A14 14 0 0 1 32 15a14 14 0 0 1 27 6c0 12-9 22-27 36z" fill="#e2445c" stroke="#1a1410" stroke-width="3" stroke-linejoin="round"/><path d="M15 18c3-5 9-6 12-3" stroke="#ffb3c0" stroke-width="3" fill="none" stroke-linecap="round"/></svg>';
 function statIcon(kind,v,weak,max){let O=CARD_LAYOUT.outerBoundsPx||{attack:[16.5,761.5,97,97],health:[477.5,761.5,97,97]},box=kind==='atk'?O.attack:O.health,
-  num=(v==null||v==='—')?'?':v,text=max!=null?'<b class="cur">'+num+'</b><small>/'+max+'</small>':num;
+  num=(v==null||v==='—')?'?':v,text=max!=null?'<b class="cur">'+num+'</b>':num;
  return '<span class="gstat '+kind+(weak?' weak':'')+'" style="'+pct(box)+'">'+(kind==='atk'?ICON_SWORD:ICON_HEART)
  +'<span class="gb '+kind+'" data-k="'+kind+'Num" style="left:6%;top:18%;width:88%;height:64%"><i class="fit one" data-r=".95">'+text+'</i></span></span>'}
 
