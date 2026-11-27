@@ -1,4 +1,4 @@
-// ==== チュートリアル：案内の巫女が1手ずつ教える練習バトル。新規セーブでは最初に自動で始まる ====
+// ==== チュートリアル：案内役ゼウスが1手ずつ教える練習バトル。新規セーブでは最初に自動で始まる ====
 // 進め方：各ステップの「説明」を出し、wait があればその操作が済むまで待つ（なければ「次へ」）。
 // 練習バトル：自分＝幼神ライガ（2ターン目の状態から）、相手＝幼神コダマ＋岩神ガンザ（体力2）、相手の神殿は2枚。
 // 光らせる場所は「いま押すべき1か所」を毎回計算する（カードの拡大が開いていればその中のボタン、など）
@@ -8,32 +8,32 @@ function attackTargetFor(getU){if(document.querySelector('.handzoom.breach [data
 const myHero=()=>heroOf(p),myGanza=()=>p.units.find(u=>u.id===6);
 async function autoAttack(u){document.querySelectorAll('.handzoom').forEach(x=>x.remove());if(!u)return;attackMode=false;attacker=u.uid;u.used=false;await target(c.shrines.length?0:heroOf(c).uid)}
 const TUT_STEPS=[
- {say:'ようこそ、『神々の一手』へ。わたしが戦い方を案内しますね。<br>攻撃できるのは、相手の<b>仲間</b>と、中央の<b>神殿</b>だけ。神殿をすべて割ると<b>最終決戦</b>、相手の主神の体力を0にしたら勝ちです。実際に勝つところまでやってみましょう。'},
- {hl:()=>'#u'+myHero().uid,say:'これがあなたの<b>主神・幼神ライガ</b>。主神は手札から出すのではなく、<b>試合のはじめから場の後方に召喚されています</b>。相手の主神（コダマ）も同じです。'},
- {hl:()=>'#shrine'+c.id,say:'場の中央に並ぶのが相手の<b>神殿</b>（伏せたカード）。本番は3枚ですが、練習なので2枚にしてあります。神殿が残っている間は、相手の主神を攻撃できません。'},
- {hl:()=>'.manazone.mine',say:'カードを使うには<b>神力</b>がいります。いまは4。毎ターン、最大まで回復します。'},
- {hl:()=>playTarget('draw',null,'.handzoom [data-a=charge]'),say:'神力の最大は、手札を<b>神力に置く</b>と増えます（1ターンに1枚）。光っている「神託」をタップして、「<b>神力に置く</b>」を押しましょう。',wait:()=>p.max>=5,
+ {say:'やっほー、『神々の一手』へようこそ！　ぼくはゼウス、相棒に戦い方を教えるね。<br>攻撃できるのは、相手の<b>仲間</b>と、中央の<b>神殿</b>だけ。神殿をすべて割ると<b>最終決戦</b>、相手の主神の体力を0にしたら勝ちだよ。実際に勝つところまで一緒にやってみよう！'},
+ {hl:()=>'#u'+myHero().uid,say:'これが相棒の<b>主神・幼神ライガ</b>だよ。主神は手札から出すんじゃなくて、<b>試合のはじめから場の後方に召喚されてる</b>んだ。相手の主神（コダマ）も同じなんだ。'},
+ {hl:()=>'#shrine'+c.id,say:'場の中央に並ぶのが相手の<b>神殿</b>（伏せたカード）。本番は3枚だけど、練習だから2枚にしてあるよ。神殿が残っている間は、相手の主神を攻撃できないんだ。'},
+ {hl:()=>'.manazone.mine',say:'カードを使うには<b>神力</b>がいるよ。いまは4。毎ターン、最大まで回復するんだ。'},
+ {hl:()=>playTarget('draw',null,'.handzoom [data-a=charge]'),say:'神力の最大は、手札を<b>神力に置く</b>と増えるよ（1ターンに1枚）。光っている「神託」をタップして、「<b>神力に置く</b>」を押してみて！',wait:()=>p.max>=5,
   auto:async()=>{closeHandZoom();let i=p.hand.indexOf('draw');if(i>=0)await chargeUI(p,i);else{p.max++;p.mp++}render()}},
- {hl:()=>playTarget('g6'),say:'神力が5になりました。次は仲間を呼びます。手札の<b>岩神ガンザ</b>（コスト3）をタップして「<b>召喚する</b>」！',wait:()=>!!myGanza(),
+ {hl:()=>playTarget('g6'),say:'神力が5になったね！　次は仲間を呼ぼう。手札の<b>岩神ガンザ</b>（コスト3）をタップして「<b>召喚する</b>」！',wait:()=>!!myGanza(),
   auto:async()=>{closeHandZoom();let i=p.hand.indexOf('g6');if(i>=0)await doPlay(p,i)}},
- {hl:()=>'#u'+myGanza().uid,say:'出したばかりの仲間は<b>召喚酔い</b>。このターンは攻撃できず、次の自分のターンから戦えます。'},
- {hl:()=>playTarget('rain'),say:'まん中の<b>天候</b>はいま「晴れ」。手札の「<b>雨乞い</b>」を使って、雨にしましょう。',wait:()=>weather==='雨',
+ {hl:()=>'#u'+myGanza().uid,say:'出したばかりの仲間は<b>召喚酔い</b>。このターンは攻撃できなくて、次の自分のターンから戦えるよ。'},
+ {hl:()=>playTarget('rain'),say:'まん中の<b>天候</b>はいま「晴れ」。手札の「<b>雨乞い</b>」を使って、雨にしよう！',wait:()=>weather==='雨',
   auto:async()=>{closeHandZoom();let i=p.hand.indexOf('rain');if(i>=0)await doPlay(p,i);else sky('雨')}},
- {hl:()=>playTarget('bolt',()=>unitSel(c,6)),say:'相手の仲間ガンザは、放っておくと攻撃してきます。<br>雨なら「<b>招雷</b>」が使えます。招雷を使い、相手のガンザをタップして倒しましょう！',wait:()=>!mates(c).length,
+ {hl:()=>playTarget('bolt',()=>unitSel(c,6)),say:'相手の仲間ガンザは、放っておくと攻撃してくるよ。<br>雨なら「<b>招雷</b>」が使えるんだ。招雷を使って、相手のガンザをタップして倒しちゃおう！',wait:()=>!mates(c).length,
   auto:async()=>{closeHandZoom();skillMode=null;let i=p.hand.indexOf('bolt'),g=c.units.find(u=>u.id===6);if(i>=0&&g)await castSpell(p,i,g);else if(g){g.hp=0;settle(c,p);render()}}},
- {hl:()=>attackTargetFor(myHero),say:'次は攻撃です。光っている所を順に：「<b>アタック</b>」→ 中央の相手の<b>神殿</b>。ライガで攻撃します。',wait:()=>c.shrines.length<2&&!busy&&!document.querySelector('.handzoom'),
+ {hl:()=>attackTargetFor(myHero),say:'次は攻撃だよ。光っている所を順に：「<b>アタック</b>」→ 中央の相手の<b>神殿</b>。ライガで攻撃するよ。',wait:()=>c.shrines.length<2&&!busy&&!document.querySelector('.handzoom'),
   auto:()=>autoAttack(myHero())},
- {hl:()=>'#u'+myHero().uid,say:'神殿を1枚割りました！ 割られた神殿のカードは、持ち主がコストなしで使えます（<b>破殿解放</b>）。<br>そしてライガの<b>進化ゲージ</b>がたまりました（攻撃を当てるたびに1増え、3で満タン）。'},
- {hl:()=>document.querySelector('.handzoom.confirm')?'.handzoom [data-a=end]':'.ends button.end',say:'このターンはここまで。「<b>ターン終了</b>」を押しましょう。',wait:()=>turn===c,
+ {hl:()=>'#u'+myHero().uid,say:'神殿を1枚割ったね！ 割られた神殿のカードは、持ち主がコストなしで使えるんだ（<b>破殿解放</b>）。<br>そしてライガの<b>進化ゲージ</b>がたまりました（攻撃を当てるたびに1増え、3で満タン）。'},
+ {hl:()=>document.querySelector('.handzoom.confirm')?'.handzoom [data-a=end]':'.ends button.end',say:'このターンはここまで。「<b>ターン終了</b>」を押してね。',wait:()=>turn===c,
   auto:async()=>{document.querySelectorAll('.handzoom').forEach(x=>x.remove());if(turn===p&&!busy)enemyTurn()}},
- {hl:()=>document.querySelector('.handzoom.ask')?'.handzoom.ask .hz-btn':document.querySelector('.handzoom.breach')?'.handzoom.breach .hz-btn.gold:not([disabled]),.handzoom.breach [data-a=hand],.handzoom.breach .hz-btn.tgt':null,say:'相手の番です……。相手もあなたの神殿を狙ってきます。<br>神殿を割られたら、出てきたカードを「使う」か「手札に加える」か選べます。',wait:()=>turn===p&&!busy&&!document.querySelector('.handzoom'),noNext:true},
- {hl:()=>'button[onclick="ascendUI(p)"]',say:'あなたの番です。神力が回復しました。<br>進化ゲージが満タンなので、神力3で<b>主神を進化</b>できます。光っている「<b>進化</b>」を押しましょう！',wait:()=>p.stage>=1&&!busy,
+ {hl:()=>document.querySelector('.handzoom.ask')?'.handzoom.ask .hz-btn':document.querySelector('.handzoom.breach')?'.handzoom.breach .hz-btn.gold:not([disabled]),.handzoom.breach [data-a=hand],.handzoom.breach .hz-btn.tgt':null,say:'相手の番だよ……。相手も相棒の神殿を狙ってくるよ。<br>神殿を割られたら、出てきたカードを「使う」か「手札に加える」か選べるからね。',wait:()=>turn===p&&!busy&&!document.querySelector('.handzoom'),noNext:true},
+ {hl:()=>'button[onclick="ascendUI(p)"]',say:'相棒の番だよ。神力が回復したね。<br>進化ゲージが満タンだから、神力3で<b>主神を進化</b>できるよ。光っている「<b>進化</b>」を押してみて！',wait:()=>p.stage>=1&&!busy,
   auto:async()=>{document.querySelectorAll('.handzoom').forEach(x=>x.remove());p.gauge=Math.max(p.gauge,ASCEND.evolve.gauge);p.mp=Math.max(p.mp,ASCEND.evolve.cost);await ascendUI(p)}},
- {enter:()=>{let h=heroOf(c),me=heroOf(p);if(h&&me)h.hp=Math.min(h.hp,Math.max(1,atkOf(me)));render()},hl:()=>'#u'+myHero().uid,say:'ライガが<b>解放形態</b>に進化しました！ 攻撃力と体力が上がり、スキルも強くなります。<br>さらに神殿が割られたあとなら、もう一段階「<b>覚醒</b>」もできます。'},
- {hl:()=>attackTargetFor(myGanza),say:'召喚酔いが解けたガンザで攻撃です。「<b>アタック</b>」→ <b>ガンザ</b> → 相手の<b>神殿</b>。これが最後の神殿です！',wait:()=>c.shrines.length===0&&!busy&&!document.querySelector('.handzoom'),
+ {enter:()=>{let h=heroOf(c),me=heroOf(p);if(h&&me)h.hp=Math.min(h.hp,Math.max(1,atkOf(me)));render()},hl:()=>'#u'+myHero().uid,say:'わぁ、ライガが<b>解放形態</b>に進化した！ 攻撃力と体力が上がって、スキルも強くなるんだ。<br>さらに神殿が割られたあとなら、もう一段階「<b>覚醒</b>」もできるよ。'},
+ {hl:()=>attackTargetFor(myGanza),say:'召喚酔いが解けたガンザで攻撃だよ。「<b>アタック</b>」→ <b>ガンザ</b> → 相手の<b>神殿</b>。これが最後の神殿！',wait:()=>c.shrines.length===0&&!busy&&!document.querySelector('.handzoom'),
   auto:()=>autoAttack(myGanza())},
- {hl:()=>'#u'+heroOf(c).uid,say:'相手の神殿がすべて割れました。<b>最終決戦</b>です！<br>神殿がなくなった側は、主神が攻撃の対象になります。主神の体力が0になったら負けです。'},
- {hl:()=>attackTargetFor(myHero),say:'進化したライガで、相手の<b>主神コダマ</b>にとどめの一撃！<br>「アタック」→ ライガ → 相手のコダマ。',wait:()=>ending==='勝利',
+ {hl:()=>'#u'+heroOf(c).uid,say:'相手の神殿がぜんぶ割れたよ。<b>最終決戦</b>だ！<br>神殿がなくなった側は、主神が攻撃の対象になるんだ。主神の体力が0になったら負けだよ。'},
+ {hl:()=>attackTargetFor(myHero),say:'進化したライガで、相手の<b>主神コダマ</b>にとどめの一撃だ！<br>「アタック」→ ライガ → 相手のコダマ。',wait:()=>ending==='勝利',
   auto:()=>autoAttack(myHero())}
 ];
 let TUT=null;
@@ -47,7 +47,7 @@ function tutorialStart(){if(typeof start!=='function')return;TUT_STEPS.forEach(x
  let g=mk(c,6);g.hp=2;g.bornTurn=-5;c.units.push(g);c.turns=1;render();
  TUT={i:0,el:null,ring:null,timer:null,allow:null};tutGuardOn();tutDraw();TUT.timer=setInterval(tutTick,150)}
 function tutDraw(){if(TUT)TUT.t=0;let s=TUT_STEPS[TUT.i];if(s.enter&&!s._done){s._done=1;try{s.enter()}catch(e){}}if(!TUT.el){TUT.el=document.createElement('div');TUT.el.className='tut-box';document.body.appendChild(TUT.el);TUT.ring=document.createElement('div');TUT.ring.className='tut-ring';document.body.appendChild(TUT.ring)}
-  TUT.el.innerHTML='<img src="story/portraits/guide.webp" alt="" onerror="this.remove()"><div class="tut-txt"><b>案内の巫女</b><p>'+s.say+'</p><div class="tut-acts"><small>'+(TUT.i+1)+' / '+TUT_STEPS.length+'</small>'
+  TUT.el.innerHTML='<img src="story/portraits/zeus.webp" alt="" onerror="this.remove()"><div class="tut-txt"><b>ゼウス</b><p>'+s.say+'</p><div class="tut-acts"><small>'+(TUT.i+1)+' / '+TUT_STEPS.length+'</small>'
  +(s.wait?(s.noNext?'':'<em>光っている所を押してね</em>')+(s.auto?'<button class="tut-help" onclick="tutAuto()" hidden>うまくいかない？ 代わりにやる</button>':''):'<button class="tut-next" onclick="tutNext()">'+(s.last?'はじめる':'次へ')+'</button>')+'<button class="tut-skip" onclick="if(this.dataset.ok){tutEnd(true)}else{this.dataset.ok=1;this.textContent=\'もう一度押すとスキップ\'}">スキップ</button></div></div>';tutRing()}
 function tutRing(){if(!TUT)return;let s=TUT_STEPS[TUT.i],sel=s.hl&&s.hl(),el=sel&&[...document.querySelectorAll(sel)].find(e=>e.getClientRects().length);
  document.querySelectorAll('.tut-glow').forEach(e=>{if(e!==el)e.classList.remove('tut-glow')});TUT.allow=s.wait?el:null;if(el&&s.wait)el.classList.add('tut-glow');if(!el||!el.getClientRects().length){TUT.ring.style.display='none';tutPos(s,null);return}
@@ -63,7 +63,7 @@ function tutEnd(skip){if(!TUT)return;clearInterval(TUT.timer);tutGuardOff();docu
  if(skip&&!ending){latest='チュートリアルをスキップしました。このまま練習バトルを続けられます。';render()}}
 function tutorialResult(){let won=ending==='勝利';if(TUT)tutEnd(false);save.tutorialDone=true;persist();tag.textContent='';
  app.innerHTML='<div class="scene resultscreen '+(won?'win':'lose')+'"><div class="sc-bg dim"></div><div class="sc-frame"></div><div class="rs-in"><p class="rs-sub">チュートリアル</p><h2 class="rs-title">'+(won?'勝利！':'おつかれさま')+'</h2>'
- +'<p class="rs-why">'+(won?'チュートリアル完了！ 神力・召喚・天候・神殿・破殿解放・進化・最終決戦、これで基本はばっちりです。':'練習バトルはここまで。基本の流れはつかめましたか？')+'<br>次は「対戦する」で本番、「ストーリー」で神々との物語へ。</p>'
+ +'<p class="rs-why">'+(won?'チュートリアル完了！ 神力・召喚・天候・神殿・破殿解放・進化・最終決戦、これで基本はばっちりだよ、相棒！':'練習バトルはここまで。基本の流れ、つかめたかな？')+'<br>次は「対戦する」で本番、「ストーリー」で神々との物語へ。</p>'
  +'<div class="rs-actions"><button class="btn-gold-s" onclick="window.__tutorial=false;ending=\'\';home()">ホームへ</button><button class="btn-navy" onclick="ending=\'\';tutorialStart()">もう一度</button></div></div></div>'}
 function tutPos(s,mid){let p0=s.pos||(s.top?'low':mid==null?'top':mid<innerHeight*0.5?'low':'top');TUT.el.classList.toggle('low',p0==='low');TUT.el.classList.toggle('mid',p0==='mid')}
 

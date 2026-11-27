@@ -3,20 +3,20 @@
 const STORY_ORDER=[5,0,3,10,2];                       // コダマ→カグラ→ハヤテ→オボロ→ライガ（自分の主神は除く）
 const STORY_SLUG={2:'raiga',5:'kodama',0:'kagura',3:'hayate',10:'oboro'};
 const STORY_BG={tenza:'story/backgrounds/tenza.webp',kodama:'story/backgrounds/kodama.webp',kagura:'story/backgrounds/kagura.webp',hayate:'story/backgrounds/hayate.webp',oboro:'story/backgrounds/oboro.webp',raiga:'story/backgrounds/raiga.webp'};
-const STORY_NAMES={guide:'案内の巫女'};
+const STORY_NAMES={zeus:'ゼウス'};// 案内役：遥かなる時空から来た謎の精霊。主人公の相棒（2026-11-27 交代）
 // 台本の書式：「@命令 …」が演出、「話し手: セリフ」がセリフ。
 //   @bg 背景 / @in left|right 立ち絵 / @out left|right / @shake left|right / @zoom left|right / @battle 1|2 / @end
-//   話し手・立ち絵のキー：guide＝案内役、hero＝主人公（選んだ主神）、kodama-child・kodama-awakened など
+//   話し手・立ち絵のキー：zeus＝案内役（ゼウス）、hero＝主人公（選んだ主神）、kodama-child・kodama-awakened など
 const STORY_SCRIPTS={
 5:`@bg tenza
-@in left guide
-guide: ようこそ、天座へ。神々が力を競う、はじまりの社です。
+@in left zeus
+zeus: ここが天座だよ！　神さまたちが力を競う、はじまりの社なんだ。
 @in right hero
 hero: ここが……天座。空気が澄んでいる。
-guide: あなたの力はまだ幼い。四柱の神と手合わせをして、主神の座をめざしてください。
+zeus: 相棒の力はまだ幼いんだ。四柱の神と手合わせして、主神の座をめざそう！　ぼくもずっと一緒だよー。
 @shake right
 hero: 四柱の神と……。わかった、やってみる！
-guide: 最初のお相手は、森をあずかる大地の神。どうか、お気をつけて。
+zeus: 最初の相手は、森をあずかる大地の神。根っこみたいに粘り強いから、気をつけてね。
 @bg kodama
 @out left
 @in left kodama-child
@@ -44,8 +44,8 @@ hero: きみの森、すごく強かった。何度も押し返されそうに�
 kodama-awakened: また来てよ。次はもっと深い根を張って待ってるから。
 @out left
 @bg tenza
-@in left guide
-guide: 大地の神に認められましたね。次の社への道が開きました。
+@in left zeus
+zeus: やったね、大地の神に認められたよ！　次の社への道が開いたんだ。
 hero: うん。次の神にも、会いに行こう。
 @end`
 };
