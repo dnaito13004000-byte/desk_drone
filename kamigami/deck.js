@@ -41,3 +41,5 @@ if(document.querySelector('.home3'))home();
 
 // 編成操作のたびに一番上へ戻らないよう、スクロール位置を保つ
 deckRender=keepScroll(deckRender,'.dk-scroll');
+deckRender=withImgReuse(deckRender);
+deckRender=withLazy(deckRender);

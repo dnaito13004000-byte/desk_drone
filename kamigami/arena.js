@@ -194,13 +194,13 @@ async function strike(f,u,d,v){let node=document.getElementById('u'+u.uid),tgt=d
  if(!node||!tgt||calm()){subLog=[];render();await shrineReveal(f,u,d);await shrineReveal(d,u,f);return}
  let say=document.querySelector('.duel .say');if(say)say.textContent=latest;
  let lost=v?0:was.sh-d.shrines.length,cards=[...tgt.querySelectorAll('.back')],hitCards=v?[]:cards.slice(cards.length-lost),aimEl=v?tgt:(hitCards[hitCards.length-1]||tgt.querySelector('.keep')||tgt);
- let a=feet(node),b=v?feet(tgt):body(aimEl),line=aim(a,b,f===p);tgt.classList.add('aimed');node.classList.add('attacking');await pause(380);
+ let a=feet(node),b=v?feet(tgt):body(aimEl),line=aim(a,b,f===p,elemColor(u),node);tgt.classList.add('aimed');node.classList.add('attacking');await pause(380);
  let from=body(node,.5),to=v?body(tgt,.5):b,k=v?.62:.5,dx=(to.x-from.x)*k,dy=(to.y-from.y)*k,back='translate('+(-dx*.14)+'px,'+(-dy*.14)+'px) scale(.95)',hit='translate('+dx+'px,'+dy+'px) scale(1.08)';
  // 少し引く
  await node.animate([{transform:'none'},{transform:back}],{duration:170,easing:'cubic-bezier(.2,.7,.3,1)',fill:'forwards'}).finished;
  sfx('attack');
  // 加速して突っ込む
- await node.animate([{transform:back},{transform:hit}],{duration:150,easing:'cubic-bezier(.7,0,1,.55)',fill:'forwards'}).finished;line.remove();
+ await node.animate([{transform:back},{transform:hit}],{duration:150,easing:'cubic-bezier(.7,0,1,.55)',fill:'forwards'}).finished;line.remove();impactFx(b,elemColor(u));
  if(v){let dmg=f.hitInfo?f.hitInfo.v:was.v-v.hp;sfx('hit');burst(fxKind[u.id]||'bolt',to.x,to.y);await hitstop(80);
   shake(dmg);struck(tgt);pop(dmg?'−'+dmg:'影分身',to.x,body(tgt,.2).y,dmg,dmg?'':'guard');drain(tgt,v);
   if(f.overflowHit){let oe=document.getElementById('u'+f.overflowHit.uid),og=d.units.concat([]).find(z=>z.uid===f.overflowHit.uid)||{hp:0,max:1,id:d.id,atk:0};if(oe){let orr=body(oe,.45);await pause(120);burst('bolt',orr.x,orr.y);struck(oe);pop('−'+f.overflowHit.n,orr.x,body(oe,.2).y,f.overflowHit.n);drain(oe,heroOf(d)||og);if(!heroOf(d))oe.classList.add('ko')}}
@@ -422,7 +422,7 @@ async function freeUse(f,k,t){let before=snap();f.hand.push(k);let i=f.hand.leng
  if(!ok){f.mp-=costOf(k);return false}latest='破殿解放！ '+latest;render();await diffFx(before);render();return true}
 function breachBox(f,k){let o=document.createElement('div');o.className='handzoom breach';o.setAttribute('role','dialog');o.setAttribute('aria-label','破殿解放 '+cardLabel(k));
  let mine=f===p,full=isSum(k)?cardFull(sumId(k)):cardFull(k);
- o.innerHTML='<div class="hz-in"><p class="breach-head"><b>破殿解放</b><small>'+(mine?'自分':'相手')+'の神殿が割れた</small></p><div class="hz-card">'+ucard(k,{})+'</div><div class="hz-text"><p class="hz-kind">'+(isSum(k)?'仲間':'呪文')+' ／ '+(colorOf(isSum(k)?sumId(k):k)||'色なし')+' ／ コスト'+costOf(k)+'</p><p class="hz-eff">'+full+'</p></div><div class="hz-acts"></div></div>';
+ o.innerHTML='<div class="hz-in"><p class="breach-head"><b>破殿解放</b><small>'+(mine?'自分':'相手')+'の神殿が割れた</small></p><div class="hz-card">'+ucard(k,{})+'<i class="curtain" aria-hidden="true"></i></div><div class="hz-text"><p class="hz-kind">'+(isSum(k)?'仲間':'呪文')+' ／ '+(colorOf(isSum(k)?sumId(k):k)||'色なし')+' ／ コスト'+costOf(k)+'</p><p class="hz-eff">'+full+'</p></div><div class="hz-acts"></div></div>';
  document.body.appendChild(o);return o}
 async function breachOne(f,k){await gaugeUp(f);let mine=f===p&&!window.__autoP,can=freeLegal(f,k);
  if(!mine){let t;if(can&&SP[k]&&SP[k].tgt){t=aiTarget(f,k);if(!t||t==='none')t=spTargets(f,k)[0]}
@@ -586,3 +586,46 @@ moves.mirror=['覚醒の神鏡',2,'自分の主神の進化ゲージを+1する�
 function firstHit(u){return !u||!(u.att>0)}
 // 後攻は進化ゲージを1つ持って始める（必要数3は変えない）。対戦はいつもあなたが先攻なので、後攻＝相手
 {const s3=start;start=function(){let r=s3.apply(this,arguments);try{if(c&&!window.__tutorial)c.gauge=Math.max(c.gauge||0,1)}catch(e){}return r}}
+
+// ==== 対戦の演出（2026-11-28）：攻撃のエネルギー軌跡／カードが黒くなる・点滅するのを防ぐ ====
+const ELEM_COL={'天象':'#9fd4ff','烈火':'#ff6a2a','奔流':'#3fd6ff','大地':'#4fd46a','神秘':'#b46bff'};
+function elemColor(u){try{let t=u.hero?GOD_CARDS[u.id].type:(colorOf(u.id)||'');return ELEM_COL[t]||'#ffd76a'}catch(e){return '#ffd76a'}}
+// 攻撃の軌跡：白い芯→属性色の光の帯が弧を描いて伸び、粒が対象へ流れ、先端は光の槍。重ね表示（#fx）だけで描くのでレイアウト計算は走らない
+let _aimN=0;
+function aim(a,b,ally,col,node){col=col||(ally?'#ffd76a':'#ff8f74');let s=document.createElementNS('http://www.w3.org/2000/svg','svg'),id='am'+(++_aimN);
+ let dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len,bend=Math.min(90,len*.28)*(dx>=0?1:-1),mx=(a.x+b.x)/2+nx*bend,my=(a.y+b.y)/2+ny*bend,ang=Math.atan2(b.y-my,b.x-mx)*180/Math.PI;
+ let d='M'+a.x+' '+a.y+'Q'+mx+' '+my+' '+b.x+' '+b.y,dots='';
+ for(let i=0;i<7;i++)dots+='<circle r="'+(i%3?2.2:3.2)+'" fill="#fff" opacity=".95"><animateMotion dur=".55s" begin="'+(i*.08)+'s" repeatCount="indefinite" path="'+d+'"/></circle>';
+ s.setAttribute('class','aim energy');s.setAttribute('width',innerWidth);s.setAttribute('height',innerHeight);s.style.setProperty('--ec',col);
+ s.innerHTML='<defs><filter id="'+id+'f" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="5"/></filter>'
+  +'<radialGradient id="'+id+'h"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="'+col+'"/><stop offset="1" stop-color="'+col+'" stop-opacity="0"/></radialGradient></defs>'
+  +'<path d="'+d+'" stroke="'+col+'" stroke-width="16" fill="none" stroke-linecap="round" pathLength="100" class="trail band" opacity=".55" filter="url(#'+id+'f)"/>'
+  +'<path d="'+d+'" stroke="'+col+'" stroke-width="8" fill="none" stroke-linecap="round" pathLength="100" class="trail mid"/>'
+  +'<path d="'+d+'" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" pathLength="100" class="trail core"/>'
+  +'<g class="dots">'+dots+'</g>'
+  +'<g class="head" transform="translate('+b.x+' '+b.y+') rotate('+ang+')"><circle r="16" fill="url(#'+id+'h)" opacity=".9"/><path d="M6 0L-26 -7L-18 0L-26 7Z" fill="#fff" stroke="'+col+'" stroke-width="2" stroke-linejoin="round"/><path d="M-26 -7L-44 0L-26 7" fill="none" stroke="'+col+'" stroke-width="2.5" stroke-linecap="round" opacity=".8"/></g>';
+ fxLayer().appendChild(s);
+ if(node&&!calm()){let r=body(node,.5),g=document.createElement('i');g.className='atkflare';g.style.cssText='left:'+r.x+'px;top:'+r.y+'px;--ec:'+col;fxLayer().appendChild(g);setTimeout(()=>g.remove(),520)}
+ return s}
+// 着弾：衝撃のリングと火花
+function impactFx(pt,col){if(calm())return;let w=document.createElement('div');w.className='impact';w.style.cssText='left:'+pt.x+'px;top:'+pt.y+'px;--ec:'+col;
+ let h='<i class="ring"></i><i class="ring r2"></i><i class="core"></i>';for(let i=0;i<12;i++)h+='<b style="--a:'+(i*30+((i*37)%17))+'deg;--d:'+(36+(i*13)%30)+'px"></b>';w.innerHTML=h;fxLayer().appendChild(w);setTimeout(()=>w.remove(),700)}
+// カード絵の先読み：対戦開始時に、両デッキ・手札・神殿・主神の全形態の絵を読み込んで解凍しておく
+const _preImgs=new Map();
+function preloadBattleArt(){try{let keys=new Set();for(const f of [p,c])if(f){[...f.deck,...f.hand,...f.shrines].forEach(k=>keys.add(k))}
+ let html=[...keys].map(k=>{try{return ucard(isSum(k)?(typeof sumId(k)==='number'?sumId(k):sumId(k)):k,{})}catch(e){return ''}}).join('');
+ for(const f of [p,c])if(f)for(const st of [0,1,2])try{html+=gcard(f.id,st)}catch(e){}
+ let srcs=new Set([...html.matchAll(/src="([^"]+)"/g)].map(m=>m[1]));srcs.add('cards/card_back.webp');
+ for(const src of srcs){if(_preImgs.has(src))continue;let im=new Image();im.decoding='async';im.src=src;_preImgs.set(src,im);if(im.decode)im.decode().catch(()=>{})}}catch(e){}}
+{const s4=start;start=function(){let r=s4.apply(this,arguments);preloadBattleArt();return r}}
+// 描き直しても、読み込み済みのカード絵（<img>）はそのまま使い回す → 黒くなったり点滅したりしない
+{const rImg=render;render=function(){let old=new Map(),ar=document.querySelector('.arena.duel');
+ if(ar)for(const im of ar.querySelectorAll('img')){if(!im.complete||!im.naturalWidth)continue;let k=im.getAttribute('src');if(!old.has(k))old.set(k,[]);old.get(k).push(im)}
+ let r=rImg.apply(this,arguments);
+ let nar=document.querySelector('.arena.duel');
+ if(nar){if(old.size)for(const im of nar.querySelectorAll('img')){let k=im.getAttribute('src'),L=old.get(k);if(L&&L.length){let o=L.shift();if(o!==im){for(const at of im.attributes)if(at.name!=='src'&&o.getAttribute(at.name)!==at.value)o.setAttribute(at.name,at.value);im.replaceWith(o)}}}
+  // 暗くする表現は、カード絵を変えずに上から半透明の幕を重ねる
+  for(const g of nar.querySelectorAll('.unit .gc,.handrail .spell .gc'))if(!g.querySelector(':scope>.veil'))g.insertAdjacentHTML('beforeend','<i class="veil" aria-hidden="true"></i>')}
+ return r}}
+// 読み込みが終わっていない絵だけ、読み込み完了まで隠しておく（裏面が見える）
+{const rLd=render;render=function(){let r=rLd.apply(this,arguments);let ar=document.querySelector('.arena.duel');if(ar)for(const im of ar.querySelectorAll('.gc>img')){if(!im.complete||!im.naturalWidth){im.classList.add('ld');im.addEventListener('load',()=>im.classList.remove('ld'),{once:true});im.addEventListener('error',()=>im.classList.remove('ld'),{once:true})}}return r}}

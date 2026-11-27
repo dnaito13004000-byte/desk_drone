@@ -49,7 +49,7 @@ function pct(b){let [W,H]=CARD_LAYOUT.canvasPx;return 'left:'+(b[0]/W*100)+'%;to
 // 主神カード1枚。live＝対戦中の値（攻撃力・現在/最大体力）
 function gcard(id,st,live,cls='',short=false){let s=stageOf(id,st),VL=VESSEL_LAYOUT[id],B=VL?VL.safe:CARD_LAYOUT.safeTextBoundsPx;if(VL)cls+=' vessel';
   atk=live?live.atk:s.atk,hp=live?'<b class="cur">'+Math.max(0,live.hp)+'</b>':s.hp,weak=live&&live.weak;
- return '<span class="gc '+cls+'" data-id="'+id+'" data-st="'+st+'"><img src="'+cardImg(id,st)+'" alt="'+s.name+'" draggable="false" loading="lazy">'+rubyBand(s.name,true)
+ return '<span class="gc '+cls+'" data-id="'+id+'" data-st="'+st+'"><img src="'+cardImg(id,st)+'" alt="'+s.name+'" draggable="false"'+(window.__lazyImg?' loading="lazy"':'')+'>'+rubyBand(s.name,true)
  +statIcon('atk',atk,weak,null,VL&&VL.outer)
  +statIcon('hp',live?Math.max(0,live.hp):s.hp,false,live?live.max:null,VL&&VL.outer)
  +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+(short?s.skill+(s.cost&&(s.fx.bolt||s.fx.heal||s.fx.fox)&&st===0?'（神力'+s.cost+'）':''):stageText(id,st))+'</i></span>'
@@ -130,7 +130,7 @@ function ucard(key,o={}){if(typeof EXP_CARDS!=='undefined'&&EXP_CARDS[key])retur
  else{name=spellName(key);img=hdArt(key);band='呪文';eff=cardShort(key)}
  let hp=null;
  return '<span class="gc uc uc-'+kind+' r-'+r+' '+(o.cls||'')+'" data-k="'+key+'"><span class="uc-frame"></span>'
- +'<span class="uc-art" style="'+pct(FRAME_PX.art)+'"><img src="'+img+'" alt="" draggable="false" loading="lazy"></span>'
+ +'<span class="uc-art" style="'+pct(FRAME_PX.art)+'"><img src="'+img+'" alt="" draggable="false"'+(window.__lazyImg?' loading="lazy"':'')+'></span>'
  +costBadge(o)
  +(o.rank?'<span class="uc-rk">'+r+'</span>':'')
  +'<span class="uc-nameband" style="'+pct(FRAME_PX.nameBand)+'"></span><span class="uc-panel" style="'+pct(FRAME_PX.panel)+'"></span>'
@@ -298,7 +298,7 @@ function colorChip(k){let c=colorOf(k);return '<i class="colchip c-'+(COLORS.ind
 function cardCost(k){if(EXP_CARDS[k])return EXP_CARDS[k].cost;if(typeof k==='number')return (typeof ALLY_COST!=='undefined'&&ALLY_COST[k])||1;return moves[k]?moves[k][1]:1}
 // 拡張カードの表示：完成カード絵＋剣・ハートの器に数字（仲間）＋効果帯に全文＋細帯にコスト
 function expCard(k,o={}){let e=EXP_CARDS[k],B=CARD_LAYOUT.safeTextBoundsPx,ally=e.kind==='ally';
- return '<span class="gc uc uc-exp '+(ally?'uc-ally':'uc-spell')+' r-'+e.r+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/expansion/'+k+'.webp" alt="'+e.name+'" draggable="false" loading="lazy">'+rubyBand(e.name)
+ return '<span class="gc uc uc-exp '+(ally?'uc-ally':'uc-spell')+' r-'+e.r+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/expansion/'+k+'.webp" alt="'+e.name+'" draggable="false"'+(window.__lazyImg?' loading="lazy"':'')+'>'+rubyBand(e.name)
  +(ally?(o.live?statIcon('atk',o.live.atk,o.live.weak)+statIcon('hp',Math.max(0,o.live.hp),false,o.live.max):statIcon('atk',e.atk)+statIcon('hp',e.hp)):'')
  +'<span class="gb evo" data-k="evolution" style="'+pct(B.evolution)+'"><i class="fit one" data-r=".9">コスト'+e.cost+'</i></span>'
  +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+e.text+'</i></span>'
@@ -315,7 +315,7 @@ TERMS.push(['最終決戦','神殿がすべて割れた側は、主神が攻撃�
 // ---- 初期呪文8種：枠つき完成イラスト（2026-11-25差し替え）。名前帯はアート側、コスト・効果文は既存の重ね表示で載せる ----
 const STARTER_ART={rain:'amagoi',sun:'kumobarai',bolt:'shourai',guard:'shugo',draw:'shintaku',seed:'tanemaki',mirror:'kakusei_kagami',scroll:'shini_keishou'};
 function starterCard(k,o={}){let B=CARD_LAYOUT.safeTextBoundsPx,t=CARD_TABLE[k]||{},cost=o.cost!=null?o.cost:(typeof costOf==='function'?costOf(k):1);
- return '<span class="gc uc uc-exp uc-spell r-'+(t.r||'N')+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/starter/'+STARTER_ART[k]+'.webp" alt="'+spellName(k)+'" draggable="false" loading="lazy">'+rubyBand(spellName(k))
+ return '<span class="gc uc uc-exp uc-spell r-'+(t.r||'N')+' '+(o.cls||'')+'" data-k="'+k+'"><img src="cards/starter/'+STARTER_ART[k]+'.webp" alt="'+spellName(k)+'" draggable="false"'+(window.__lazyImg?' loading="lazy"':'')+'>'+rubyBand(spellName(k))
  +'<span class="gb evo" data-k="evolution" style="'+pct(B.evolution)+'"><i class="fit one" data-r=".9">コスト'+cost+'</i></span>'
  +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+(t.full||cardShort(k))+'</i></span>'
  +(o.showCost?costBadge(Object.assign({},o,{cost})):'')+'</span>'}
@@ -355,3 +355,9 @@ function rubyBand(name,hero){let r=readingOf(name);return r?'<span class="gb rub
 const VESSEL_LAYOUT={10:{
  safe:{effect:[146,742,304,80],evolution:[96,697,404,18]},
  outer:{attack:[36,744,92,92],health:[466,744,92,92]}}};
+// 描き直しのとき、読み込み済みのカード絵（<img>）を使い回す（黒い一瞬・再読み込みを防ぐ。図鑑・デッキ編成用）
+function withImgReuse(fn){return function(){let old=new Map();for(const im of document.querySelectorAll('.gc>img')){if(!im.complete||!im.naturalWidth)continue;let k=im.getAttribute('src');if(!old.has(k))old.set(k,[]);old.get(k).push(im)}
+ let r=fn.apply(this,arguments);if(old.size)for(const im of document.querySelectorAll('.gc>img')){let L=old.get(im.getAttribute('src'));if(L&&L.length){let o=L.shift();if(o!==im&&!o.isConnected){for(const at of im.attributes)if(at.name!=='src'&&o.getAttribute(at.name)!==at.value)o.setAttribute(at.name,at.value);im.replaceWith(o)}}}return r}}
+
+// 図鑑・デッキ編成を描くときだけ、画面外の絵は後から読む（対戦中は黒く見えるので使わない）
+function withLazy(fn){return function(){window.__lazyImg=true;try{return fn.apply(this,arguments)}finally{window.__lazyImg=false}}}

@@ -225,3 +225,5 @@ function starterPick(i){let o=document.createElement('div');o.className='handzoo
 })();
 function keepScroll(fn,sel){return function(){let el=document.querySelector(sel),y=el?el.scrollTop:null;let r=fn.apply(this,arguments);if(y!=null){let n=document.querySelector(sel);if(n)n.scrollTop=y}return r}}
 album=keepScroll(album,'.al-scroll');
+album=withImgReuse(album);
+album=withLazy(album);

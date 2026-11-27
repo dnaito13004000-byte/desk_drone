@@ -531,3 +531,44 @@ small.al-ruby{margin:0 0 1px}
 
 /* 器形式の主神カード：上端の「主神」札は絵にあるので、CSSの札は出さない */
 .gc.vessel[data-st]::before{display:none}
+
+/* ==== 対戦の演出（2026-11-28）==== */
+/* 攻撃の軌跡 */
+#fx svg.energy{position:fixed;left:0;top:0;overflow:visible;pointer-events:none;z-index:40}
+#fx svg.energy .trail{stroke-dasharray:100;stroke-dashoffset:100;animation:draw .26s cubic-bezier(.3,.7,.3,1) forwards}
+#fx svg.energy .trail.band{animation-duration:.3s}
+#fx svg.energy .dots{opacity:0;animation:show .01s .18s forwards}
+#fx svg.energy .head{opacity:0;animation:show .06s .24s forwards}
+#fx svg.energy .head>circle{animation:headPulse .32s ease-in-out .24s infinite alternate}
+@keyframes headPulse{to{opacity:.45}}
+.atkflare{position:fixed;width:150px;height:150px;translate:-50% -50%;border-radius:50%;pointer-events:none;z-index:39;
+ background:radial-gradient(circle,#fff 0 14%,color-mix(in srgb,var(--ec) 75%,#fff) 30%,transparent 66%);mix-blend-mode:screen;animation:flare .5s ease-out forwards}
+@keyframes flare{0%{opacity:0;transform:scale(.4)}25%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.25)}}
+.impact{position:fixed;width:0;height:0;pointer-events:none;z-index:41}
+.impact .ring{position:absolute;left:-40px;top:-40px;width:80px;height:80px;border-radius:50%;border:4px solid #fff;box-shadow:0 0 14px var(--ec),inset 0 0 12px var(--ec);animation:ringOut .55s ease-out forwards}
+.impact .ring.r2{border-width:2px;border-color:var(--ec);animation-delay:.08s;opacity:0}
+.impact .core{position:absolute;left:-28px;top:-28px;width:56px;height:56px;border-radius:50%;background:radial-gradient(circle,#fff 0 25%,var(--ec) 50%,transparent 70%);animation:flare .45s ease-out forwards}
+.impact b{position:absolute;left:-2px;top:-9px;width:4px;height:18px;border-radius:2px;background:linear-gradient(#fff,var(--ec));box-shadow:0 0 6px var(--ec);transform:rotate(var(--a)) translateY(0);animation:sparkOut .6s ease-out forwards}
+@keyframes ringOut{0%{opacity:1;transform:scale(.2)}100%{opacity:0;transform:scale(1.9)}}
+@keyframes sparkOut{0%{opacity:1;transform:rotate(var(--a)) translateY(-6px) scaleY(1)}100%{opacity:0;transform:rotate(var(--a)) translateY(calc(var(--d) * -1)) scaleY(.4)}}
+@media (prefers-reduced-motion:reduce){#fx svg.energy .dots{display:none}}
+/* 暗くする表現：カード絵は変えず、上に半透明の幕（彩度も幕側で落とす）*/
+.arena.duel .gc>.veil{position:absolute;inset:0;z-index:6;border-radius:inherit;pointer-events:none;background:rgba(4,9,14,.4);opacity:0;transition:opacity .18s}
+.arena.duel .unit.used .gc>.veil,.arena.duel .unit.sick .gc>.veil,.arena.duel .zone.foe .unit.walled .gc>.veil,
+.arena.duel .spell.cant .gc>.veil,.arena.duel .spell.uspell:has(.nopay) .gc>.veil{opacity:1;-webkit-backdrop-filter:saturate(.55);backdrop-filter:saturate(.55)}
+.arena.duel .unit.sick .gc>.veil,.arena.duel .spell.cant .gc>.veil{background:rgba(4,9,14,.26)}
+.arena.duel .unit.used img,.arena.duel .unit.used .gc,.arena.duel .unit.used .gc>img,.arena.duel .unit.herocard.used .gc>img,.arena.duel .unit.herocard.used .gc img,
+.arena.duel .unit.sick .gc,.arena.duel .zone.foe .unit.walled .gc,.arena.duel .spell.cant,.arena.duel .spell.uspell:has(.nopay) .gc,
+.arena.duel .spell.uspell:has(.nopay) .uc-art img,.arena.duel .spell.uspell:has(.nopay)>.gc>img{filter:none!important}
+/* 破殿解放：読み込み済みの絵の上で、光の幕が左右に開く */
+.handzoom.breach .hz-card{position:relative}
+.handzoom.breach .curtain{position:absolute;left:0;right:0;bottom:0;top:12px;z-index:8;pointer-events:none;border-radius:3.5%/2.4%;overflow:hidden}
+.handzoom.breach .curtain::before,.handzoom.breach .curtain::after{content:'';position:absolute;top:0;bottom:0;width:51%;background:linear-gradient(90deg,#fff8dc,#ffe9a6 40%,#fffdf2);box-shadow:0 0 30px #ffe9a6}
+.handzoom.breach .curtain::before{left:0;animation:curL .7s cubic-bezier(.6,0,.2,1) .15s forwards}
+.handzoom.breach .curtain::after{right:0;background:linear-gradient(270deg,#fff8dc,#ffe9a6 40%,#fffdf2);animation:curR .7s cubic-bezier(.6,0,.2,1) .15s forwards}
+@keyframes curL{to{transform:translateX(-105%);opacity:.2}}@keyframes curR{to{transform:translateX(105%);opacity:.2}}
+@media (prefers-reduced-motion:reduce){.handzoom.breach .curtain{display:none}}
+/* 絵の読み込み中は黒ではなく裏面を見せ、読み込めたら絵をふわっと出す（読み込み済みなら即表示） */
+.arena.duel .gc,.handzoom .gc{background:#0b1430 url(cards/card_back.webp) center/100% 100% no-repeat}
+.arena.duel .gc>img.ld,.handzoom .gc>img.ld{opacity:0}
+.arena.duel .gc>img,.handzoom .gc>img{transition:opacity .22s ease-out}
