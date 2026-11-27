@@ -38,9 +38,9 @@ function playIntro(){
   decks.forEach(d=>[...d.children].forEach((card,i)=>anim(card,[{transform:'none'},{transform:'translateX('+(i%2?-46:46)+'px) rotate('+(i%2?-10:10)+'deg)'},{transform:'none'},{transform:'translateX('+(i%2?40:-40)+'px)'},{transform:'none'}],{duration:640,delay:i*12,easing:'ease-in-out'})));
   await wait(700);if(run.done)return;
 
-  // 3. 神殿の設置：伏せカード5枚ずつ
+  // 3. 神殿の設置：伏せカード3枚ずつ
   let shrines=[...document.querySelectorAll('.arena.duel .zone.foe .back'),...document.querySelectorAll('.arena.duel .zone.mine .back')];
-  shrines.forEach((b,i)=>{b.classList.add('intro-show');anim(b,[{transform:'translateY(-30px) scale(1.4)',opacity:0},{transform:'none',opacity:1}],{duration:260,delay:i%5*60,fill:'backwards',easing:'cubic-bezier(.2,.8,.3,1.2)'})});
+  shrines.forEach((b,i)=>{b.classList.add('intro-show');anim(b,[{transform:'translateY(-30px) scale(1.4)',opacity:0},{transform:'none',opacity:1}],{duration:260,delay:i%SHRINES*60,fill:'backwards',easing:'cubic-bezier(.2,.8,.3,1.2)'})});
   await wait(500);if(run.done)return;
 
   // 4. 手札の配布：山札から1枚ずつ。自分は表向き、相手は裏向き（枚数だけ）

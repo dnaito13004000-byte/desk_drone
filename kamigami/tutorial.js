@@ -10,7 +10,7 @@ async function autoAttack(u){document.querySelectorAll('.handzoom').forEach(x=>x
 const TUT_STEPS=[
  {say:'ようこそ、『神々の一手』へ。わたしが戦い方を案内しますね。<br>攻撃できるのは、相手の<b>仲間</b>と、中央の<b>神殿</b>だけ。神殿をすべて割ると<b>最終決戦</b>、相手の主神の体力を0にしたら勝ちです。実際に勝つところまでやってみましょう。'},
  {hl:()=>'#u'+myHero().uid,say:'これがあなたの<b>主神・幼神ライガ</b>。主神は手札から出すのではなく、<b>試合のはじめから場の後方に召喚されています</b>。相手の主神（コダマ）も同じです。'},
- {hl:()=>'#shrine'+c.id,say:'場の中央に並ぶのが相手の<b>神殿</b>（伏せたカード）。本番は5枚ですが、練習なので2枚にしてあります。神殿が残っている間は、相手の主神を攻撃できません。'},
+ {hl:()=>'#shrine'+c.id,say:'場の中央に並ぶのが相手の<b>神殿</b>（伏せたカード）。本番は3枚ですが、練習なので2枚にしてあります。神殿が残っている間は、相手の主神を攻撃できません。'},
  {hl:()=>'.manazone.mine',say:'カードを使うには<b>神力</b>がいります。いまは4。毎ターン、最大まで回復します。'},
  {hl:()=>playTarget('draw',null,'.handzoom [data-a=charge]'),say:'神力の最大は、手札を<b>神力に置く</b>と増えます（1ターンに1枚）。光っている「神託」をタップして、「<b>神力に置く</b>」を押しましょう。',wait:()=>p.max>=5,
   auto:async()=>{closeHandZoom();let i=p.hand.indexOf('draw');if(i>=0)await chargeUI(p,i);else{p.max++;p.mp++}render()}},
