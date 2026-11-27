@@ -134,7 +134,7 @@ const SFX_ON=true;    // dist/sfx/ に置いた音だけが鳴る（ファイル
 function sfx(key){if(!SFX_ON)return;let s=soundCfg();if(s.muted||!(s.volume>0))return;let base=sfxLoad(key);if(base.dead)return;try{let a=base.cloneNode();a.volume=Math.min(1,s.volume);let pr=a.play();if(pr)pr.catch(()=>{})}catch(e){}}
 function setVolume(v){let s=soundCfg();s.volume=Math.max(0,Math.min(1,v/100));if(s.volume>0)s.muted=false;persist();let lab=document.querySelector('.soundpanel output');if(lab)lab.textContent=Math.round(s.volume*100)}
 function toggleMute(){let s=soundCfg();s.muted=!s.muted;persist();render();if(!s.muted)sfx('hit')}
-function soundPanel(){let s=soundCfg(),v=Math.round(s.volume*100);return '<div class="soundpanel" role="dialog" aria-label="効果音の設定"><b>効果音</b><label>音量 <output>'+v+'</output><input type="range" min="0" max="100" step="5" value="'+v+'" oninput="setVolume(this.value)" onchange="sfx(\'hit\')"></label>'+btn(s.muted?'ミュート中（タップで解除）':'ミュートする','toggleMute()','',s.muted?'gold':'')+btn('閉じる','soundOpen=false;render()')+'</div>'}
+function soundPanel(){let s=soundCfg(),v=Math.round(s.volume*100);return '<div class="soundpanel" role="dialog" aria-label="音の設定（BGM・効果音）"><b>音（BGM・効果音）</b><label>音量 <output>'+v+'</output><input type="range" min="0" max="100" step="5" value="'+v+'" oninput="setVolume(this.value)" onchange="sfx(\'hit\')"></label>'+btn(s.muted?'ミュート中（タップで解除）':'ミュートする','toggleMute()','',s.muted?'gold':'')+btn('閉じる','soundOpen=false;render()')+'</div>'}
 // ---- 覚醒ムービー：dist/video/ に置いた神ごとの召喚エフェクト動画を全画面で再生。無い神は従来の覚醒演出 ----
 const AWAKEN_VIDEO={2:'video/awaken-thunder.mp4',1:'video/awaken-water.mp4',5:'video/awaken-forest.mp4',6:'video/awaken-rock.mp4'};
 function playAwakenVideo(id){let src=AWAKEN_VIDEO[id];if(!src||calm())return Promise.resolve(false);
@@ -629,3 +629,53 @@ function preloadBattleArt(){try{let keys=new Set();for(const f of [p,c])if(f){[.
  return r}}
 // 読み込みが終わっていない絵だけ、読み込み完了まで隠しておく（裏面が見える）
 {const rLd=render;render=function(){let r=rLd.apply(this,arguments);let ar=document.querySelector('.arena.duel');if(ar)for(const im of ar.querySelectorAll('.gc>img')){if(!im.complete||!im.naturalWidth){im.classList.add('ld');im.addEventListener('load',()=>im.classList.remove('ld'),{once:true});im.addEventListener('error',()=>im.classList.remove('ld'),{once:true})}}return r}}
+
+// ==== BGM（2026-11-28）：通常バトルBGM → 最終決戦BGM ====
+// 音源は dist/sfx/ の bgm-battle.mp3（通常バトル）と bgm-final.mp3（最終決戦）。音量・ミュートは効果音と共通の設定（save.sound）に従う
+// 最終決戦BGMは曲頭の一拍を落とさないよう、対戦開始時にデコードまで済ませておき、切替の瞬間に0秒から鳴らす（フェードなし）
+const BGM_FILES={battle:'sfx/bgm-battle.mp3',final:'sfx/bgm-final.mp3'};
+const bgm={ctx:null,gain:null,el:null,elNode:null,elOk:false,buf:null,loading:null,src:null,mode:'',want:'',finalDone:false};
+function bgmLevel(){let s=soundCfg();return s.muted?0:Math.max(0,Math.min(1,s.volume))}
+function bgmCtx(){if(!bgm.ctx){let AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;try{bgm.ctx=new AC();bgm.gain=bgm.ctx.createGain();bgm.gain.gain.value=bgmLevel();bgm.gain.connect(bgm.ctx.destination)}catch(e){bgm.ctx=null;return null}}
+ if(bgm.ctx.state!=='running'&&!document.hidden)bgm.ctx.resume().catch(()=>{});return bgm.ctx}
+function bgmApply(){if(bgm.gain)bgm.gain.gain.value=bgmLevel();if(bgm.el&&!bgm.elNode)bgm.el.volume=bgmLevel()}
+// 通常バトルBGM（長い曲なのでストリーミング再生。音量はWeb Audio経由でかける＝iPhoneでも音量設定が効く）
+function bgmElement(){if(bgm.el)return bgm.el;let a=new Audio();a.preload='auto';a.loop=true;a.src=BGM_FILES.battle;a.setAttribute('playsinline','');bgm.el=a;
+ let ctx=bgmCtx();if(ctx){try{bgm.elNode=ctx.createMediaElementSource(a);bgm.elNode.connect(bgm.gain)}catch(e){bgm.elNode=null}}bgmApply();return a}
+// 最終決戦BGM（曲頭を確実に鳴らすため、デコード済みの音で鳴らす）
+function bgmPreloadFinal(){let ctx=bgmCtx();if(!ctx||bgm.buf||bgm.loading)return bgm.loading;
+ bgm.loading=fetch(BGM_FILES.final).then(r=>{if(!r.ok)throw new Error('bgm '+r.status);return r.arrayBuffer()}).then(ab=>new Promise((res,rej)=>ctx.decodeAudioData(ab,res,rej))).then(b=>{bgm.buf=b;return b}).catch(e=>{bgm.loading=null;console.warn('最終決戦BGMを読み込めませんでした',e);return null});return bgm.loading}
+function bgmStopFinal(){if(bgm.src){try{bgm.src.onended=null;bgm.src.stop()}catch(e){}try{bgm.src.disconnect()}catch(e){}bgm.src=null}}
+function bgmPlayBattle(){let a=bgmElement();if(document.hidden)return;let pr=a.play();if(pr)pr.then(()=>{bgm.elOk=true}).catch(()=>{})}
+// 対戦開始：通常バトルBGMを曲頭から。最終決戦BGMはここで先読み・デコード
+function bgmBattleStart(){bgmStopFinal();bgm.finalDone=false;bgm.mode='battle';bgm.want='battle';let a=bgmElement();try{a.pause();a.currentTime=0}catch(e){}bgmPlayBattle();bgmPreloadFinal()}
+// 最終決戦へ：1試合1回。通常BGMを止めるのと同じ瞬間に、最終決戦BGMを0秒から現在の音量で鳴らす
+function bgmFinal(){if(bgm.finalDone||bgm.mode!=='battle'||ending)return;bgm.finalDone=true;
+ let go=b=>{if(bgm.mode!=='battle'||!bgm.finalDone||ending)return;let ctx=bgmCtx();if(!ctx||!b)return;bgmStopFinal();
+  let s=ctx.createBufferSource();s.buffer=b;s.loop=true;s.connect(bgm.gain);bgmApply();
+  if(bgm.el)bgm.el.pause();s.start(ctx.currentTime,0);bgm.src=s;bgm.mode='final';bgm.want='final'};
+ if(bgm.buf){go(bgm.buf);return}
+ // まだ読み込み中なら、無音を作らないよう通常BGMを流したまま待ち、届いた瞬間に切り替える
+ let w=bgmPreloadFinal();if(w)w.then(go)}
+// 決着・ホームへ戻るとき：止める
+function bgmStop(){bgmStopFinal();if(bgm.el){try{bgm.el.pause();bgm.el.currentTime=0}catch(e){}}bgm.mode='';bgm.want=''}
+// スマホ：最初のタップで音声を有効にし、通常BGMの再生も許可しておく（無音で一瞬再生して止める）
+function bgmUnlock(){let ctx=bgmCtx();if(!ctx)return;let a=bgmElement();
+ if(!bgm.elOk&&a.paused&&bgm.want!=='battle'){a.muted=true;let pr=a.play();if(pr)pr.then(()=>{if(bgm.want!=='battle'){a.pause();try{a.currentTime=0}catch(e){}}a.muted=false;bgm.elOk=true}).catch(()=>{a.muted=false})}
+ if(bgm.want==='battle'&&a.paused&&!ending)bgmPlayBattle()}
+['pointerdown','touchend','click','keydown'].forEach(t=>document.addEventListener(t,bgmUnlock,{capture:true,passive:true}));
+// 画面が裏に回ったら一時停止、戻ったら続きから
+document.addEventListener('visibilitychange',()=>{if(!bgm.ctx)return;if(document.hidden){bgm.ctx.suspend().catch(()=>{});if(bgm.el)bgm.el.pause()}else{bgm.ctx.resume().catch(()=>{});if(bgm.mode==='battle')bgmPlayBattle()}});
+{const s0=start;start=function(){let r=s0.apply(this,arguments);try{bgmBattleStart()}catch(e){console.warn(e)}return r}}
+{const v0=setVolume;setVolume=function(){let r=v0.apply(this,arguments);bgmApply();return r}}
+{const m0=toggleMute;toggleMute=function(){let r=m0.apply(this,arguments);bgmApply();return r}}
+// home() は後から読み込まれる home.js で定義されるので、読み込み完了後に包む
+document.addEventListener('DOMContentLoaded',()=>{if(typeof home==='function'&&!home.__bgm){const h0=home;home=function(){bgmStop();return h0.apply(this,arguments)};home.__bgm=true}});
+// 決着したら止めて、既存のリザルト演出へ
+{const rb=render;render=function(){if(ending&&bgm.mode)bgmStop();return rb.apply(this,arguments)}}
+// 切替のタイミング：神殿が割れて「残り0枚」になったことが画面で分かる瞬間（割れる演出）
+{const bc=breakCard;breakCard=function(card,foe){let r=bc.apply(this,arguments);try{if(!ending&&p&&c&&(!p.shrines.length||!c.shrines.length))bgmFinal()}catch(e){}return r}}
+// 既存の最終決戦判定（finalCheck）：身代わりで割れる演出がこれから出る場合は、その演出まで待つ（バナーとBGMをそろえる）
+{const fc=finalCheck;let wait=null;finalCheck=function(force){if(!force&&!calm()&&subLog.length&&!ending&&[p,c].some(s=>s&&!s.shrines.length&&!s.finalShown)){if(!wait)wait=setTimeout(()=>{wait=null;finalCheck(true)},1600);return}
+ let before=[p,c].map(s=>s&&s.finalShown);fc();if(!ending&&[p,c].some((s,i)=>s&&s.finalShown&&!before[i]))bgmFinal()}}
+{const sf=subFx;subFx=async function(){let r=await sf.apply(this,arguments);try{if(!ending&&!document.querySelector('.resultscreen'))finalCheck()}catch(e){}return r}}

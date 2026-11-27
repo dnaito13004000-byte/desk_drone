@@ -110,7 +110,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .gc .fit.one{transform-origin:50% 50%}
 .gc .gb.hp,.gc .gb.atk{background:none!important;border:0!important;box-shadow:none!important;border-radius:0}
 .gc .gb.hp>.fit,.gc .gb.atk>.fit{background:none!important;height:auto!important}.arena.duel .unit .gc .gb.hp{margin:0!important;flex:none}
-.duel .sndbtn{display:none}
+/* .duel .sndbtn{display:none} 2026-11-28 BGMを追加したので、音量・ミュートのボタンを再び表示 */
 /* ==== 開幕演出 ==== */
 .arena.duel.intro .zone .back:not(.intro-show),.arena.duel.intro .handrail .spell:not(.intro-show),.arena.duel.intro .opp .ohand i:not(.intro-show),
 .arena.duel.intro .unit:not(.intro-show),.arena.duel.intro .mid:not(.intro-show){opacity:0}
