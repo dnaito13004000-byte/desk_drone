@@ -72,7 +72,7 @@ function home(){if(save.starterPending){starter();return}tag.textContent='';choo
  +'<header class="h4-head"><div class="h4-brand">'+TORII+'<i></i><span>雷鳴の社</span></div>'
  +'<div class="h4-chips"><span class="h4-chip">'+TICKET+'<small>チケット</small><b>'+packLabel()+'</b></span><span class="h4-chip sh">'+SHARD+'<small>神の欠片</small><b>'+save.shards+'</b></span></div></header>'
  // 2. メインビジュアル（5人の集合絵。ロゴは絵に含まれている）
- +'<div class="h4-visual" id="h4visual"><img class="h4-art" id="h4art" src="art/home-hero.webp" alt="神々の一手　5人の神子"><p class="h4-wins">通算勝利 <b>'+save.wins+'</b></p></div>'
+ +'<div class="h4-visual" id="h4visual"><img class="h4-art" id="h4art" src="art/home-hero-sq.webp" alt="神々の一手　5人の神子"><p class="h4-wins">通算勝利 <b>'+save.wins+'</b></p></div>'
  // 3. メイン操作
  +'<div class="h4-main">'
  +'<button class="h4-duel" onclick="chooseGod()"><b>対戦する</b><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
@@ -188,15 +188,8 @@ function closeZoom(){zoom=null;let z=document.querySelectorAll('.albumscreen .al
 function zoomHtml(){let {id}=zoom,r=cardRarity(id);
  return '<div class="al-zoom" onclick="if(event.target===this){closeZoom()}">'+card([id],'big')+'<p class="zt"><b>'+cardName(id)+'</b>　<i class="rr r-'+r+'">'+RANK_NAME(r)+'</i>　'+colorChip(id)+(GOD_CARDS[id]?'':'<small class="zcost">コスト'+cardCost(id)+'</small>')+'<br><em>'+cardShort(id)+'</em><br>'+cardText(id)+'</p>'+termList(cardText(id)+(isGod(id)&&!GOD_CARDS[id]?'仲間':''))
  +'<button class="btn-navy" onclick="closeZoom()">閉じる</button></div>'}
-// メインビジュアルの収まり（2026-11-28 改）：表示エリアを全面で覆う（cover）。左右の余白は出さない
-// 主人公の顔・カード・ロゴが切れないよう、ロゴの文字の下端（絵の97.5%）を「通算勝利」のすぐ上にそろえ、上ははみ出した分を切る。
-// エリアが絵より縦長なら、さらに拡大して左右を切る。絵の下端は濃紺へグラデーションで溶け込む
-function fitHomeArt(){let box=document.getElementById('h4visual'),img=document.getElementById('h4art');if(!box||!img)return;
- let W=box.clientWidth,H=box.clientHeight,IW=1024,IH=1536,LOGO=.975,GAP=34;if(!W||!H)return;
- let s=W/IW,h=IH*s,y=H-GAP-LOGO*h;
- if(y>0){s=(H-GAP)/(LOGO*IH);h=IH*s;y=0}             // 縦長のエリア：拡大して上まで覆う（左右ははみ出す）
- let w=IW*s,x=(W-w)/2;
- img.style.cssText='width:'+w+'px;height:'+h+'px;left:'+x+'px;top:'+y+'px'}
+// メインビジュアルの収まり（2026-11-28 正方形の絵）：中央基準で、表示エリアを全面で覆う（cover）。それ以上の拡大はしない
+function fitHomeArt(){let img=document.getElementById('h4art');if(img)img.style.cssText='left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%'}
 window.addEventListener('resize',()=>requestAnimationFrame(fitHomeArt));
 {const h0=home;home=function(){let r=h0.apply(this,arguments);let img=document.getElementById('h4art');if(img){if(img.complete)fitHomeArt();else img.addEventListener('load',fitHomeArt,{once:true});requestAnimationFrame(fitHomeArt)}return r}}
 home();
