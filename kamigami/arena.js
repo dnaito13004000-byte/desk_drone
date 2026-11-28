@@ -1026,3 +1026,6 @@ const SHIELD_SVG='<svg viewBox="0 0 16 18" width="10" height="11" aria-hidden="t
 {const rr3=render;render=function(){let r=rr3.apply(this,arguments);try{for(const s of [p,c]){if(!s)continue;
   for(const u of s.units){let e=document.getElementById('u'+u.uid);if(!e)continue;e.querySelectorAll('.ribbon.barrier').forEach(x=>x.remove());if(u.shield>0&&!e.querySelector('.shieldmark'))e.insertAdjacentHTML('beforeend','<em class="shieldmark" title="次に受けるダメージ−'+u.shield+'" aria-label="軽減 −'+u.shield+'">'+SHIELD_SVG+'−'+u.shield+'</em>')}
   let row=document.getElementById('shrine'+s.id),b=row&&row.querySelector('.shrinecut');if(b){let n=shrineCut(s),k=(s.shrineSh||[]).filter(x=>x>0).length;b.innerHTML=SHIELD_SVG+'−'+n+(k>1?' ×'+k:'');b.title='神殿の軽減（次に受けるダメージ−'+n+'）'}}}catch(e){console.warn(e)}return r}}
+
+// ==== 調整（2026-11-28 BM）：神位継承の巻の上げ幅は最大+4（神力の消費は今までどおり全額）====
+SP.scroll.run=(f,t)=>{let n=1+f.mp,up=Math.min(4,n);f.mp=0;t.atk+=up;t.max+=up;t.hp+=up;latest+='　神力を'+n+'消費し、'+names[t.id]+'の攻撃力と体力+'+up+(n>up?'（最大+4）':'')};
