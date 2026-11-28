@@ -679,3 +679,111 @@ document.addEventListener('DOMContentLoaded',()=>{if(typeof home==='function'&&!
 {const fc=finalCheck;let wait=null;finalCheck=function(force){if(!force&&!calm()&&subLog.length&&!ending&&[p,c].some(s=>s&&!s.shrines.length&&!s.finalShown)){if(!wait)wait=setTimeout(()=>{wait=null;finalCheck(true)},1600);return}
  let before=[p,c].map(s=>s&&s.finalShown);fc();if(!ending&&[p,c].some((s,i)=>s&&s.finalShown&&!before[i]))bgmFinal()}}
 {const sf=subFx;subFx=async function(){let r=await sf.apply(this,arguments);try{if(!ending&&!document.querySelector('.resultscreen'))finalCheck()}catch(e){}return r}}
+
+// ==== 主神の新しい効果（2026-11-28）：天象＝守り／烈火＝バトル／奔流＝場のコントロール／大地＝神力ブースト／神秘＝墓地 ====
+// 数値は godcards.js の GOD_CARDS（fx）だけで持つ。ここは仕組みだけ
+const ownerOf=v=>[p,c].find(s=>s&&s.units&&s.units.includes(v));
+// ダメージ軽減：ライガの常時軽減（雷壁・天守）＋結界（その味方1体、張った側の次のターン開始まで）
+function dmgCut(v){let s=ownerOf(v);if(!s)return 0;return (heroFx(s).wall||0)+(v.barrierN||0)}
+function cutName(v){let s=ownerOf(v),x=s?heroFx(s):{};return v.barrierN&&!x.wall?'結界':x.shrineWall?'天守':x.wall?(v.barrierN?'結界・雷壁':'雷壁'):'結界'}
+let zeroWhy='';
+{const h0=hurt;hurt=function(v,n){if(n>0){let cut=dmgCut(v);if(cut){let b=n;n=Math.max(0,n-cut);if(n===0){zeroWhy=cutName(v);return 0}}}return h0.call(this,v,n)}}
+// 攻撃の解決（軽減・天守・獅子王を入れた版。それ以外は元の処理と同じ）
+resolveStrike=function(f,u,d,v){let x=fxOf(f,u),wasWeak=v&&weakened(v)?Math.min(v.weak,v.atk):0;u.att=(u.att||0)+1;u.used=u.att>=maxAttacks(f,u)||!v||!!v.hero;let bonus=f.burst?1:0;f.burst=false;f.overflowHit=null;let hit=false;
+ let pow=atkOf(u)+bonus+(u.id==='earth-1'&&u.hp>=u.max?1:0)-(u.att===2&&x.second?x.second:0);pow=Math.max(0,pow);
+ // 獅子王：2回目の攻撃では、相手の『攻撃されたとき』に発動する効果を受けない（今のカードに該当する効果はない。追加されたら pure の間は発動させない）
+ const pure=!!(x.pureSecond&&u.att===2);f.pureHit=pure;
+ if(v){let dmg=pow+(x.extra||0),note='';zeroWhy='';
+  let cut=dmg>0?dmgCut(v):0;if(cut){let b=dmg;dmg=Math.max(0,dmg-cut);note='（'+cutName(v)+'で−'+(b-dmg)+'）';if(!dmg)zeroWhy=cutName(v)}
+  if(v.shadow&&dmg>0){v.shadow=false;dmg=0;note='（影分身で0）'}else if(v.ward&&dmg>0){v.ward=false;dmg=0;note='（守護で0）';zeroWhy='守護'}
+  v.hp-=dmg;hit=dmg>0;if(dmg>0)v.hitThisTurn=true;
+  let ca=hurt(u,atkOf(v));if(!ca&&atkOf(v)>0)note+=dmgCut(u)>=atkOf(v)?'（'+cutName(u)+'で反撃0）':'（守護で反撃0）';latest=names[u.id]+' → '+names[v.id]+'　'+dmg+'ダメージ・反撃 '+ca+note;f.hitInfo={v:dmg,u:ca};if(ca>0)u.hitThisTurn=true;settle(d,f)}
+ else{if(d.shrines.length){let sw=heroFx(d).shrineWall||0;
+   if(sw&&pow-sw<=0){zeroWhy='天守';latest='天守！ '+names[u.id]+'の攻撃（'+pow+'）を、神殿が受け止めた（−'+sw+'）'}
+   else{let lost=d.shrines.splice(0,1+bonus);d.broken=lost;d.shrineBroken=true;hit=true;latest=names[u.id]+'が神殿を破壊！'+(sw?'（天守−'+sw+'）':'');shrineLost(d)}}
+  else{ending=f===p?'勝利':'敗北';hit=true;lastReward=grantReward(f===p)}}
+ if(u.hero&&hit&&f.stage===0)f.gauge=Math.min(ASCEND.evolve.gauge,f.gauge+1);if(!ending)afterStrike(f,u,d,v,wasWeak);attacker=u.used||u.hp<=0?-1:attacker}
+// 0ダメージの吹き出し：理由（結界・雷壁・天守・守護）を出す
+{const pp=pop;pop=function(t){if((t==='影分身'||t==='守護')&&zeroWhy){arguments[0]=zeroWhy;zeroWhy=''}return pp.apply(this,arguments)}}
+// すり抜け：主神ハヤテは持たなくなった（仲間カードのすり抜けは残す）
+t_pierce=function(f,u){return !!u&&((u.id==='water-2'&&weather==='雨')||u.id==='water-6'||!!u.pierce)};
+
+// ---- 主神の技（1ターンに1回、神力を払う）----
+skillOf=function(f){let h=heroOf(f);if(!h||!GOD_CARDS[f.id])return null;let s=stageOf(f.id,f.stage),x=s.fx,cost=s.cost||1;
+ if(x.barrier)return {kind:'barrier',name:'結界',n:x.barrier,cost,side:'ally'};
+ if(x.bind)return {kind:'bind',name:s.skill,cost,side:'foe'};
+ if(x.grow)return {kind:'grow',name:s.skill,n:x.grow,heal:x.selfHeal||0,cost,side:'self'};
+ if(x.sac)return {kind:'sac',name:s.skill,n:x.sac,cost,side:'ally'};
+ if(x.doom)return {kind:'doom',name:s.skill,cost,side:'foe'};
+ return null};
+canSkill=function(f){let k=skillOf(f);if(!k||f.skillUsed||f.mp<k.cost)return false;let d=foeOf(f);
+ if(k.kind==='sac')return mates(f).length>0&&d.units.length>0;if(k.kind==='doom')return mates(d).length>0;return true};
+const isAI=f=>f!==p||!!window.__autoP;
+let aiPhase='pre';
+useSkill=async function(f,v){let k=skillOf(f),d=foeOf(f);if(!k||!canSkill(f))return;
+ if(isAI(f)){let plan=aiSkillPlan(f,k,aiPhase);if(plan)await runSkill(f,k,plan);return}
+ if(k.kind==='grow')return runSkill(f,k,{});
+ if(k.kind==='sac'){if(!skillMode||!skillMode.sacUid){if(!v||v.hero||!f.units.includes(v)){latest='生贄にする自分の仲間を選んでください';render();return}
+   skillMode={...k,side:'foe',sacUid:v.uid,step:2};latest=names[v.id]+'を生贄に。ダメージを与える相手のカードを選んでください';render();return}
+  let mate=f.units.find(u=>u.uid===skillMode.sacUid);if(!mate||!v||!d.units.includes(v)){skillMode=null;render();return}return runSkill(f,k,{mate,t:v})}
+ if(k.kind==='doom'){if(!v||v.hero||!d.units.includes(v)){latest='破壊する相手の仲間を選んでください';render();return}return runSkill(f,k,{t:v})}
+ if(k.kind==='barrier'){if(!v||!f.units.includes(v))return;return runSkill(f,k,{t:v})}
+ if(k.kind==='bind'){if(!v||!d.units.includes(v))return;return runSkill(f,k,{t:v})}};
+// 墓地の仲間から手札に戻す1枚（コストの高い順→攻撃力の高い順）
+function graveBest(f){let L=(f.grave||[]).filter(k=>isSum(k));if(!L.length)return null;return L.sort((a,b)=>cardCost(sumKeyId(b))-cardCost(sumKeyId(a))||(gods[sumKeyId(b)]||[0])[0]-(gods[sumKeyId(a)]||[0])[0])[0]}
+function sumKeyId(k){let m=/^g(\d+)$/.exec(k);return m?+m[1]:k}
+async function skillFx(el,kind,label,cls,n){if(!el||calm())return;let r=body(el,.45);burst(kind,r.x,r.y);if(label)pop(label,r.x,body(el,.2).y,n||1,cls||'');await pause(420)}
+async function runSkill(f,k,P){let d=foeOf(f);f.mp-=k.cost;f.skillUsed=true;skillMode=null;let wasBusy=busy;busy=true;render();
+ const el=u=>u&&document.getElementById('u'+u.uid);
+ if(k.kind==='barrier'){let t=P.t;t.barrierN=Math.max(t.barrierN||0,k.n);latest='結界！ '+names[t.id]+'は次の相手のターンまで、受けるダメージ−'+k.n;sfx('summon');await skillFx(el(t),'guard','結界 −'+k.n,'guard')}
+ else if(k.kind==='bind'){let t=P.t;t.bindNext=true;latest=k.name+'！ '+names[t.id]+'は次の相手のターンに攻撃できない';await skillFx(el(t),'water','水縛り','guard')}
+ else if(k.kind==='grow'){let h=heroOf(f);f.max+=k.n;f.mp+=k.n;let b=h.hp;if(k.heal)h.hp=Math.min(h.max,h.hp+k.heal);let up=h.hp-b;if(up>0)healed(f);
+  latest=k.name+'！ 神力の最大値+'+k.n+'（'+f.max+'）'+(up>0?'　'+names[h.id]+'の体力を'+up+'回復':'');sfx('summon');await skillFx(el(h),'leaf','神力 +'+k.n,'heal');if(up>0&&!calm()){let r=body(el(h),.3);pop('+'+up,r.x,r.y,1,'heal');drain(el(h),h);await pause(300)}}
+ else if(k.kind==='sac'){let m=P.mate,t=P.t,e1=el(m),e2=el(t);let n1=hurt(m,k.n),w1=zeroWhy;zeroWhy='';let n2=hurt(t,k.n),w2=zeroWhy;zeroWhy='';
+  latest=k.name+'！ '+names[m.id]+'に'+n1+'、'+names[t.id]+'に'+n2+'ダメージ';
+  if(!calm()){sfx('hit');for(const [e,n,u,w] of [[e1,n1,m,w1],[e2,n2,t,w2]])if(e){let r=body(e,.45);burst('bolt',r.x,r.y);struck(e);pop(n?'−'+n:(w||'守護'),r.x,body(e,.2).y,Math.max(1,n),n?'':'guard');drain(e,u);if(u.hp<=0&&!(u.hero&&ownerOf(u)&&ownerOf(u).shrines.length))e.classList.add('ko')}await pause(560)}
+  settle(f,d);await subFx()}
+ else if(k.kind==='doom'){let t=P.t,e=el(t);t.ward=false;t.hp=0;let back=graveBest(f);
+  if(!calm()&&e){sfx('hit');let r=body(e,.45);burst('water',r.x,r.y);struck(e);pop('破壊',r.x,body(e,.2).y,3);e.classList.add('ko');await pause(560)}
+  settle(d);latest=k.name+'！ '+names[t.id]+'を破壊';
+  if(back){let i=f.grave.lastIndexOf(back);f.grave.splice(i,1);f.hand.push(back);latest+='。墓地の'+cardLabel(back)+'を手札に戻した'}else latest+='（墓地に仲間がいないので、手札に戻すカードはなし）'}
+ busy=wasBusy;render();await shrineReveal(f,null,d)}
+// AIの使い方：pre＝ターンのはじめ（召喚前）、post＝攻撃の直前（召喚後）
+function aiSkillPlan(f,k,ph){let d=foeOf(f),foeAtk=d.units.some(u=>atkOf(u)>0);
+ if(k.kind==='grow')return f.max<9?{}:null;
+ if(k.kind==='doom'){let L=mates(d).sort((a,b)=>(atkOf(b)*2+b.hp)-(atkOf(a)*2+a.hp));return L.length?{t:L[0]}:null}
+ if(ph==='pre')return null;
+ if(k.kind==='barrier'){if(!foeAtk)return null;let h=heroOf(f),L=[...f.units].sort((a,b)=>(b.hero?1:0)-(a.hero?1:0)||atkOf(b)-atkOf(a));
+  let t=(!f.shrines.length||h.hp<=Math.max(...d.units.map(atkOf))+2)?h:(L.find(u=>!u.hero&&u.hp<=Math.max(...d.units.map(atkOf)))||h);return {t}}
+ if(k.kind==='bind'){let t=[...d.units].filter(u=>!u.bindNext&&atkOf(u)>=2).sort((a,b)=>atkOf(b)-atkOf(a))[0];return t?{t}:null}
+ if(k.kind==='sac'){let n=k.n,kill=mates(d).filter(u=>!u.ward&&u.hp<=n+0-dmgCut(u)+0&&n>dmgCut(u)).sort((a,b)=>atkOf(b)-atkOf(a));
+  let t=kill[0]||(!d.shrines.length&&!heroOf(d).ward?heroOf(d):null);if(!t)return null;
+  let my=mates(f).sort((a,b)=>((b.hp>n)?1:0)-((a.hp>n)?1:0)||atkOf(a)-atkOf(b));let m=my[0];if(!m)return null;
+  if(m.hp<=n&&!t.hero&&atkOf(m)>atkOf(t))return null;return {mate:m,t}}
+ return null}
+// 召喚のあと、攻撃の直前にもう一度だけ技を考える
+{const aa=aiAttack;aiAttack=async function(f){if(!ending&&canSkill(f)){aiPhase='post';try{await useSkill(f,null)}finally{aiPhase='pre'}}if(ending)return;return aa.apply(this,arguments)}}
+// 技のボタン：芽吹き系は対象を選ばずにすぐ使う
+{const ha=heroActs;heroActs=function(){let o=ha.apply(this,arguments),k=skillOf(p);if(k&&k.kind==='grow')o=o.replace("skillMode=skillOf(p);attacker=-1;render()","useSkill(p,heroOf(p))");
+ if(k&&k.kind==='sac'&&canSkill(p))o=o.replace(k.name+' · 神力'+k.cost,k.name+' · 神力'+k.cost+'（自分の仲間→相手を選ぶ）');return o}}
+// ---- ターン開始：渦巻・天潮（ハヤテ）／結界と水縛りの期限 ----
+function threat(u){return atkOf(u)*2+u.hp+(cardCost(typeof u.id==='number'?u.id:u.id)||0)}
+let startNotes=[];
+{const ts=turnStart;turnStart=function(f){let r=ts.apply(this,arguments),x=heroFx(f),o=foeOf(f);if(!heroOf(f)||!o)return r;
+ if(x.swirl){let t=mates(o).filter(u=>!u.bindNext).sort((a,b)=>atkOf(b)-atkOf(a))[0];if(t){t.bindNext=true;startNotes.push({uid:t.uid,label:'渦巻',text:'渦巻：'+names[t.id]+'は次の相手のターンに攻撃できない'})}}
+ if(x.tide){let t=mates(o).sort((a,b)=>threat(b)-threat(a))[0];if(t){o.units=o.units.filter(u=>u!==t);o.hand.push(handKey(t.id));startNotes.push({side:o,label:'手札へ',text:'天潮：'+names[t.id]+'を'+(o===p?'あなた':'相手')+'の手札に戻した'})}}
+ return r}}
+{const b2=begin;begin=function(f){if(f&&f.units)for(const u of f.units)u.barrierN=0;let o=foeOf(f);if(o)for(const u of o.units)u.bound=false;
+ let r=b2.apply(this,arguments);for(const u of f.units)if(u.bindNext){u.bindNext=false;u.used=true;u.bound=true}
+ if(startNotes.length){let N=startNotes;startNotes=[];queueMicrotask(()=>{latest+=(latest?'　':'')+N.map(n=>n.text).join('　')});
+  if(!calm())setTimeout(()=>{for(const n of N){let e=n.uid?document.getElementById('u'+n.uid):document.getElementById('shrine'+(n.side&&n.side.id));if(e){let r=body(e,.4);pop(n.label,r.x,r.y,1,'guard')}}},120)}
+ return r}}
+// 状態の表示：結界・水縛り（場のカードの帯と、詳細の状態欄）
+{const us=unitStatus;unitStatus=function(f,u){let t=us.apply(this,arguments),cut=dmgCut(u);
+ if(u.barrierN)t.unshift('結界：受けるダメージ−'+u.barrierN+'（次の相手のターンまで）');if(heroFx(f).wall)t.unshift((heroFx(f).shrineWall?'天守':'雷壁')+'：受けるダメージ−'+heroFx(f).wall);
+ if(u.bound)t.unshift('水縛り：このターンは攻撃できない');if(u.bindNext)t.unshift('水縛り：次のターンは攻撃できない');return t}}
+{const rr=render;render=function(){let r=rr.apply(this,arguments);try{for(const s of [p,c]){if(!s)continue;for(const u of s.units){let e=document.getElementById('u'+u.uid);if(!e)continue;
+  let tags=[];if(u.barrierN)tags.push('<em class="ribbon barrier">結界−'+u.barrierN+'</em>');if(u.bound||u.bindNext)tags.push('<em class="ribbon bind">水縛り</em>');if(tags.length&&!e.querySelector('.ribbon.barrier,.ribbon.bind'))e.insertAdjacentHTML('beforeend','<span class="ribbons2">'+tags.join('')+'</span>')}}
+  // 対象にできない主神は「対象」表示を外す（生贄の冥火の1体目・幽冥）
+  if(skillMode&&!skillMode.spell&&(skillMode.kind==='doom'||(skillMode.kind==='sac'&&!skillMode.sacUid))){let side=skillMode.kind==='doom'?c:p,h=heroOf(side),e=h&&document.getElementById('u'+h.uid);if(e){e.classList.remove('target');let m=e.querySelector('.mark');if(m)m.innerHTML=''}}
+ }catch(e){console.warn(e)}return r}}

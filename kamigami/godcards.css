@@ -572,3 +572,8 @@ small.al-ruby{margin:0 0 1px}
 .arena.duel .gc,.handzoom .gc{background:#0b1430 url(cards/card_back.webp) center/100% 100% no-repeat}
 .arena.duel .gc>img.ld,.handzoom .gc>img.ld{opacity:0}
 .arena.duel .gc>img,.handzoom .gc>img{transition:opacity .22s ease-out}
+/* 2026-11-28 主神の新効果：結界・水縛りの帯 */
+.duel .ribbons2{position:absolute;left:-5px;top:30px;z-index:3;display:flex;flex-direction:column;gap:3px;pointer-events:none}
+.duel .ribbons2 .ribbon{position:static}
+.duel .ribbon.barrier{background:#c9a227;color:#1b1406}
+.duel .ribbon.bind{background:#2b8fa8}

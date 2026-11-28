@@ -8,31 +8,34 @@ const STAGE_RULE=[
  '進化：ゲージ{gauge}＋神力{cost}',   // N形態に表示
  '覚醒：神殿が割れた後＋神力{cost}',  // R形態に表示
  '最終形態'];                        // SR形態に表示
-// fx の意味：bolt=雷撃のダメージ（神力cost・敵1体）／heal=芽吹きの回復量（神力cost・味方1体）／fox=冥火で下げる攻撃力（神力cost・敵1体）
+// 2026-11-28 主神の効果を色の役割に合わせて書き換え（天象＝守り／烈火＝バトル／奔流＝場のコントロール／大地＝神力ブースト／神秘＝墓地）
+// 新しい fx：barrier=結界の軽減量／wall=味方全体の常時軽減／shrineWall=自分の神殿への軽減／grow=神力の最大値を増やす量／selfHeal=自分の回復量
+//  pureSecond=2回目の攻撃で相手の『攻撃されたとき』の効果を受けない／bind=水縛り／swirl=渦巻／tide=天潮／sac=生贄の冥火のダメージ／doom=幽冥
+// （旧）fx の意味：bolt=雷撃のダメージ（神力cost・敵1体）／heal=芽吹きの回復量（神力cost・味方1体）／fox=冥火で下げる攻撃力（神力cost・敵1体）
 //  overflow=攻撃の余ったダメージが敵の主神へ／regen=自分のターンのはじめに味方全体を回復／extra=攻撃した相手への追加ダメージ
 //  attacks=1ターンの攻撃回数／second=2回目の攻撃力の減少量／haste=出たターンから攻撃／pierce='hero'（主神と神殿へすり抜け）・'all'
 //  shadow=影分身（自分への攻撃を1回ダメージ0）／shadowRevive=影分身が自分のターンのはじめに復活
 const GOD_CARDS={
  2:{key:'raiga',name:'ライガ',type:'天象',stages:[
-  {rank:'N',name:'幼神ライガ',atk:3,hp:8,skill:'雷撃',cost:1,fx:{bolt:2},text:'雷撃（神力{cost}）：敵1体に{bolt}ダメージ'},
-  {rank:'R',name:'雷鼓解放ライガ',atk:4,hp:11,skill:'轟雷',cost:1,fx:{bolt:3,overflow:true},text:'轟雷：攻撃の余ったダメージは敵の主神に届く。雷撃は{bolt}ダメージ'},
-  {rank:'SR',name:'天穿雷神ライガ',atk:6,hp:14,skill:'天穿',cost:1,fx:{bolt:4,overflow:true},text:'天穿：攻撃の余ったダメージは敵の主神に届く。雷撃は{bolt}ダメージ'}]},
+  {rank:'N',name:'幼神ライガ',atk:3,hp:8,skill:'結界',cost:1,fx:{barrier:1},text:'結界（神力{cost}）：味方1体は次の相手のターンまで、受けるダメージが{barrier}減る'},
+  {rank:'R',name:'雷鼓解放ライガ',atk:4,hp:11,skill:'雷壁',cost:1,fx:{barrier:2,wall:1},text:'雷壁：味方全体が受けるダメージを{wall}減らす。結界（神力{cost}）は、味方1体の受けるダメージを{barrier}減らす'},
+  {rank:'SR',name:'天穿雷神ライガ',atk:6,hp:14,skill:'天守',cost:1,fx:{barrier:2,wall:2,shrineWall:2},text:'天守：味方と自分の神殿が受けるダメージを{wall}減らす。結界（神力{cost}）は{barrier}減らす'}]},
  5:{key:'kodama',name:'コダマ',type:'大地',stages:[
-  {rank:'N',name:'幼神コダマ',atk:2,hp:10,skill:'芽吹き',cost:1,fx:{heal:2},text:'芽吹き（神力{cost}）：味方1体の体力を{heal}回復'},
-  {rank:'R',name:'樹脈解放コダマ',atk:3,hp:13,skill:'樹脈',fx:{regen:1},text:'樹脈：自分のターンのはじめに、味方全体の体力を{regen}回復'},
-  {rank:'SR',name:'万象樹神コダマ',atk:4,hp:17,skill:'千樹',fx:{regen:2},text:'千樹：自分のターンのはじめに、味方全体の体力を{regen}回復'}]},
+  {rank:'N',name:'幼神コダマ',atk:2,hp:10,skill:'芽吹き',cost:2,fx:{grow:1,selfHeal:0},text:'芽吹き（神力{cost}）：神力を{grow}増やす'},
+  {rank:'R',name:'樹脈解放コダマ',atk:3,hp:13,skill:'樹脈',cost:2,fx:{grow:1,selfHeal:2},text:'樹脈（神力{cost}）：神力を{grow}増やし、このカードの体力を{selfHeal}回復する'},
+  {rank:'SR',name:'万象樹神コダマ',atk:4,hp:17,skill:'千樹',cost:2,fx:{grow:1,selfHeal:3},text:'千樹（神力{cost}）：神力を{grow}増やし、このカードの体力を{selfHeal}回復する'}]},
  0:{key:'kagura',name:'カグラ',type:'烈火',stages:[
   {rank:'N',name:'幼神カグラ',atk:4,hp:6,skill:'火の拳',fx:{extra:1},text:'火の拳：攻撃した相手に追加で{extra}ダメージ'},
   {rank:'R',name:'炎拳解放カグラ',atk:5,hp:8,skill:'烈火連撃',fx:{attacks:2,second:2},text:'烈火連撃：1ターンに{attacks}回攻撃できる（2回目は攻撃力−{second}）'},
-  {rank:'SR',name:'熔獅神カグラ',atk:7,hp:10,skill:'獅子王',fx:{attacks:2,extra:2},text:'獅子王：1ターンに{attacks}回攻撃できる。攻撃した相手に追加で{extra}ダメージ'}]},
+  {rank:'SR',name:'熔獅神カグラ',atk:7,hp:10,skill:'獅子王',fx:{attacks:2,pureSecond:true},text:'獅子王：{attacks}回攻撃できる。2回目の攻撃では、相手の『攻撃されたとき』に発動する効果を受けない'}]},
  3:{key:'hayate',name:'ハヤテ',type:'奔流',stages:[
-  {rank:'N',name:'幼神ハヤテ',atk:3,hp:6,skill:'そよ風',fx:{haste:true},text:'そよ風：場に出たターンから攻撃できる'},
-  {rank:'R',name:'風翼解放ハヤテ',atk:4,hp:8,skill:'風渡り',fx:{haste:true,pierce:'hero'},text:'風渡り：出たターンから攻撃できる。すり抜け（神殿を無視して主神を攻撃できる）'},
-  {rank:'SR',name:'蒼翼神ハヤテ',atk:5,hp:11,skill:'天翔',fx:{haste:true,pierce:'all'},text:'天翔：出たターンから攻撃できる。すり抜け（神殿を無視して主神を攻撃できる）'}]},
+  {rank:'N',name:'幼神ハヤテ',atk:3,hp:6,skill:'水縛り',cost:1,fx:{bind:true},text:'水縛り（神力{cost}）：敵1体は、次の相手のターンに攻撃できない'},
+  {rank:'R',name:'風翼解放ハヤテ',atk:4,hp:8,skill:'渦巻',fx:{swirl:true},text:'渦巻：自分のターン開始時、敵の仲間1体は次の相手のターンに攻撃できない'},
+  {rank:'SR',name:'蒼翼神ハヤテ',atk:5,hp:11,skill:'天潮',fx:{tide:true},text:'天潮：自分のターン開始時、相手の仲間1体を手札に戻す'}]},
  10:{key:'oboro',name:'オボロ',type:'神秘',stages:[
-  {rank:'N',name:'幼神オボロ',atk:2,hp:7,skill:'冥火',cost:1,fx:{fox:1},text:'冥火（神力{cost}）：敵1体の攻撃力を、その敵が場を離れるまで−{fox}'},
-  {rank:'R',name:'魔紋解放オボロ',atk:3,hp:9,skill:'影分身',cost:1,fx:{fox:1,shadow:true},text:'影分身：自分への攻撃を1回だけ影に受けさせる（ダメージ0）'},
-  {rank:'SR',name:'幽冥魔神オボロ',atk:4,hp:12,skill:'幽冥',cost:1,fx:{fox:2,shadow:true,shadowRevive:true},text:'幽冥：影分身が自分のターンのはじめに復活する。冥火は−{fox}'}]}
+  {rank:'N',name:'幼神オボロ',atk:2,hp:7,skill:'生贄の冥火',cost:1,fx:{sac:2},text:'生贄の冥火（神力{cost}）：自分の仲間1体と、相手のカード1体に{sac}ダメージ。自分の仲間がいないと使えない'},
+  {rank:'R',name:'魔紋解放オボロ',atk:3,hp:9,skill:'生贄の冥火',cost:1,fx:{sac:3},text:'生贄の冥火（神力{cost}）：自分の仲間1体と、相手のカード1体に{sac}ダメージ。自分の仲間がいないと使えない'},
+  {rank:'SR',name:'幽冥魔神オボロ',atk:4,hp:12,skill:'幽冥',cost:3,fx:{doom:true},text:'幽冥（神力{cost}）：相手の仲間1体を破壊する。自分の墓地の仲間1体を手札に戻す'}]}
 };
 const HERO_IDS=[2,5,0,3,10];
 const STAGE_FILES=['01-child-N.webp','02-awakened-R.webp','03-final-SR.webp'];
@@ -52,7 +55,7 @@ function gcard(id,st,live,cls='',short=false){let s=stageOf(id,st),VL=VESSEL_LAY
  return '<span class="gc '+cls+'" data-id="'+id+'" data-st="'+st+'"><img src="'+cardImg(id,st)+'" alt="'+s.name+'" draggable="false"'+(window.__lazyImg?' loading="lazy"':'')+'>'+rubyBand(s.name,true)
  +statIcon('atk',atk,weak,null,VL&&VL.outer)
  +statIcon('hp',live?Math.max(0,live.hp):s.hp,false,live?live.max:null,VL&&VL.outer)
- +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+(short?s.skill+(s.cost&&(s.fx.bolt||s.fx.heal||s.fx.fox)&&st===0?'（神力'+s.cost+'）':''):stageText(id,st))+'</i></span>'
+ +'<span class="gb eff" data-k="effect" style="'+pct(B.effect)+'"><i class="fit ml">'+(short?s.skill+(s.cost&&!s.fx.wall?'（神力'+s.cost+'）':''):stageText(id,st))+'</i></span>'
  +'<span class="gb evo" data-k="evolution" style="'+pct(B.evolution)+'"><i class="fit one" data-r=".9">'+ruleText(st)+'</i></span></span>'}
 function placeBoxes(gc){let B=CARD_LAYOUT.safeTextBoundsPx;gc.querySelectorAll('.gb').forEach(b=>{if(B[b.dataset.k])b.setAttribute('style',pct(B[b.dataset.k]))})}
 // 文字を安全範囲に収める：箱の高さから始めて、はみ出す間は小さくする
@@ -310,7 +313,7 @@ function expInfo(k){closeGodDetail();let e=EXP_CARDS[k],ally=e.kind==='ally';
  +(CARD_TABLE[k].later?'<p class="gd-next">このカードは、今の対戦デッキにはまだ入っていません。</p>':'')+termList(e.text+(ally?'仲間':''))
  +'<button class="gd-close" onclick="closeGodDetail()">閉じる</button></div></div>';
  d.onclick=e2=>{if(e2.target===d)closeGodDetail()};document.body.appendChild(d)}
-TERMS.push(['最終決戦','神殿がすべて割れた側は、主神が攻撃の対象になる。主神の体力を0にしたら勝ち。'],['すり抜け','神殿を無視して主神を攻撃できること。風翼解放ハヤテ・蒼翼神ハヤテ、雨の間の瀬渡りのカワセミ神、疾風の忍神、水面抜きの対象。'],['破殿解放','神殿が割れたとき、そのカードをコストなしで使えること。使わなければ手札に加わる。'],['召喚酔い','場に出たターンは攻撃できない状態。次の自分のターンから攻撃できる。主神もおたがい1ターン目は攻撃できない。'],['速攻','「出たターンから攻撃できる」効果。召喚酔いにならない。'],['登場時','その仲間を場に出したとき。'],['元の値','カードに書かれている攻撃力。弱める効果などで下がっていると「元の値より低い」状態になる。']);
+TERMS.push(['最終決戦','神殿がすべて割れた側は、主神が攻撃の対象になる。主神の体力を0にしたら勝ち。'],['すり抜け','神殿を無視して主神を攻撃できること。雨の間の瀬渡りのカワセミ神、疾風の忍神、水面抜きの対象。'],['破殿解放','神殿が割れたとき、そのカードをコストなしで使えること。使わなければ手札に加わる。'],['召喚酔い','場に出たターンは攻撃できない状態。次の自分のターンから攻撃できる。主神もおたがい1ターン目は攻撃できない。'],['速攻','「出たターンから攻撃できる」効果。召喚酔いにならない。'],['登場時','その仲間を場に出したとき。'],['元の値','カードに書かれている攻撃力。弱める効果などで下がっていると「元の値より低い」状態になる。']);
 
 // ---- 初期呪文8種：枠つき完成イラスト（2026-11-25差し替え）。名前帯はアート側、コスト・効果文は既存の重ね表示で載せる ----
 const STARTER_ART={rain:'amagoi',sun:'kumobarai',bolt:'shourai',guard:'shugo',draw:'shintaku',seed:'tanemaki',mirror:'kakusei_kagami',scroll:'shini_keishou'};
@@ -352,12 +355,18 @@ function rubyBand(name,hero){let r=readingOf(name);return r?'<span class="gb rub
 
 // ==== 「器」形式の主神カード（名前・レア度・上端の札は絵に描き込み済み、数値・効果文・進化条件の欄は空欄）2026-11-27 ====
 // オボロ3形態：新しい枠の空欄に合わせて、重ね表示の位置と大きさを変える（数値・効果は変えない）
-const VESSEL_LAYOUT={10:{
- safe:{effect:[146,742,304,80],evolution:[96,697,404,18]},
- outer:{attack:[36,744,92,92],health:[466,744,92,92]}}};
+// 2026-11-28 主神15枚を新しい絵に差し替え。5柱とも空欄が標準のレイアウト（cards/layout.json）と一致したので、オボロ専用の位置は外した
+const VESSEL_LAYOUT={};
 // 描き直しのとき、読み込み済みのカード絵（<img>）を使い回す（黒い一瞬・再読み込みを防ぐ。図鑑・デッキ編成用）
 function withImgReuse(fn){return function(){let old=new Map();for(const im of document.querySelectorAll('.gc>img')){if(!im.complete||!im.naturalWidth)continue;let k=im.getAttribute('src');if(!old.has(k))old.set(k,[]);old.get(k).push(im)}
  let r=fn.apply(this,arguments);if(old.size)for(const im of document.querySelectorAll('.gc>img')){let L=old.get(im.getAttribute('src'));if(L&&L.length){let o=L.shift();if(o!==im&&!o.isConnected){for(const at of im.attributes)if(at.name!=='src'&&o.getAttribute(at.name)!==at.value)o.setAttribute(at.name,at.value);im.replaceWith(o)}}}return r}}
 
 // 図鑑・デッキ編成を描くときだけ、画面外の絵は後から読む（対戦中は黒く見えるので使わない）
 function withLazy(fn){return function(){window.__lazyImg=true;try{return fn.apply(this,arguments)}finally{window.__lazyImg=false}}}
+
+// 2026-11-28 主神の新しい効果の用語
+TERMS.push(['結界','味方1体が、次の相手のターンが終わるまで、受けるダメージが減る。仲間・主神どちらにも使える。'],
+ ['水縛り','その神は、次の相手のターンに攻撃できない。'],
+ ['墓地','倒れた自分の仲間や、使った呪文が置かれる場所（対戦中だけ）。場の「墓地」をタップすると中身を見られる。'],
+ ['手札に戻す','場の仲間を、持ち主の手札に戻すこと。受けていたダメージや強化はなくなる。'],
+ ['神力を1増やす','神力の最大値が1増える。毎ターンの始めに回復する量も、この試合のあいだずっと1増える。']);
