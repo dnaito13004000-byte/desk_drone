@@ -957,3 +957,24 @@ standardDeck=function(id){let col=GOD_CARDS[id].type,own=k=>save.cards.filter(x=
 {const rr2=render;render=function(){let r=rr2.apply(this,arguments);try{for(const s of [p,c]){if(!s)continue;
   for(const u of s.units)if(u.saveToHand){let e=document.getElementById('u'+u.uid);if(e&&!e.querySelector('.ribbon.keep')){let box=e.querySelector('.ribbons2');if(!box){e.insertAdjacentHTML('beforeend','<span class="ribbons2"></span>');box=e.querySelector('.ribbons2')}box.insertAdjacentHTML('beforeend','<em class="ribbon keep">守護</em>')}}
   let n=shrineCut(s),row=document.getElementById('shrine'+s.id);if(row&&n>0&&!row.querySelector('.shrinecut'))row.insertAdjacentHTML('beforeend','<em class="shrinecut" title="'+shrineCutName(s)+'">神殿 −'+n+'</em>')}}catch(e){console.warn(e)}return r}}
+
+// ==== 調整（2026-11-28 BJ計測後）：変えるのは次の3点だけ ====
+// 1. 軽減は「その対象に効いている軽減の中で最も大きい値」だけを適用（足し算しない）。仲間・主神・神殿すべて同じ
+addBarrier=function(u,src,n){u.bar=u.bar||{};u.bar[src]=Math.max(u.bar[src]||0,n);u.barrierN=Math.max(0,...Object.values(u.bar))};
+dmgCut=function(v){let s=ownerOf(v);if(!s)return 0;return Math.max(heroFx(s).wall||0,v.barrierN||0)};
+cutName=function(v){let s=ownerOf(v),x=s?heroFx(s):{},w=x.wall||0,b=v.barrierN||0;if(b>w){let src=Object.entries(v.bar||{}).sort((a,c)=>c[1]-a[1])[0];return src?({raiga:'結界','sky-1':'雲紡ぎのアヤ','sky-2':'霹靂を喰う天狗','sky-6':'嵐呼の雷獣','sky-7':'霙神','sky-3':'雨脚の矢','sky-8':'稲光','sky-4':'雲間の返照'}[src[0]]||'結界'):'結界'}return x.shrineWall?'天守':'雷壁'};
+shrineCut=function(d){if(!d)return 0;return Math.max(heroFx(d).shrineWall||0,(weather==='晴れ'&&d.units.some(u=>u.id===8&&u.hp>0))?1:0,d.shrineBar||0)};
+shrineCutName=function(d){let a=heroFx(d).shrineWall||0,b=(weather==='晴れ'&&d.units.some(u=>u.id===8&&u.hp>0))?1:0,c2=d.shrineBar||0,m=Math.max(a,b,c2);return m===a&&a?'天守':m===c2&&c2?'天柱落とし':m===b&&b?'陽神アカツキ':'軽減'};
+// 2. 星神スバル・逆さ月の宣告：墓地の「カード」の数（呪文も数える）。墓地の仲間を対象に取る効果は変えない
+const graveCount=f=>(f&&f.grave||[]).length;
+subaruBonus=function(u){let s=ownerOf(u);return s?Math.min(3,graveCount(s)):0};
+Object.assign(SP['mystic-5'],{can:f=>graveCount(f)>0,run:(f,t)=>{let n=hurt(t,Math.min(5,graveCount(f)));latest+='　'+names[t.id]+'に'+n+'ダメージ'},why:'墓地にカードがあるときだけ使える',
+ ai:f=>{let n=Math.min(5,graveCount(f));return best(mates(foeOf(f)),u=>(u.hp<=n-dmgCut(u)?100:0)+threat(u))}});
+{const us3=unitStatus;unitStatus=function(f,u){let t=us3.apply(this,arguments);if(u.id===11)t=t.map(x=>/^墓地の仲間\d+体：攻撃力/.test(x)?'墓地のカード'+graveCount(f)+'枚：攻撃力+'+subaruBonus(u):x);return t}}
+// 3. 氷神ユキネ（奔流／U／コスト3／攻2／体5）：登場したとき、敵の仲間1体は次の相手のターンに攻撃できない
+gods[4]=[2,5];ALLY_COST[4]=3;
+{const oe2=onEnter;onEnter=function(f,u){let r=oe2.apply(this,arguments);if(u.id===4){let d=foeOf(f),L=mates(d).filter(x=>!x.bindNext);
+  const go=t=>{if(t){bindFoe(f,t);latest+='　氷神ユキネ：'+names[t.id]+'は次の相手のターンに攻撃できない'}};
+  if(!L.length)latest+='　氷神ユキネ：敵の仲間がいない';else if(autoSide(f)||L.length===1)go(best(L,x=>atkOf(x)));else runAsk(async()=>{let t=await askChoice('氷神ユキネ（登場時）','次の相手のターンに攻撃できなくする敵の仲間を選ぶ',L.map(unitOpt));go(t||best(L,x=>atkOf(x)))})}return r}}
+// 大地の神力回復は、供給量（最大値）まで（種まきと同じ。2026-11-28 確定）
+gainMana=function(f,n,src){if(n<=0||!f)return;let b=f.mp;f.mp=Math.min(f.max,f.mp+n);let up=f.mp-b;if(up>0){latest+='　'+src+'：神力を'+up+'回復';manaUpHook(f)}};
