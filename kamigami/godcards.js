@@ -475,3 +475,10 @@ TERMS.push(['主神の技','主神が神力を払って使う技（結界・水�
 {const ti=termsIn;termsIn=function(text){let L=ti.apply(this,arguments),t=String(text||'');if(/（神力\d+）/.test(t)&&!L.some(x=>x[0]==='主神の技'))L.push(TERMS.find(x=>x[0]==='主神の技'));return L}}
 // 変更2：大地の神力ブーストは、先攻の1ターン目（試合で一番最初のターン）だけ使えない
 TERMS.push(['先攻の1ターン目','試合で一番最初のターン。このターンだけ、大地の「神力を増やす／神力を回復する」効果（主神コダマの技を含む）は使えない・発動しない。手札を神力に置く基本ルールは使える。']);
+
+// ==== 神秘の立て直し（2026-11-28 BP）：ツクヨ・獏神・写し神を「断末魔」持ちに。新規カードはなし ====
+// 断末魔＝その仲間が墓地に送られたときに発動する効果（戦闘・効果で破壊、生贄、自分の効果で墓地に送ったとき。手札に戻る・ゲームから取り除くときは発動しない）
+NEW_TEXT[9]='断末魔：自分の墓地の仲間1体を手札に戻す。';NEW_SHORT[9]='断末魔：墓地の仲間1体を手札へ';CARD_TABLE[9].full=NEW_TEXT[9];CARD_TABLE[9].short=NEW_SHORT[9];   // 月神ツクヨ：コスト3→2
+NEW_TEXT['mystic-2']=EXP_CARDS['mystic-2'].text=CARD_TABLE['mystic-2'].short=CARD_TABLE['mystic-2'].full='断末魔：敵の仲間1体に3ダメージ。';                                    // 逆夢の獏神：コスト5→2
+NEW_TEXT['mystic-7']=EXP_CARDS['mystic-7'].text=CARD_TABLE['mystic-7'].short=CARD_TABLE['mystic-7'].full='断末魔：自分の主神を2回復する。';EXP_CARDS['mystic-7'].cost=1;      // 写し神：コスト2→1
+TERMS.push(['断末魔','その仲間が墓地に送られたときに発動する効果。戦闘や効果で破壊されたとき・生贄にされたとき・自分の効果で墓地に送ったときに発動する。手札に戻ったときと、ゲームから取り除かれたときは発動しない。']);

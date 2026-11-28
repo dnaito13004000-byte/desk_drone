@@ -940,7 +940,7 @@ function ENTER_VALUE(f,u){let d=foeOf(f);if(u.id===9)return graveAllies(f).lengt
  if(!autoSide(f)&&k==='mystic-8'){let L=uniq(f.grave||[]);if(L.length>1){let k2=await askChoice('心読み','手札に戻す墓地のカードを選ぶ',L.map(keyOpt),'やめる');if(!k2)return false;f.pick2=k2}}
  return dp.apply(this,arguments)}}
 // 逆夢の獏神：攻撃するとき、墓地の仲間1体を取り除いてもよい（その攻撃力だけダメージが増える）
-{const sk=strike;strike=async function(f,u,d,v){if(u&&u.id==='mystic-2'&&v&&graveAllies(f).length&&!ending){let L=uniq(graveAllies(f)),k=null;
+{const sk=strike;strike=async function(f,u,d,v){if(false&&u&&u.id==='mystic-2'&&v&&graveAllies(f).length&&!ending)/* 2026-11-28 BP：獏神の除外は廃止（断末魔に作り替え） */{let L=uniq(graveAllies(f)),k=null;
   if(autoSide(f)){let top=[...L].sort((a,b)=>baseOf(b)[0]-baseOf(a)[0])[0],n=atkOf(u)-dmgCut(v);if(v.hero||(v.hp>n&&v.hp<=n+baseOf(top)[0]))k=top}
   else k=await askChoice('逆夢の獏神','墓地の仲間1体をゲームから取り除きますか？<br><small>取り除いた仲間の攻撃力だけ、この攻撃のダメージが増える</small>',L.map(keyOpt),'取り除かない');
   if(k&&exile(f,k)){u.exileBonus=baseOf(k)[0];latest='逆夢の獏神：'+cardLabel(k)+'を取り除いた（ダメージ+'+u.exileBonus+'）';render()}}
@@ -1040,3 +1040,51 @@ const EARTH_BAN='先攻の1ターン目は、大地の神力ブーストは使�
 {const sc0=SP.seed.can;SP.seed.can=f=>!firstTurn(f)&&(sc0?sc0(f):true);SP.seed.why=EARTH_BAN}
 {const cs2=canSkill;canSkill=function(f){if(firstTurn(f)){let k=skillOf(f);if(k&&k.kind==='grow')return false}return cs2.apply(this,arguments)}}
 {const ha2=heroActs;heroActs=function(){let o=ha2.apply(this,arguments),k=skillOf(p);if(k&&k.kind==='grow'&&firstTurn(p))o=o.replace(k.name+' · 神力'+k.cost,k.name+'（先攻1ターン目は使えない）');return o}}
+
+// ==== 神秘の立て直し（2026-11-28 BP）：断末魔／月神ツクヨ・逆夢の獏神・写し神 ====
+ALLY_COST[9]=2;ALLY_COST['mystic-2']=2;EXP_CARDS['mystic-2'].cost=2;EXP_CARDS['mystic-7'].cost=1;
+// 断末魔：仲間が墓地に送られたときに発動（守護で手札に戻るとき・手札に戻す効果・ゲームから取り除くときは発動しない）
+const LAST_WORDS={
+ // 月神ツクヨ：自分の墓地の仲間1体を手札に戻す（いま墓地に送られたこのツクヨ自身は除く）
+ 9:(s,u,k)=>{let L=[...(s.grave||[])];let self=L.lastIndexOf(k);if(self>=0)L.splice(self,1);L=L.filter(x=>isSum(x));if(!L.length){latest+='　断末魔（月神ツクヨ）：墓地に仲間がいない';return}
+   let pick=graveRank(s,L)[0],i=s.grave.lastIndexOf(pick);if(i===self)i=s.grave.lastIndexOf(pick,i-1);if(i<0)return;s.grave.splice(i,1);s.hand.push(pick);latest+='　断末魔（月神ツクヨ）：墓地の'+cardLabel(pick)+'を手札に戻した'},
+ // 逆夢の獏神：敵の仲間1体に3ダメージ（倒せる相手を優先）
+ 'mystic-2':(s,u)=>{let d=foeOf(s),L=mates(d);if(!L.length){latest+='　断末魔（逆夢の獏神）：敵の仲間がいない';return}
+   let t=best(L.filter(x=>!x.ward&&x.hp<=3-dmgCut(x)),x=>threat(x))||best(L,x=>threat(x));let n=hurt(t,3);latest+='　断末魔（逆夢の獏神）：'+names[t.id]+'に'+n+'ダメージ'},
+ // 写し神：自分の主神を2回復する
+ 'mystic-7':(s,u)=>{let h=heroOf(s);if(!h)return;let b=h.hp;h.hp=Math.min(h.max,h.hp+2);latest+='　断末魔（写し神）：'+names[h.id]+'を'+(h.hp-b)+'回復';if(window.__onLastWords)__onLastWords(s,u)}};
+let lwDepth=0;
+settle=function(...sides){let all=new Set(sides),lw=[];
+ for(let k=0;k<6&&!ending;k++){let any=false;for(const s of [...all])for(const u of s.units)if(u.id==='fire-6'&&u.hp<=0&&!u.boomed){u.boomed=true;any=true;let d=foeOf(s);all.add(d);
+  let t=[...d.units].filter(x=>x.hp>0&&!x.ward).sort((a,b)=>(a.hero?1:0)-(b.hero?1:0)||(a.hp<=2?-1:0)-(b.hp<=2?-1:0)||a.hp-b.hp)[0]||d.units.find(x=>x.hp>0);
+  if(t){let n=hurt(t,2);latest+='　爆炎の剣神が倒れ、'+names[t.id]+'に'+n+'ダメージ'}}if(!any)break}
+ for(const x of all)substitute(x);
+ for(const x of all){for(const y of x.units)if(y.hp<=0&&!y.hero){if(y.saveToHand){x.hand.push(handKey(y.id));latest+='　守護：'+names[y.id]+'は手札に戻った'}else{let k=handKey(y.id);x.grave=x.grave||[];x.grave.push(k);if(LAST_WORDS[y.id])lw.push([x,y,k])}}x.units=x.units.filter(y=>y.hp>0||(y.hero&&ending))}
+ // 断末魔の効果。ダメージで次の仲間が倒れたら、もう一度片付ける（連鎖は6段まで）
+ if(lw.length&&!ending&&lwDepth<6){lwDepth++;try{let touched=new Set();for(const [s,u,k] of lw){if(ending)break;LAST_WORDS[u.id](s,u,k);touched.add(s);touched.add(foeOf(s))}if(!ending)settle(...touched)}finally{lwDepth--}}};
+// 月神ツクヨ・写し神：登場時の効果はなくなった
+{const oe3=onEnter;onEnter=function(f,u){if(u&&(u.id===9||u.id==='mystic-7'))return;return oe3.apply(this,arguments)}}
+// ---- AI ----
+// 生贄の材料：写し神（最優先）→ ツクヨ（墓地に仲間がいれば連れ戻せる）→ 獏神（断末魔3ダメージ）
+const FODDER={'mystic-7':6,9:4,'mystic-2':3};
+const fodder=u=>threat(u)-((u.id===9&&!graveAllies(ownerOf(u)).length)?1:(FODDER[u.id]||0))*3;
+// 面削りの童神（AI）：生贄は材料から
+{const oe4=onEnter;onEnter=function(f,u){if(u&&u.id==='mystic-1'&&autoSide(f)){let d=foeOf(f),own=mates(f).filter(x=>x!==u),foes=mates(d);
+   if(own.length&&foes.length){let m=[...own].sort((a,b)=>fodder(a)-fodder(b))[0],t=best(foes.filter(x=>!x.ward&&x.hp<=3-dmgCut(x)),x=>threat(x));
+    if(m&&t&&(FODDER[m.id]||threat(t)>=threat(m))){sacrifice(m);let n=hurt(t,3);latest+='　面削りの童神：'+names[m.id]+'を生贄に、'+names[t.id]+'に'+n+'ダメージ';settle(f,d)}}return}
+  return oe4.apply(this,arguments)}}
+// 生贄の冥火（AI）：材料がいれば、倒せなくても当てる（断末魔で取り返せるため）
+{const ap2=aiSkillPlan;aiSkillPlan=function(f,k,ph){if(k.kind==='sac'&&ph!=='pre'){let d=foeOf(f),n=k.n,m=[...mates(f)].sort((a,b)=>fodder(a)-fodder(b))[0];if(!m)return null;
+   let kill=best(mates(d).filter(u=>!u.ward&&u.hp<=n-dmgCut(u)),u=>threat(u)),t=kill||(!d.shrines.length&&!heroOf(d).ward?heroOf(d):null);
+   if(!t&&FODDER[m.id])t=best(mates(d),u=>threat(u))||heroOf(d);if(!t)return null;if(!FODDER[m.id]&&m.hp<=n&&!t.hero&&atkOf(m)>atkOf(t))return null;return {mate:m,t}}
+  return ap2.apply(this,arguments)}}
+// 影の縫い返し（AI）：材料から送る／空蝉の歩法（AI）：断末魔持ちを送って、断末魔を使ってから次のターンに戻す
+SP['mystic-3'].ai=f=>{let d=foeOf(f);for(const m of [...mates(f)].sort((a,b)=>fodder(a)-fodder(b))){let n=atkOf(m),t=best(mates(d).filter(x=>!x.ward&&x.hp<=n-dmgCut(x)),x=>threat(x));if(t&&(FODDER[m.id]||threat(t)>threat(m)))return m;if(FODDER[m.id]&&m.id!=='mystic-7'&&mates(d).length)return m}return null};
+{const a4=SP['mystic-4'].ai;SP['mystic-4'].ai=f=>{let L=mates(f).filter(u=>(u.id==='mystic-2'&&mates(foeOf(f)).length)||(u.id===9&&graveAllies(f).length)||u.id==='mystic-7');return L[0]||a4(f)}}
+// 獏神・ツクヨ（AI）：断末魔まで含めて攻撃先を選ぶ。反撃で倒れても得をするなら相打ちを狙う
+{const aa3=aiAttack;aiAttack=async function(f){let d=foeOf(f);for(const u of f.units.filter(x=>(x.id==='mystic-2'||x.id===9)&&!x.used&&x.hp>0&&!sickOf(f,x))){if(ending)break;
+   let foes=mates(d);if(!foes.length||!firstHit(u))continue;let eff=v=>Math.max(0,atkOf(u)-(v.shield||0));
+   if(foes.some(v=>v.hp<=eff(v)&&!v.ward))continue;// 普通に倒せる相手がいれば通常の判断に任せる
+   let ok=v=>!v.dodge&&atkOf(v)>=u.hp,gain=u.id==='mystic-2'?(v=>foes.some(o=>o!==v&&o.hp<=3-dmgCut(o)&&!o.ward)||v.hp-eff(v)<=3-0):(()=>graveAllies(f).length>0);
+   let trade=best(foes.filter(v=>ok(v)&&gain(v)),v=>threat(v));if(trade)await strike(f,u,d,trade)}
+  return aa3.apply(this,arguments)}}
