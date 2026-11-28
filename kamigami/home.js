@@ -188,8 +188,14 @@ function closeZoom(){zoom=null;let z=document.querySelectorAll('.albumscreen .al
 function zoomHtml(){let {id}=zoom,r=cardRarity(id);
  return '<div class="al-zoom" onclick="if(event.target===this){closeZoom()}">'+card([id],'big')+'<p class="zt"><b>'+cardName(id)+'</b>　<i class="rr r-'+r+'">'+RANK_NAME(r)+'</i>　'+colorChip(id)+(GOD_CARDS[id]?'':'<small class="zcost">コスト'+cardCost(id)+'</small>')+'<br><em>'+cardShort(id)+'</em><br>'+cardText(id)+'</p>'+termList(cardText(id)+(isGod(id)&&!GOD_CARDS[id]?'仲間':''))
  +'<button class="btn-navy" onclick="closeZoom()">閉じる</button></div>'}
-// メインビジュアルの収まり（2026-11-28 正方形の絵）：中央基準で、表示エリアを全面で覆う（cover）。それ以上の拡大はしない
-function fitHomeArt(){let img=document.getElementById('h4art');if(img)img.style.cssText='left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%'}
+// メインビジュアルの収まり（2026-11-28 正方形の絵）：5人とロゴが入る範囲（絵の x245〜1005・y230〜1090）を、表示エリアいっぱいに拡大する。
+// 横は5人の幅に合わせ、縦が足りない端末では5人とロゴが入るところまでにとどめる。ロゴの下端は「通算勝利」のすぐ上。絵はエリアを全面で覆う
+function fitHomeArt(){let box=document.getElementById('h4visual'),img=document.getElementById('h4art');if(!box||!img)return;
+ let W=box.clientWidth,H=box.clientHeight,N=1254,L=245,R=1005,T=230,B=1090,GAP=30;if(!W||!H)return;
+ let s=Math.min(W/(R-L),(H-GAP)/(B-T));s=Math.max(s,W/N,H/N);
+ let w=N*s,x=W/2-(L+R)/2*s,y=H-GAP-B*s;
+ x=Math.min(0,Math.max(W-w,x));y=Math.min(0,Math.max(H-w,y));
+ img.style.cssText='left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+w+'px'}
 window.addEventListener('resize',()=>requestAnimationFrame(fitHomeArt));
 {const h0=home;home=function(){let r=h0.apply(this,arguments);let img=document.getElementById('h4art');if(img){if(img.complete)fitHomeArt();else img.addEventListener('load',fitHomeArt,{once:true});requestAnimationFrame(fitHomeArt)}return r}}
 home();
