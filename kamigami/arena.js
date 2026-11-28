@@ -1165,3 +1165,40 @@ SP['fire-4']={tgt:'ally',ok:(f,t)=>t.hp>0&&!sickOf(f,t)&&!t.ninoAt,run:(f,t)=>{t
   for(const u of L){for(const v of mates(d)){if(v.dodge&&!u.hero)continue;let raw=atkOf(u)+(fxOf(f,u).extra||0),shielded=(v.shield||0)>0||v.ward;if(raw>=v.hp){let s=threat(v)+(shielded?20:0);if(s>sc){sc=s;best1=u}}}}return best1}};
 // 二の太刀の追加攻撃のあと、AIがもう一度攻撃する（post の aiAttack で拾う）。resetTurn で印を消す
 {const rt4=resetTurn;resetTurn=function(f){let r=rt4.apply(this,arguments);for(const s of [p,c])if(s)for(const u of s.units)u.ninoAt=0;return r}}
+
+// ==== 調整（2026-11-28 BT）====
+// 二の太刀：このターンすでに1回攻撃した味方の仲間だけ（主神には使えない）。追加の攻撃は軽減を無視（そのまま）
+Object.assign(SP['fire-4'],{tgt:'allyMate',ok:(f,t)=>t.hp>0&&(t.att||0)>=1&&!t.ninoAt,why:'このターンにすでに攻撃した味方の仲間がいるときだけ使える',
+ ai:f=>{let d=foeOf(f),L=mates(f).filter(u=>u.hp>0&&(u.att||0)>=1&&!u.ninoAt);let pick=null,sc=-1;
+  for(const u of L)for(const v of mates(d)){if(v.dodge)continue;let raw=atkOf(u)+(fxOf(f,u).extra||0),shielded=(v.shield||0)>0||v.ward;if(raw>=v.hp){let s=threat(v)+(shielded?20:0);if(s>sc){sc=s;pick=u}}}return pick}});
+// 薄暮の呪い手：断末魔で、自分の墓地の仲間1体を体力半分（切り上げ）で場に戻す（登場時の効果は廃止。いま墓地に送られた呪い手自身は除く）
+LAST_WORDS['mystic-6']=(s,u,k)=>{let L=[...(s.grave||[])],self=L.lastIndexOf(k);if(self>=0)L.splice(self,1);L=L.filter(x=>isSum(x));
+ if(!L.length){latest+='　断末魔（薄暮の呪い手）：墓地に仲間がいない';return}if(s.units.length>=3){latest+='　断末魔（薄暮の呪い手）：場がいっぱいで戻せない';return}
+ let pick=graveRank(s,L)[0];let i=s.grave.lastIndexOf(pick);if(i===self)i=s.grave.lastIndexOf(pick,i-1);if(i<0)return;
+ let tmp=s.grave.splice(i,1)[0];s.grave.push(tmp);let r=revive(s,pick,Math.ceil(baseOf(pick)[1]/2));if(r)latest+='　断末魔（薄暮の呪い手）：'+names[r.id]+'を体力'+r.hp+'で場に戻した'};
+{const oe6=onEnter;onEnter=function(f,u){if(u&&u.id==='mystic-6')return;return oe6.apply(this,arguments)}}
+// AI：呪い手は「死んだら仲間を連れ戻す」材料。墓地に強い仲間がいるほど先に死なせる
+const graveTop=f=>{let L=graveAllies(f);return L.length?Math.max(...L.map(k=>baseOf(k)[0]*2+baseOf(k)[1])):0};
+// 生贄の材料としての優先度：墓地に戻せる仲間がいれば高く、強い仲間ほどさらに高く（いま行動している側の墓地で判断）
+Object.defineProperty(FODDER,'mystic-6',{enumerable:true,get(){let f=turn;if(!f||!graveAllies(f).length)return 0;return graveTop(f)>=10?7:4}});
+// 攻撃：呪い手は、墓地に仲間がいれば反撃で倒れる相打ちも狙う（倒れたら連れ戻せる）
+{const aa4=aiAttack;aiAttack=async function(f){let d=foeOf(f);for(const u of f.units.filter(x=>x.id==='mystic-6'&&!x.used&&x.hp>0&&!sickOf(f,x))){if(ending)break;
+   let foes=mates(d);if(!foes.length||!firstHit(u)||!graveAllies(f).length)continue;let eff=v=>Math.max(0,atkOf(u)-(v.shield||0));
+   if(foes.some(v=>v.hp<=eff(v)&&!v.ward))continue;let trade=best(foes.filter(v=>!v.dodge&&atkOf(v)>=u.hp),v=>threat(v));if(trade)await strike(f,u,d,trade)}
+  return aa4.apply(this,arguments)}}
+
+// ==== 神秘の呪文4枚の強化（2026-11-28 BU）====
+// 逆さ月の宣告：コスト3→2。敵の仲間1体に、自分の墓地のカードの数＋1だけダメージ（最大6）
+EXP_CARDS['mystic-5'].cost=2;
+Object.assign(SP['mystic-5'],{can:f=>true,run:(f,t)=>{let n=hurt(t,Math.min(6,graveCount(f)+1));latest+='　'+names[t.id]+'に'+n+'ダメージ'},why:'',
+ ai:f=>{let n=Math.min(6,graveCount(f)+1);return best(mates(foeOf(f)),u=>(u.hp<=n-dmgCut(u)?100:0)+threat(u))}});
+// 影の縫い返し：送った仲間の攻撃力＋2だけダメージ
+SP['mystic-3'].run=(f,t)=>{let d=foeOf(f),n0=atkOf(t)+2,tg=f.pick2&&d.units.includes(f.pick2)?f.pick2:best(mates(d).filter(x=>x.hp<=n0-dmgCut(x)),x=>threat(x))||best(mates(d),x=>atkOf(x));f.pick2=null;sacrifice(t);settle(f);let n=tg?hurt(tg,n0):0;latest+='　'+names[t.id]+'を墓地に送り、'+(tg?names[tg.id]+'に'+n+'ダメージ':'');settle(d)};
+SP['mystic-3'].ai=f=>{let d=foeOf(f);for(const m of [...mates(f)].sort((a,b)=>fodder(a)-fodder(b))){let n=atkOf(m)+2,t=best(mates(d).filter(x=>!x.ward&&x.hp<=n-dmgCut(x)),x=>threat(x));if(t&&(FODDER[m.id]||threat(t)>threat(m)))return m}return null};
+// 空蝉の歩法：次の自分のターン開始時、攻撃力+2・体力+2で場に戻す
+SP['mystic-4'].run=(f,t)=>{let k=handKey(t.id);sacrifice(t);settle(f);if((f.grave||[]).includes(k)){f.utsusemi2=(f.utsusemi2||[]).concat(k);latest+='　'+names[t.id]+'を墓地に送った（次の自分のターン開始時に攻撃力+2・体力+2で戻る）'}};
+{const ts5=turnStart;turnStart=function(f){let r=ts5.apply(this,arguments);if(f&&!ending&&f.utsusemi2&&f.utsusemi2.length){let L=f.utsusemi2;f.utsusemi2=[];
+  for(const k of L){let u=revive(f,k);if(u){u.atk+=2;u.max+=2;u.hp+=2;startNotes.push({uid:u.uid,label:'空蝉',text:'空蝉の歩法：'+names[u.id]+'が攻撃力+2・体力+2で戻った'})}}}return r}}
+// 心読み：墓地のカード1枚を手札に戻す。戻したのが仲間なら、敵の仲間1体に1ダメージ
+SP['mystic-8'].run=f=>{let L=f.grave||[],k=f.pick2&&L.includes(f.pick2)?f.pick2:graveRank(f,L)[0];f.pick2=null;let i=L.lastIndexOf(k);if(i<0)return;L.splice(i,1);f.hand.push(k);latest+='　墓地の'+cardLabel(k)+'を手札に戻した';
+ if(isSum(k)){let d=foeOf(f),M=mates(d);if(M.length){let t=best(M.filter(x=>!x.ward&&x.hp<=1-dmgCut(x)),x=>threat(x))||best(M,x=>threat(x));let n=hurt(t,1);latest+='・'+names[t.id]+'に'+n+'ダメージ';settle(d)}}};
