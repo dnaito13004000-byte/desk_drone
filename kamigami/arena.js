@@ -1145,3 +1145,23 @@ weatherWant=function(f){let d=foeOf(f),mx=Math.max(0,...d.units.map(u=>atkOf(u))
 {const rr4=render;render=function(){let r=rr4.apply(this,arguments);try{for(const s of [p,c]){if(!s)continue;for(const u of s.units){let e=document.getElementById('u'+u.uid),m=e&&e.querySelector('.shieldmark');if(m)m.classList.toggle('off',!shieldOn(u))}
   let row=document.getElementById('shrine'+s.id),b=row&&row.querySelector('.shrinecut');if(b&&s.shrineShRain&&weather!=='雨')b.classList.add('off')}}catch(e){}return r}}
 {const us5=unitStatus;unitStatus=function(f,u){let t=us5.apply(this,arguments);if(u.shield>0&&!shieldOn(u))t=t.map(x=>/^軽減：/.test(x)?'軽減：次に受けるダメージ−'+u.shield+'（雨のときだけ効く。いまは晴れなので効かない）':x);return t}}
+
+// ==== 烈火の強化（2026-11-28 BS）：攻撃の制限を外す ====
+// 獅子王（カグラSR）：2回目の攻撃も神殿に打てる（主神は今まで通り、相手の神殿が全部割れた最終決戦のときだけ）
+// 二の太刀：味方1体は、このターンもう1回攻撃できる。その追加の攻撃は、相手の軽減（シールド・招雷）を無視する（対象は今まで通り仲間のみ）
+const kaguraSR=u=>!!u&&u.hero&&u.id===0&&(()=>{let s=ownerOf(u);return !!s&&s.stage===2})();
+const isNinoHit=u=>!!u&&!!u.ninoAt&&(u.att||0)+1>=u.ninoAt;
+firstHit=function(u){if(!u)return true;if(isNinoHit(u))return false;if(kaguraSR(u))return true;return !(u.att>0)};
+{const rs4=resolveStrike;resolveStrike=function(f,u,d,v){let nino=isNinoHit(u),hid=null,ward=null;
+  if(nino&&v){hid=v.shield;ward=v.ward;v.shield=0;v.ward=false}
+  let r;try{r=rs4.apply(this,arguments)}finally{if(nino&&v){if(hid!=null)v.shield=hid;v.ward=ward}}
+  if(nino){u.ninoAt=0;if(window.__onNino)__onNino(f,u,v);if(v)latest+='（二の太刀：軽減を無視）'}
+  // 獅子王：神殿（・最終決戦の主神）を殴っても、まだ攻撃回数が残っていれば行動済みにしない
+  if(kaguraSR(u)&&!ending&&u.hp>0&&(u.att||0)<maxAttacks(f,u)){if(window.__onKagura&&u.att===2&&!v)__onKagura(f);u.used=false;if(f===p)attacker=u.uid}
+  else if(kaguraSR(u)&&u.att===2&&!v&&window.__onKagura)__onKagura(f);
+  return r}}
+SP['fire-4']={tgt:'ally',ok:(f,t)=>t.hp>0&&!sickOf(f,t)&&!t.ninoAt,run:(f,t)=>{t.extraAtt=(t.extraAtt||0)+1;t.used=false;t.ninoAt=maxAttacks(f,t);latest+='　'+names[t.id]+'はもう1回攻撃できる（その攻撃は軽減を無視）'},post:true,
+ ai:f=>{let d=foeOf(f),L=f.units.filter(u=>u.hp>0&&!sickOf(f,u)&&!u.ninoAt&&u.used&&(u.att||0)>=1);let best1=null,sc=-1;
+  for(const u of L){for(const v of mates(d)){if(v.dodge&&!u.hero)continue;let raw=atkOf(u)+(fxOf(f,u).extra||0),shielded=(v.shield||0)>0||v.ward;if(raw>=v.hp){let s=threat(v)+(shielded?20:0);if(s>sc){sc=s;best1=u}}}}return best1}};
+// 二の太刀の追加攻撃のあと、AIがもう一度攻撃する（post の aiAttack で拾う）。resetTurn で印を消す
+{const rt4=resetTurn;resetTurn=function(f){let r=rt4.apply(this,arguments);for(const s of [p,c])if(s)for(const u of s.units)u.ninoAt=0;return r}}
