@@ -466,3 +466,12 @@ for(const t of TERMS){
 NEW_TEXT.scroll='自分の神力をすべて消費し、消費した数だけ、味方の仲間1体の攻撃力と体力を上げる（最大+4まで。場を離れるまで続く）。';
 NEW_SHORT.scroll='神力をすべて使い 仲間を強化（X・最大+4）';
 CARD_TABLE.scroll.full=NEW_TEXT.scroll;CARD_TABLE.scroll.short=NEW_SHORT.scroll;if(typeof moves!=='undefined'&&moves.scroll)moves.scroll[2]=NEW_TEXT.scroll;
+
+// ==== 調整（2026-11-28 BN）====
+// 変更1：主神コダマの「神力を増やす」技（芽吹き・樹脈・千樹）のコストを神力2→3（効果の中身は変えない）
+GOD_CARDS[5].stages.forEach(s=>s.cost=3);
+// 変更3：主神の技は、どの主神も1ターンに1回まで（ターン開始時に自動で起きる効果は技ではない）
+TERMS.push(['主神の技','主神が神力を払って使う技（結界・水縛り・芽吹き・樹脈・千樹・生贄の冥火・幽冥）。どの主神も1ターンに1回まで。雷壁・天守の付け直しや渦巻・天潮など、ターン開始時に自動で起きる効果は技ではない。']);
+{const ti=termsIn;termsIn=function(text){let L=ti.apply(this,arguments),t=String(text||'');if(/（神力\d+）/.test(t)&&!L.some(x=>x[0]==='主神の技'))L.push(TERMS.find(x=>x[0]==='主神の技'));return L}}
+// 変更2：大地の神力ブーストは、先攻の1ターン目（試合で一番最初のターン）だけ使えない
+TERMS.push(['先攻の1ターン目','試合で一番最初のターン。このターンだけ、大地の「神力を増やす／神力を回復する」効果（主神コダマの技を含む）は使えない・発動しない。手札を神力に置く基本ルールは使える。']);

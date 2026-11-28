@@ -1029,3 +1029,14 @@ const SHIELD_SVG='<svg viewBox="0 0 16 18" width="10" height="11" aria-hidden="t
 
 // ==== 調整（2026-11-28 BM）：神位継承の巻の上げ幅は最大+4（神力の消費は今までどおり全額）====
 SP.scroll.run=(f,t)=>{let n=1+f.mp,up=Math.min(4,n);f.mp=0;t.atk+=up;t.max+=up;t.hp+=up;latest+='　神力を'+n+'消費し、'+names[t.id]+'の攻撃力と体力+'+up+(n>up?'（最大+4）':'')};
+
+// ==== 調整（2026-11-28 BN）：先攻の1ターン目は、大地の神力ブースト（増やす・回復する）が使えない ====
+// 先攻＝対戦開始時に最初に行動する側（この対戦ではいつも自分）。手札を神力に置く基本ルールは対象外
+let firstSide=null;
+{const s5=start;start=function(){let r=s5.apply(this,arguments);firstSide=p;return r}}
+const firstTurn=f=>!!f&&f===firstSide&&(f.turns||0)<=1&&round===1;
+const EARTH_BAN='先攻の1ターン目は、大地の神力ブーストは使えない';
+{const gm2=gainMana;gainMana=function(f,n,src){if(firstTurn(f)){latest+='　'+src+'：'+EARTH_BAN;return}return gm2.apply(this,arguments)}}
+{const sc0=SP.seed.can;SP.seed.can=f=>!firstTurn(f)&&(sc0?sc0(f):true);SP.seed.why=EARTH_BAN}
+{const cs2=canSkill;canSkill=function(f){if(firstTurn(f)){let k=skillOf(f);if(k&&k.kind==='grow')return false}return cs2.apply(this,arguments)}}
+{const ha2=heroActs;heroActs=function(){let o=ha2.apply(this,arguments),k=skillOf(p);if(k&&k.kind==='grow'&&firstTurn(p))o=o.replace(k.name+' · 神力'+k.cost,k.name+'（先攻1ターン目は使えない）');return o}}
