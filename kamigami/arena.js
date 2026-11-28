@@ -694,13 +694,13 @@ resolveStrike=function(f,u,d,v){let x=fxOf(f,u),wasWeak=v&&weakened(v)?Math.min(
  // 獅子王：2回目の攻撃では、相手の『攻撃されたとき』に発動する効果を受けない（今のカードに該当する効果はない。追加されたら pure の間は発動させない）
  const pure=!!(x.pureSecond&&u.att===2);f.pureHit=pure;
  if(v){let dmg=pow+(x.extra||0),note='';zeroWhy='';
-  let cut=dmg>0?dmgCut(v):0;if(cut){let b=dmg;dmg=Math.max(0,dmg-cut);note='（'+cutName(v)+'で−'+(b-dmg)+'）';if(!dmg)zeroWhy=cutName(v)}
+  let cut=dmg>0?dmgCut(v):0;if(cut){let b=dmg;dmg=Math.max(0,dmg-cut);note='（軽減で−'+(b-dmg)+'）';if(!dmg)zeroWhy='軽減';useShield(v,b-dmg)}
   if(v.shadow&&dmg>0){v.shadow=false;dmg=0;note='（影分身で0）'}else if(v.ward&&dmg>0){v.ward=false;dmg=0;note='（招雷で0）';zeroWhy='招雷'}
   v.hp-=dmg;hit=dmg>0;if(dmg>0)v.hitThisTurn=true;
   let ca=hurt(u,atkOf(v));if(!ca&&atkOf(v)>0)note+=dmgCut(u)>=atkOf(v)?'（'+cutName(u)+'で反撃0）':'（招雷で反撃0）';latest=names[u.id]+' → '+names[v.id]+'　'+dmg+'ダメージ・反撃 '+ca+note;f.hitInfo={v:dmg,u:ca};if(ca>0)u.hitThisTurn=true;settle(d,f)}
- else{if(d.shrines.length){let sw=shrineCut(d);
-   if(sw&&pow-sw<=0){zeroWhy=shrineCutName(d);latest=zeroWhy+'！ '+names[u.id]+'の攻撃（'+pow+'）を、神殿が受け止めた（−'+sw+'）'}
-   else{let lost=d.shrines.splice(0,1+bonus);d.broken=lost;d.shrineBroken=true;hit=true;latest=names[u.id]+'が神殿を破壊！'+(sw?'（'+shrineCutName(d)+'−'+sw+'）':'');shrineLost(d)}}
+ else{if(d.shrines.length){let sw=Math.min(shrineCut(d),pow);if(sw){d.shrineSh[0]=0;if(window.__onShield)__onShield(d,sw)}
+   if(sw&&pow-sw<=0){zeroWhy='軽減';latest='軽減！ '+names[u.id]+'の攻撃（'+pow+'）を、神殿が受け止めた（−'+sw+'・軽減は消えた）'}
+   else{let lost=d.shrines.splice(0,1+bonus);if(d.shrineSh)d.shrineSh.splice(0,lost.length);d.broken=lost;d.shrineBroken=true;hit=true;latest=names[u.id]+'が神殿を破壊！'+(sw?'（軽減−'+sw+'は消えた）':'');shrineLost(d)}}
   else{ending=f===p?'勝利':'敗北';hit=true;lastReward=grantReward(f===p)}}
  if(u.hero&&hit&&f.stage===0)f.gauge=Math.min(ASCEND.evolve.gauge,f.gauge+1);if(!ending)afterStrike(f,u,d,v,wasWeak);attacker=u.used||u.hp<=0?-1:attacker}
 // 0ダメージの吹き出し：理由（結界・雷壁・天守・守護）を出す
@@ -978,3 +978,51 @@ gods[4]=[2,5];ALLY_COST[4]=3;
   if(!L.length)latest+='　氷神ユキネ：敵の仲間がいない';else if(autoSide(f)||L.length===1)go(best(L,x=>atkOf(x)));else runAsk(async()=>{let t=await askChoice('氷神ユキネ（登場時）','次の相手のターンに攻撃できなくする敵の仲間を選ぶ',L.map(unitOpt));go(t||best(L,x=>atkOf(x)))})}return r}}
 // 大地の神力回復は、供給量（最大値）まで（種まきと同じ。2026-11-28 確定）
 gainMana=function(f,n,src){if(n<=0||!f)return;let b=f.mp;f.mp=Math.min(f.max,f.mp+n);let up=f.mp-b;if(up>0){latest+='　'+src+'：神力を'+up+'回復';manaUpHook(f)}};
+
+// ==== 軽減の統一ルール（2026-11-28 BL）：軽減は「盾」＝次に受けるダメージ1回分だけ引いて、消える ====
+// ・対象ごとに1つだけ。別の軽減が付いたら大きい方に置き換える（小さい方では上書きしない）
+// ・通常攻撃・効果ダメージ・呪文すべてで消費。ダメージを受けるまでは、ターンが終わっても残る
+// ・常駐型（雷壁・天守・陽神アカツキ）は「自分のターン開始時に付け直す」
+// ・前回の「効いている間ずっと、最も大きい値だけ適用」はこの形に置き換え
+addBarrier=function(u,src,n){if(!u||!(n>0))return;u.shield=Math.max(u.shield||0,n)};
+function useShield(v,amount){let s=ownerOf(v);v.shield=0;if(window.__onShield&&s&&amount>0)__onShield(s,amount)}
+dmgCut=function(v){return v&&v.shield||0};
+cutName=function(){return '軽減'};
+function addShrineShield(d,n){if(!d)return;d.shrineSh=d.shrines.map((_,i)=>Math.max((d.shrineSh&&d.shrineSh[i])||0,n))}
+shrineCut=function(d){return d&&d.shrineSh&&d.shrineSh[0]||0};
+shrineCutName=function(){return '軽減'};
+// 効果・呪文のダメージ：盾を先に使う（残りがあれば、そのあと招雷の「次のダメージ0」）
+{const h1=hurt;hurt=function(v,n){if(n>0&&v&&v.shield>0){let cut=Math.min(v.shield,n);n-=cut;useShield(v,cut);if(n===0){zeroWhy='軽減';return 0}}
+ let w=v.barrierN;v.barrierN=0;try{return h1.call(this,v,n)}finally{v.barrierN=w}}}
+// 古い「ずっと効く」軽減の値は使わない（盾だけで判定する）
+{const b4=begin;begin=function(f){let r=b4.apply(this,arguments);for(const s of [p,c])if(s)for(const u of s.units)u.barrierN=0;return r}}
+// 身代わりで神殿が割れたら、神殿の盾もずらす
+{const sb=substitute;substitute=function(side){let n=side&&side.shrines?side.shrines.length:0,r=sb.apply(this,arguments);if(side&&side.shrineSh&&side.shrines.length<n)side.shrineSh.splice(0,n-side.shrines.length);return r}}
+// 自分のターン開始時の付け直し：雷壁（味方全員−1）／天守（味方全員と神殿すべて−2）／陽神アカツキ（晴れの間、神殿すべて−1）
+{const ts3=turnStart;turnStart=function(f){let r=ts3.apply(this,arguments);if(!f||ending)return r;let x=heroFx(f);
+ if(x.wall){f.units.forEach(u=>addBarrier(u,'wall',x.wall))}if(x.shrineWall)addShrineShield(f,x.shrineWall);
+ if(weather==='晴れ'&&f.units.some(u=>u.id===8&&u.hp>0))addShrineShield(f,1);return r}}
+// 天柱落とし：自分の神殿すべてに −2
+SP['sky-5'].run=f=>{addShrineShield(f,2);latest+='　自分の神殿すべてに「次に受けるダメージ−2」'};
+SP['sky-5'].ai=f=>f.shrines.length&&shrineCut(f)<2&&foeOf(f).units.some(u=>atkOf(u)>0)?'none':null;
+// 軽減を付ける呪文のAI：すでに同じか大きい軽減がある味方には付けない（付け直しても増えないため）
+for(const [k,n] of [['sky-3',1],['sky-8',1]]){const a0=SP[k].ai;SP[k].ai=f=>{let t=a0(f);if(!t||t==='none')return t;let need=k==='sky-8'&&weather==='雨'?2:n;if((t.shield||0)>=need){let L=f.units.filter(u=>u.hp>0&&(u.shield||0)<need);return L.length?threatenedUnit({...f,units:L,shrines:f.shrines})||L[0]:null}return t}}
+{const ap=aiSkillPlan;aiSkillPlan=function(f,k,ph){let pl=ap.apply(this,arguments);if(pl&&k.kind==='barrier'&&pl.t&&(pl.t.shield||0)>=k.n){let L=f.units.filter(u=>u.hp>0&&(u.shield||0)<k.n).sort((a,b)=>(b.hero?1:0)-(a.hero?1:0)||threat(b)-threat(a));pl=L.length?{t:L[0]}:null}return pl}}
+// AIの攻撃：軽減は1回で消える前提。相手に盾があれば、攻撃力の低い味方から先に当てて盾を外し、強い味方で倒す
+{const prevAttack=aiAttack;aiAttack=async function(f){let d=foeOf(f);
+ if(!ending&&canSkill(f)){aiPhase='post';try{await useSkill(f,null)}finally{aiPhase='pre'}}if(ending)return;
+ const shielded=()=>d.units.some(u=>u.shield>0)||shrineCut(d)>0;
+ let order=shielded()?[...f.units].sort((a,b)=>atkOf(a)-atkOf(b)):[...f.units];
+ for(let u of order){for(let n=0;n<4&&!ending&&!u.used&&u.hp>0&&!sickOf(f,u)&&f.units.includes(u);n++){let ok=v=>!(v.dodge&&!u.hero),eff=v=>Math.max(0,atkOf(u)+(fxOf(f,u).extra||0)-(v.shield||0)),v;
+  let h=heroOf(d),kill=mates(d).filter(x=>ok(x)&&x.hp<=eff(x)&&!x.ward).sort((a,b)=>threat(b)-threat(a));
+  if(!d.shrines.length)v=h;else if(!heroLocked(f,u,d)&&h&&h.hp<=eff(h)&&!h.ward)v=h;else v=kill[0]||null;
+  // 倒せる相手がいなくて、盾つきの仲間を後ろの味方が倒せるなら、この攻撃で盾を外す
+  if(!v&&d.shrines.length){let strong=f.units.filter(x=>x!==u&&!x.used&&x.hp>0&&!sickOf(f,x)),pop=mates(d).filter(x=>ok(x)&&x.shield>0&&!x.ward&&strong.some(s=>atkOf(s)>=x.hp)).sort((a,b)=>threat(b)-threat(a))[0];if(pop&&shrineCut(d)<atkOf(u))v=pop}
+  if((!v||v.hero)&&!firstHit(u)){v=kill[0]||null;if(!v)break}
+  await strike(f,u,d,v)}}}}
+// 表示：軽減の印（盾マーク＋数字）。受けて消えたら印も消える
+const SHIELD_SVG='<svg viewBox="0 0 16 18" width="10" height="11" aria-hidden="true"><path d="M8 1 15 3.6v5c0 4.3-3 7.2-7 8.4C4 15.8 1 12.9 1 8.6v-5Z" fill="currentColor"/></svg>';
+{const us4=unitStatus;unitStatus=function(f,u){let t=us4.apply(this,arguments).filter(x=>!/^(結界|雷壁|天守)：/.test(x));if(u.shield)t.unshift('軽減：次に受けるダメージ−'+u.shield+'（受けたら消える）');return t}}
+{const rr3=render;render=function(){let r=rr3.apply(this,arguments);try{for(const s of [p,c]){if(!s)continue;
+  for(const u of s.units){let e=document.getElementById('u'+u.uid);if(!e)continue;e.querySelectorAll('.ribbon.barrier').forEach(x=>x.remove());if(u.shield>0&&!e.querySelector('.shieldmark'))e.insertAdjacentHTML('beforeend','<em class="shieldmark" title="次に受けるダメージ−'+u.shield+'" aria-label="軽減 −'+u.shield+'">'+SHIELD_SVG+'−'+u.shield+'</em>')}
+  let row=document.getElementById('shrine'+s.id),b=row&&row.querySelector('.shrinecut');if(b){let n=shrineCut(s),k=(s.shrineSh||[]).filter(x=>x>0).length;b.innerHTML=SHIELD_SVG+'−'+n+(k>1?' ×'+k:'');b.title='神殿の軽減（次に受けるダメージ−'+n+'）'}}}catch(e){console.warn(e)}return r}}
