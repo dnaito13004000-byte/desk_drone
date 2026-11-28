@@ -35,6 +35,12 @@ function grantReward(won){if(window.__storyBattle||window.__tutorial)return {won
 const TICKET='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 8v8" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2"/></svg>';
 const SHARD='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l6 8-6 12-6-12z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M6 10h12M12 2v20" stroke="currentColor" stroke-width="1" opacity=".6"/></svg>';
 const CROWN='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18l1-11-5 4-5-7-5 7-5-4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>';
+// ---- ホーム（2026-11-28）の線画アイコン ----
+const TORII='<svg class="ic" viewBox="0 0 32 28" aria-hidden="true"><path d="M2 4.5c5 1.6 23 1.6 28 0M5 9.5h22M9 6v20M23 6v20M16 9.5v-4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
+const IC_BOOK='<svg class="ic" viewBox="0 0 32 28" aria-hidden="true"><path d="M16 7c-3-2.2-7.5-2.6-12-1.6v17c4.5-1 9-.6 12 1.6 3-2.2 7.5-2.6 12-1.6v-17C23.5 4.4 19 4.8 16 7zM16 7v17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+const IC_CARDS='<svg class="ic" viewBox="0 0 32 28" aria-hidden="true"><rect x="12" y="4" width="13" height="19" rx="2" transform="rotate(10 18 13)" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="6" y="5" width="13" height="19" rx="2" transform="rotate(-8 12 14)" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+const IC_HELP='<svg class="ic" viewBox="0 0 32 28" aria-hidden="true"><circle cx="16" cy="14" r="11" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12.4 11.2c.4-2.2 2-3.4 3.9-3.4 2.2 0 3.8 1.4 3.8 3.3 0 2.6-3.6 2.8-3.6 5.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16.5" cy="20.4" r="1.2" fill="currentColor"/></svg>';
+const IC_PACK='<svg class="ic" viewBox="0 0 32 28" aria-hidden="true"><path d="M8 4.5l16-1.8 1.4 21-16 1.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8.6 8l16-1.8M10 21.8l16-1.8" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="17" cy="14" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M17 10.4c1.6 1 1.6 2.6 0 3.6s-1.6 2.6 0 3.6" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>';
 function wallet(){return '<div class="wallet"><span class="w-tk">'+TICKET+'<small>チケット</small><b>'+packLabel()+'</b></span><span class="w-sh">'+SHARD+'<small>神の欠片</small><b>'+save.shards+'</b></span><span class="w-wn">'+CROWN+'<small>通算勝利</small><b>'+save.wins+'</b></span></div>'}
 // 対戦終了画面：勝敗ともらった報酬
 function resultScreen(){if(window.__storyBattle&&typeof storyResult==='function'){storyResult();return}if(window.__tutorial){tutorialResult();return}tag.textContent='';let r=lastReward||{won:ending==='勝利'},won=ending==='勝利';
@@ -61,15 +67,21 @@ function card(x,cls=''){let id=x[0],hero=GOD_CARDS[id]&&SET_ALL.heroes.includes(
 
 // ---- ホーム ----
 function home(){if(save.starterPending){starter();return}tag.textContent='';chooseOpen=false;zoom=null;
- app.innerHTML='<div class="scene home home3"><div class="sc-bg"></div><img class="home-art" src="art/home-gods.webp" alt=""><div class="home-shade"></div>'
- +'<header class="h3-head"><h1 class="logo3"><b>神々の一手</b><i></i><svg viewBox="-60 -60 120 120" aria-hidden="true"><circle r="56" fill="none" stroke="#e8c060" stroke-width="7"/><g fill="#e8c060">'+[0,120,240].map(r=>'<g transform="rotate('+r+')">'+TOMOE+'</g>').join('')+'</g></svg><span>雷鳴の社</span></h1>'
- +'<div class="res-chips"><span class="chip">'+TICKET+'<small>チケット</small><b>'+packLabel()+'</b></span><span class="chip sh">'+SHARD+'<small>神の欠片</small><b>'+save.shards+'</b></span></div></header>'
- +'<div class="home-main"><button class="btn-duel2" onclick="chooseGod()"><span class="duel-cards" aria-hidden="true">'+[0,1].map(k=>'<i class="mc'+k+'"><svg viewBox="-60 -60 120 120"><g fill="#e8c060">'+[0,120,240].map(r=>'<g transform="rotate('+r+')">'+TOMOE+'</g>').join('')+'</g></svg></i>').join('')+'</span>'
- +'<i class="wave l"></i><i class="wave r"></i><b>対戦する</b><span class="duel-wins">'+CROWN+'通算勝利 <em>'+save.wins+'</em></span></button>'
- +'<div class="home-subs"><button class="btn-howto" onclick="storyMenu()">ストーリー</button><button class="btn-howto" onclick="deckEdit()">デッキ編成</button><button class="btn-howto" onclick="howto()">遊び方</button></div>'+(warning?'<small class="warn">'+warning+'</small>':'')+'</div>'
- +'<nav class="tabbar3" aria-label="メニュー"><button class="tile on" aria-label="ホーム" aria-current="page" onclick="home()"><img src="art/tab-home.webp" alt=""></button>'
- +'<button class="tile" aria-label="パック開封" onclick="pack()"><img src="art/tab-pack.webp" alt="">'+(save.pending.length?'<em>開封中</em>':packsLeft()?'<em>'+packLabel()+'</em>':'')+'</button>'
- +'<button class="tile" aria-label="図鑑" onclick="album()"><img src="art/tab-album.webp" alt=""></button></nav>'
+ app.innerHTML='<div class="scene home home4">'
+ // 1. ヘッダー：鳥居＋雷鳴の社／チケット・神の欠片（所持数はセーブから）
+ +'<header class="h4-head"><div class="h4-brand">'+TORII+'<i></i><span>雷鳴の社</span></div>'
+ +'<div class="h4-chips"><span class="h4-chip">'+TICKET+'<small>チケット</small><b>'+packLabel()+'</b></span><span class="h4-chip sh">'+SHARD+'<small>神の欠片</small><b>'+save.shards+'</b></span></div></header>'
+ // 2. メインビジュアル（5人の集合絵。ロゴは絵に含まれている）
+ +'<div class="h4-visual" id="h4visual"><img class="h4-fill" src="art/home-hero.webp" alt="" aria-hidden="true"><img class="h4-art" id="h4art" src="art/home-hero.webp" alt="神々の一手　5人の神子"></div>'
+ // 3. メイン操作
+ +'<div class="h4-main"><p class="h4-wins">通算勝利 <b>'+save.wins+'</b></p>'
+ +'<button class="h4-duel" onclick="chooseGod()"><b>対戦する</b><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
+ +'<div class="h4-subs"><button onclick="storyMenu()">'+IC_BOOK+'<span>ストーリー</span></button><button onclick="deckEdit()">'+IC_CARDS+'<span>デッキ編成</span></button><button onclick="howto()">'+IC_HELP+'<span>遊び方</span></button></div>'
+ +(warning?'<small class="warn">'+warning+'</small>':'')+'</div>'
+ // 4. 下部ナビ（選択中＝金色の下線。パック開封のバッジは今までと同じ条件）
+ +'<nav class="h4-nav" aria-label="メニュー"><button class="on" aria-current="page" onclick="home()">'+TORII+'<span>ホーム</span></button>'
+ +'<button onclick="pack()">'+IC_PACK+'<span>パック開封</span>'+(save.pending.length?'<em>開封中</em>':packsLeft()?'<em>'+packLabel()+'</em>':'')+'</button>'
+ +'<button onclick="album()">'+IC_BOOK+'<span>図鑑</span></button></nav>'
 +'<div class="choose" id="choose" hidden><div class="ch-in"><h2>使う主神を選ぶ</h2>'+(typeof deckValid==='function'&&deckValid(save.deck)?'<button class="ch-my" onclick="window.__myDeckNext=true;start('+save.deck.hero+')"><b>マイデッキで対戦</b><small>'+GOD_CARDS[save.deck.hero].type+' '+GOD_CARDS[save.deck.hero].name+'・'+save.deck.cards.length+'枚</small></button><p class="ch-or">または、標準デッキで</p>':'')+'<div class="ch-list five">'
  +HERO_IDS.map(i=>[i,GOD_CARDS[i].type,stageOf(i,0).name+'（攻'+stageOf(i,0).atk+' / 体'+stageOf(i,0).hp+'）']).map(([i,t,h])=>'<button class="ch-god" onclick="start('+i+')">'+gcard(i,0,null,'mini')+'<span><small>'+t+'</small><em>'+({2:'雷撃で敵を撃つ',5:'芽吹きで味方を癒す',0:'火の拳で押し切る',3:'すぐ攻めに出られる',10:'冥火で敵を弱める'})[i]+'</em></span></button>').join('')
  +'</div><button class="btn-navy" onclick="chooseGod(false)">もどる</button></div></div></div>'}
@@ -176,6 +188,16 @@ function closeZoom(){zoom=null;let z=document.querySelectorAll('.albumscreen .al
 function zoomHtml(){let {id}=zoom,r=cardRarity(id);
  return '<div class="al-zoom" onclick="if(event.target===this){closeZoom()}">'+card([id],'big')+'<p class="zt"><b>'+cardName(id)+'</b>　<i class="rr r-'+r+'">'+RANK_NAME(r)+'</i>　'+colorChip(id)+(GOD_CARDS[id]?'':'<small class="zcost">コスト'+cardCost(id)+'</small>')+'<br><em>'+cardShort(id)+'</em><br>'+cardText(id)+'</p>'+termList(cardText(id)+(isGod(id)&&!GOD_CARDS[id]?'仲間':''))
  +'<button class="btn-navy" onclick="closeZoom()">閉じる</button></div>'}
+// メインビジュアルの収まり：上の2人の頭（上から7.5%）からロゴの下端（99.5%）までは必ず見せる。
+// 入るときは横幅いっぱい（はみ出す分は上の空から切る）。入らないときだけ縮めて、左右は同じ絵のぼかしで埋める
+function fitHomeArt(){let box=document.getElementById('h4visual'),img=document.getElementById('h4art');if(!box||!img)return;
+ let W=box.clientWidth,H=box.clientHeight,IW=1024,IH=1536,TOP=.075*IH,BOT=.995*IH,BAND=BOT-TOP;if(!W||!H)return;
+ let s=Math.max(W/IW,H/IH),w,h,x,y;
+ if(H/s>=BAND||(H/BAND)/s>.96){w=IW*s;h=IH*s;x=(W-w)/2;y=Math.min(0,Math.max(H-h,H-BOT*s))}  // 横幅いっぱい。ロゴの下端を下にそろえ、余る分は上の空を切る（縮める必要が4%未満ならこちら）
+ else{s=H/BAND;w=IW*s;h=IH*s;x=(W-w)/2;y=-TOP*s}        // 頭〜ロゴが入るように縮める（左右は同じ絵のぼかし）
+ img.style.cssText='width:'+w+'px;height:'+h+'px;left:'+x+'px;top:'+y+'px';box.classList.toggle('narrow',w<W-1)}
+window.addEventListener('resize',()=>requestAnimationFrame(fitHomeArt));
+{const h0=home;home=function(){let r=h0.apply(this,arguments);let img=document.getElementById('h4art');if(img){if(img.complete)fitHomeArt();else img.addEventListener('load',fitHomeArt,{once:true});requestAnimationFrame(fitHomeArt)}return r}}
 home();
 
 // ---- 遊び方・用語集（ホームの「遊び方」ボタンから） ----
@@ -228,3 +250,4 @@ function keepScroll(fn,sel){return function(){let el=document.querySelector(sel)
 album=keepScroll(album,'.al-scroll');
 album=withImgReuse(album);
 album=withLazy(album);
+

@@ -247,3 +247,67 @@ body:has(.scene){background:#05080f;overflow:hidden}
 .home3 .home-art{width:100%;height:auto;max-height:calc(100% - 58px - 118px);object-fit:cover;object-position:50% 0}
 .home3 .sc-bg{background:linear-gradient(180deg,#1c1850 0,#2a2160 50%,#140f34 100%)}
 .home3 .home-shade{background:linear-gradient(180deg,#120d3000 0,#120d3000 calc(58px + 100vw*1.1),#1a1446 calc(58px + 100vw*1.25))}
+
+/* ==== ホーム（2026-11-28）：ヘッダー／メインビジュアル／対戦する／3ボタン／下部ナビ ==== */
+.home4{--h4ink:#120e34;--h4ink2:#1a1648;--h4gold:#d9b45a;--h4gold2:#f1d98f;--h4cream:#f4ead2;
+ display:flex;flex-direction:column;background:var(--h4ink);color:var(--h4cream);overflow:hidden}
+.home4 .ic{display:block;flex:none}
+/* 青海波（ごく薄く） */
+.home4{--h4sei:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='12' viewBox='0 0 24 12'%3E%3Cg fill='none' stroke='%23d9b45a' stroke-width='.8'%3E%3Ccircle cx='12' cy='12' r='11'/%3E%3Ccircle cx='12' cy='12' r='7.5'/%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3Ccircle cx='0' cy='12' r='11'/%3E%3Ccircle cx='24' cy='12' r='11'/%3E%3Ccircle cx='0' cy='0' r='11'/%3E%3Ccircle cx='24' cy='0' r='11'/%3E%3C/g%3E%3C/svg%3E")}
+/* 1. ヘッダー */
+.h4-head{position:relative;flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:max(8px,env(safe-area-inset-top)) 12px 8px 14px;background:linear-gradient(180deg,#151140,#120e34);border-bottom:1px solid #d9b45a55}
+.h4-head::after{content:"";position:absolute;inset:auto 0 0 0;height:22px;background:var(--h4sei) repeat-x;opacity:.10;pointer-events:none;-webkit-mask:linear-gradient(90deg,#000,transparent 30%,transparent 70%,#000);mask:linear-gradient(90deg,#000,transparent 30%,transparent 70%,#000)}
+.h4-brand{display:flex;align-items:center;gap:9px;color:var(--h4gold);min-width:0}
+.h4-brand .ic{width:26px;height:23px}
+.h4-brand i{width:1px;height:22px;background:#d9b45a88}
+.h4-brand span{font:700 18px/1 "Shippori Mincho B1","Yu Mincho",serif;letter-spacing:.14em;color:var(--h4gold2);white-space:nowrap}
+.h4-chips{display:grid;gap:5px}
+.h4-chip{position:relative;display:grid;grid-template-columns:18px auto minmax(22px,auto);align-items:center;gap:7px;min-width:148px;height:26px;padding:0 12px 0 10px;
+ background:var(--h4gold);clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,7px 100%,0 50%)}
+.h4-chip::before{content:"";position:absolute;inset:1px;background:#16123d;clip-path:inherit;z-index:0}
+.h4-chip>*{position:relative;z-index:1}
+.h4-chip svg{width:18px;height:18px;color:var(--h4gold)}.h4-chip.sh svg{color:#b9a2ff}
+.h4-chip small{font:600 12px "Shippori Mincho B1","Yu Mincho",serif;color:var(--h4cream);white-space:nowrap;letter-spacing:.06em}
+.h4-chip b{justify-self:end;font:800 16px/1 system-ui,sans-serif;color:#fff}
+/* 2. メインビジュアル（縦の余りに合わせて高さが変わる。絵の位置は fitHomeArt で決める） */
+.h4-visual{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;background:var(--h4ink)}
+.h4-art{position:absolute;max-width:none}
+.h4-fill{position:absolute;inset:-20px;width:calc(100% + 40px);height:calc(100% + 40px);object-fit:cover;object-position:50% 40%;filter:blur(16px) brightness(.55) saturate(.9);opacity:0;transition:opacity .2s}
+.h4-visual.narrow .h4-fill{opacity:1}
+.h4-visual::after{content:"";position:absolute;inset:auto 0 0 0;height:16px;background:linear-gradient(180deg,#120e3400,var(--h4ink));pointer-events:none}
+/* 3. メイン操作 */
+.h4-main{flex:none;padding:2px 16px 12px}
+.h4-wins{margin:0 4px 8px auto;width:max-content;max-width:100%;padding:0 2px 3px 40px;border-bottom:1px solid #d9b45a66;font:600 13px "Shippori Mincho B1","Yu Mincho",serif;color:var(--h4cream);letter-spacing:.12em;text-align:right}
+.h4-wins b{margin-left:6px;font:800 16px system-ui,sans-serif;color:#fff;letter-spacing:0}
+.h4-duel{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:64px;border:0;padding:0 44px;cursor:pointer;color:#1b1a4a;
+ background:#a9822f;clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0 calc(100% - 12px),0 12px)}
+.h4-duel::before{content:"";position:absolute;inset:2px;clip-path:inherit;background:var(--h4sei) 0 100%/24px 12px repeat-x,linear-gradient(180deg,#fbf0c6,#efd58a 55%,#e2bf63);background-blend-mode:soft-light,normal}
+.h4-duel::after{content:"";position:absolute;inset:5px;clip-path:polygon(9px 0,calc(100% - 9px) 0,100% 9px,100% calc(100% - 9px),calc(100% - 9px) 100%,9px 100%,0 calc(100% - 9px),0 9px);border:1px solid #a9822f99;pointer-events:none}
+.h4-duel>*{position:relative;z-index:1}
+.h4-duel b{font:800 30px/1 "Shippori Mincho B1","Yu Mincho",serif;letter-spacing:.16em;padding-left:.16em}
+.h4-duel .chev{position:absolute;right:18px;width:22px;height:22px;color:#1b1a4a}
+.h4-duel:active{filter:brightness(.95);transform:translateY(1px)}
+.h4-duel:focus-visible,.h4-subs button:focus-visible,.h4-nav button:focus-visible{outline:3px solid #9fe3ff;outline-offset:3px}
+.h4-subs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.h4-subs button{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;height:50px;padding:0 6px;border:0;cursor:pointer;color:var(--h4cream);
+ background:#b8954a;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.h4-subs button::before{content:"";position:absolute;inset:1px;clip-path:inherit;background:linear-gradient(180deg,#221d58,#18143f)}
+.h4-subs button>*{position:relative;z-index:1}
+.h4-subs .ic{width:20px;height:18px;color:var(--h4gold)}
+.h4-subs span{font:700 14px/1.1 "Shippori Mincho B1","Yu Mincho",serif;letter-spacing:.06em;white-space:nowrap}
+.h4-subs button:active{filter:brightness(1.15)}
+.home4 .warn{display:block;margin-top:6px;font-size:11px;color:#f2d68a;text-align:center}
+/* 4. 下部ナビ（iPhoneのセーフエリアの分だけ下に余白） */
+.h4-nav{flex:none;display:grid;grid-template-columns:repeat(3,1fr);padding:6px 6px max(6px,env(safe-area-inset-bottom));background:#0f0b2c;border-top:1px solid #d9b45a55}
+.h4-nav button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;border:0;background:none;cursor:pointer;color:#cfc4a8}
+.h4-nav .ic{width:28px;height:25px}
+.h4-nav span{font:700 12px "Shippori Mincho B1","Yu Mincho",serif;letter-spacing:.08em}
+.h4-nav button.on{color:var(--h4gold2)}
+.h4-nav button.on::after{content:"";position:absolute;bottom:0;left:50%;width:32px;height:2px;translate:-50% 0;border-radius:2px;background:var(--h4gold)}
+.h4-nav em{position:absolute;top:2px;left:calc(50% + 10px);min-width:20px;height:18px;padding:0 5px;border-radius:9px;background:#c8402e;color:#fff;font:800 11px/18px system-ui,sans-serif;font-style:normal;text-align:center}
+/* 縦が短い端末：まず余白を詰める（文字とタップ領域は小さくしない） */
+@media (max-height:700px){.h4-head{padding-bottom:6px}.h4-chips{gap:4px}.h4-chip{height:24px}.h4-main{padding-bottom:8px}.h4-wins{margin-bottom:5px}.h4-subs{margin-top:8px}.h4-nav button{min-height:50px}}
+.home4 .choose{z-index:12}
+.h4-head{margin:0}
+.h4-nav{margin:0}.h4-nav button{margin:0;padding:0;min-height:52px;font:inherit}.h4-nav span{line-height:1}
+.h4-subs button,.h4-duel{margin:0;font:inherit}
