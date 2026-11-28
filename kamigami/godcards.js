@@ -528,3 +528,8 @@ const BU_TEXT={'mystic-5':'敵の仲間1体に、自分の墓地のカードの�
  'mystic-8':'自分の墓地のカード1枚を手札に戻す。戻したのが仲間なら、敵の仲間1体に1ダメージを与える。'};
 for(const [k,t] of Object.entries(BU_TEXT)){NEW_TEXT[k]=EXP_CARDS[k].text=CARD_TABLE[k].short=CARD_TABLE[k].full=t}
 for(const t of TERMS)if(t[0]==='蘇生')t[1]='墓地の仲間を場に戻すこと。戻ったターンは、召喚したときと同じく攻撃できない。登場時の効果は起きない（薄暮の呪い手の断末魔・空蝉の歩法など）。';
+
+// ==== 単色ルール（2026-11-28）：デッキは主神の色＋色なし（神託・覚醒の神鏡）だけ ====
+BASE_COLOR.draw='';BASE_COLOR.mirror='';   // 神託は色なし（全色のデッキに入れられる）
+const monoOK=(hero,id)=>{let c=colorOf(id);return !c||(GOD_CARDS[hero]&&c===GOD_CARDS[hero].type)};
+TERMS.push(['単色','デッキは主神1柱と、その主神の色の仲間・呪文だけで組む。他の色は入れられない。色なしのカード（神託・覚醒の神鏡）だけは、どの色のデッキにも入れられる。']);

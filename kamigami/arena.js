@@ -1202,3 +1202,10 @@ SP['mystic-4'].run=(f,t)=>{let k=handKey(t.id);sacrifice(t);settle(f);if((f.grav
 // 心読み：墓地のカード1枚を手札に戻す。戻したのが仲間なら、敵の仲間1体に1ダメージ
 SP['mystic-8'].run=f=>{let L=f.grave||[],k=f.pick2&&L.includes(f.pick2)?f.pick2:graveRank(f,L)[0];f.pick2=null;let i=L.lastIndexOf(k);if(i<0)return;L.splice(i,1);f.hand.push(k);latest+='　墓地の'+cardLabel(k)+'を手札に戻した';
  if(isSum(k)){let d=foeOf(f),M=mates(d);if(M.length){let t=best(M.filter(x=>!x.ward&&x.hp<=1-dmgCut(x)),x=>threat(x))||best(M,x=>threat(x));let n=hurt(t,1);latest+='・'+names[t.id]+'に'+n+'ダメージ';settle(d)}}};
+
+// ==== 単色ルール（2026-11-28）：AIの標準デッキ・ストーリーの相手デッキも「主神の色＋色なし」だけ ====
+{const sd3=standardDeck;standardDeck=function(id){let col=GOD_CARDS[id].type,own=k=>save.cards.filter(x=>x[0]===k).length,ally=k=>typeof k==='number'||isSum(k);
+ let pool=[...SET_ALL.allies,...SET_ALL.spells].filter(battleReady).filter(k=>own(k)>0&&monoOK(id,k)),mine=pool.filter(k=>colorOf(k)===col),A=mine.filter(ally),S=mine.filter(k=>!ally(k)),none=pool.filter(k=>!colorOf(k));
+ let deck=[],cnt=k=>deck.filter(x=>x===handKey(k)).length,add=k=>{if(deck.length<20&&cnt(k)<Math.min(2,own(k)))deck.push(handKey(k))};
+ [...A,...S].forEach(add);[...A].sort((a,b)=>costOf(handKey(a))-costOf(handKey(b))).forEach(add);S.forEach(add);none.forEach(k=>{add(k);add(k)});return deck}}
+document.addEventListener('DOMContentLoaded',()=>{if(typeof applyStoryFoe!=='function'||applyStoryFoe.__mono)return;const af=applyStoryFoe;applyStoryFoe=function(f,F){if(F&&F.deck){let bad=F.deck.filter(k=>!monoOK(F.id,isSum(k)?sumId(k):k));if(bad.length){let fill=standardDeck(F.id).filter(k=>!F.deck.includes(k)||F.deck.filter(x=>x===k).length<2);F={...F,deck:F.deck.filter(k=>monoOK(F.id,isSum(k)?sumId(k):k)).concat(fill.slice(0,bad.length))}}}return af.call(this,f,F)};applyStoryFoe.__mono=true});

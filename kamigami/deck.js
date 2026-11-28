@@ -43,3 +43,21 @@ if(document.querySelector('.home3,.home4'))home();
 deckRender=keepScroll(deckRender,'.dk-scroll');
 deckRender=withImgReuse(deckRender);
 deckRender=withLazy(deckRender);
+
+// ==== 単色ルール（2026-11-28）：主神の色＋色なしだけ。他の色はどうやっても入らない ====
+let dkNotice='';
+{const dv=deckValid;deckValid=function(d){return dv.apply(this,arguments)&&d.cards.every(id=>monoOK(d.hero,id))}}
+// 読み込み時：保存デッキに他の色が混ざっていたら外して警告
+{const de=deckEdit;deckEdit=function(){let fresh=!deckDraft;de.apply(this,arguments);if(fresh&&deckDraft&&deckDraft.hero!=null){let before=deckDraft.cards.length;deckDraft.cards=deckDraft.cards.filter(id=>monoOK(deckDraft.hero,id));let n=before-deckDraft.cards.length;if(n){dkNotice='保存デッキに他の色のカードが'+n+'枚混ざっていたので外しました（単色ルール）。足りない分を入れてから保存してください';deckRender(true)}}}}
+// 主神を変えたら、他の色のカードを外して知らせる
+dkHero=function(id){let before=deckDraft.cards.length;deckDraft.hero=id;deckDraft.cards=deckDraft.cards.filter(x=>monoOK(id,x));let n=before-deckDraft.cards.length;dkNotice=n?'主神を'+GOD_CARDS[id].type+'に変えたので、他の色のカード'+n+'枚を外しました':'';dkColor='all';deckRender(true)};
+// 入れる：主神が未選択なら入れない。他の色は入れない
+{const da=dkAdd;dkAdd=function(id){if(deckDraft.hero==null){dkNotice='先に主神を選んでください';deckRender(true);return}if(!monoOK(deckDraft.hero,id))return;dkNotice='';return da.apply(this,arguments)}}
+// 一覧：主神を選んだら「その色＋色なし」だけ。色の絞り込みもその2つだけにする
+{const dr=deckRender;deckRender=function(keep){let d=deckDraft,hc=d&&d.hero!=null?GOD_CARDS[d.hero].type:null;if(hc&&dkColor!=='all'&&dkColor!=='none'&&dkColor!==hc)dkColor='all';
+ let pool0=SET_ALL.allies,sp0=SET_ALL.spells;if(hc){SET_ALL.allies=pool0.filter(id=>monoOK(d.hero,id));SET_ALL.spells=sp0.filter(id=>monoOK(d.hero,id))}
+ let r;try{r=dr.apply(this,arguments)}finally{SET_ALL.allies=pool0;SET_ALL.spells=sp0}
+ try{let chips=document.querySelector('.deckscreen .al-ctl .al-chips');if(chips&&hc)chips.querySelectorAll('button').forEach(b=>{let v=(b.getAttribute('onclick')||'').match(/dkSet\('c','([^']+)'\)/);if(v&&v[1]!=='all'&&v[1]!=='none'&&v[1]!==hc)b.remove()});
+  let h=[...document.querySelectorAll('.deckscreen h2.al-set')][2];if(h&&hc){let s=h.querySelector('span');if(s)s.textContent=hc+'＋色なしだけ（単色）'}else if(h&&!hc){let s=h.querySelector('span');if(s)s.textContent='先に主神を選ぶと、その色のカードだけになります'}
+  if(dkNotice){let w=document.querySelector('.deckscreen .dk-why');if(w)w.insertAdjacentHTML('beforebegin','<p class="dk-notice" role="status">'+dkNotice+'</p>')}}catch(e){}
+ return r}}

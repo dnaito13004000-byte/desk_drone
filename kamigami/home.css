@@ -318,3 +318,4 @@ body:has(.scene){background:#05080f;overflow:hidden}
 .h4-visual::after{height:64px;z-index:1;background:linear-gradient(180deg,#120e3400,#120e34cc 62%,var(--h4ink))}
 .h4-visual .h4-wins{position:absolute;right:20px;bottom:6px;z-index:2;margin:0;text-shadow:0 1px 3px #000c}
 .h4-main{padding-top:4px}
+.deckscreen .dk-notice{margin:0 0 4px;font-size:12px;color:#ffd98a;text-align:center}

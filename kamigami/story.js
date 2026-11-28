@@ -51,8 +51,10 @@ hero: うん。次の神にも、会いに行こう。
 };
 const STORY_CHAPTERS={
  5:{bg:'kodama',battles:[
-  {stage:0,shrines:3,deck:['g6','g6','earth-1','earth-1','earth-2','seed','seed','earth-4','earth-4','guard','guard','draw','draw','rain','sun','g1','g1','earth-3','earth-3','mirror']},
-  {stage:1,shrines:4,deck:['g6','g6','earth-1','earth-1','earth-2','earth-2','earth-3','earth-3','earth-5','earth-5','seed','seed','earth-4','guard','guard','draw','draw','mirror','scroll','scroll']}]},
+  // 2026-11-28 単色ルール：守護・雨乞い・雲払い・雨神シズク（他の色）を、大地のカードに置き換え
+  {stage:0,shrines:3,deck:['g6','g6','earth-1','earth-1','earth-2','earth-2','seed','seed','earth-4','earth-4','earth-7','earth-7','draw','draw','earth-8','earth-8','earth-5','earth-3','earth-3','mirror']},
+  // 2026-11-28 単色ルール：守護（神秘）を、不動の山神に置き換え
+  {stage:1,shrines:4,deck:['g6','g6','earth-1','earth-1','earth-2','earth-2','earth-3','earth-3','earth-5','earth-5','seed','seed','earth-4','earth-6','earth-6','draw','draw','mirror','scroll','scroll']}]},
  0:{bg:'kagura'},3:{bg:'hayate'},10:{bg:'oboro'},2:{bg:'raiga'}
 };
 function chTitle(id){return GOD_CARDS[id].type+'の章　'+GOD_CARDS[id].name}
