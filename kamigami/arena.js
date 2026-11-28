@@ -27,7 +27,7 @@ async function subFx(){let list=subLog;subLog=[];if(calm())return;
   await pause(650)}}
 function heroFx(f){return GOD_CARDS[f.id]?stageOf(f.id,f.stage).fx:{}}
 function fxOf(f,u){return u&&u.hero?heroFx(f):{}}
-const atkOf=u=>Math.max(0,(u.setAtk!=null?u.setAtk:u.atk+(u.tmpAtk||0)+(u.id===7&&weather==='雨'?1:0)+(u.id===8&&weather==='晴れ'?1:0))-(u.weak||0));// ナギ：雨で+1／アカツキ：晴れで+1
+const atkOf=u=>Math.max(0,(u.setAtk!=null?u.setAtk:u.atk+(u.tmpAtk||0)+(u.id===11?subaruBonus(u):0))-(u.weak||0));// 2026-11-28：ナギ・アカツキの天候ボーナスは廃止。星神スバル＝墓地の仲間の数（最大+3）
 function maxAttacks(f,u){return (fxOf(f,u).attacks||(u&&u.id==='water-7'?2:1))+(u&&u.extraAtt||0)}
 function canEvolve(f){let h=heroOf(f);return !!h&&f.stage===0&&f.gauge>=ASCEND.evolve.gauge&&f.mp>=ASCEND.evolve.cost}
 function canAwaken(f){let h=heroOf(f);return !!h&&f.stage===1&&f.shrineBroken&&f.mp>=ASCEND.awaken.cost}
@@ -48,7 +48,7 @@ function skillOf(f){let h=heroOf(f);if(!h)return null;let s=stageOf(f.id,f.stage
 function canSkill(f){let k=skillOf(f);return !!k&&!f.skillUsed&&f.mp>=k.cost}
 async function useSkill(f,v){let k=skillOf(f),d=f===p?c:p;if(!k||!canSkill(f)||!v)return;f.mp-=k.cost;f.skillUsed=true;skillMode=null;let wasBusy=busy;busy=true;
  let el=document.getElementById('u'+v.uid),r=el&&body(el,.45);
- if(k.kind==='bolt'){let nn=hurt(v,k.n),wasHero=v.hero;latest=k.name+'！ '+names[v.id]+'に'+nn+'ダメージ'+(nn?'':'（守護で0）');if(r&&!calm()){sfx('hit');burst('bolt',r.x,r.y);struck(el);pop(nn?'−'+nn:'守護',r.x,body(el,.2).y,k.n);drain(el,v);if(v.hp<=0&&!(wasHero&&d.shrines.length))el.classList.add('ko');await pause(v.hp<=0?560:420)}settle(d);await subFx()}
+ if(k.kind==='bolt'){let nn=hurt(v,k.n),wasHero=v.hero;latest=k.name+'！ '+names[v.id]+'に'+nn+'ダメージ'+(nn?'':'（招雷で0）');if(r&&!calm()){sfx('hit');burst('bolt',r.x,r.y);struck(el);pop(nn?'−'+nn:'守護',r.x,body(el,.2).y,k.n);drain(el,v);if(v.hp<=0&&!(wasHero&&d.shrines.length))el.classList.add('ko');await pause(v.hp<=0?560:420)}settle(d);await subFx()}
  else if(k.kind==='heal'){let before=v.hp;v.hp=Math.min(v.max,v.hp+k.n);if(v.hp>before)healed(f);latest=k.name+'！ '+names[v.id]+'の体力を'+(v.hp-before)+'回復';if(r&&!calm()){burst('leaf',r.x,r.y);pop('+'+(v.hp-before),r.x,body(el,.2).y,1,'heal');drain(el,v);await pause(420)}}
  else{v.weak=k.n;v.weakBy=null;latest=k.name+'！ '+names[v.id]+'の攻撃力−'+k.n+'（場を離れるまで）';if(r&&!calm()){burst('water',r.x,r.y);pop('攻−'+k.n,r.x,body(el,.2).y,1,'guard');await pause(420)}}
  busy=wasBusy;render();await shrineReveal(f,null,d)}
@@ -72,7 +72,7 @@ function legal(f,k){return k&&f.mp>=1&&(isSum(k)?f.units.length<3:(k!=='guard'||
 function play(f,i,t){let k=f.hand[i];if(!legal(f,k))return;if((k==='bolt'||k==='guard')&&!t)return;f.mp--;f.hand.splice(i,1);sel=-1;latest=names[f.id]+'：'+info(k)[0];if(isSum(k)){let u=mk(f,+k.slice(1));f.units.push(u);arrived=u.uid;sfx('summon');latest=names[u.id]+'を召喚！'}if(k==='rain')sky('雨');if(k==='sun')sky('晴れ');if(k==='seed'){let b=f.mp;f.mp=Math.min(f.max,f.mp+2);latest=names[f.id]+'：種まき（神力を'+(f.mp-b)+'回復）'}if((k==='bolt'||k==='guard')&&t)spellEffect(f,k,t);if(k==='draw')for(let j=0;j<2&&f.deck.length;j++)f.hand.push(f.deck.pop())}
 // 守護：味方1体の「次に受けるダメージ」を0にする（u.ward）。招雷：雨のとき敵1体に2ダメージ
 function hurt(v,n){if(n>0&&v.ward){v.ward=false;return 0}v.hp-=n;return n}
-function spellEffect(f,k,t){let d=f===p?c:p;if(k==='bolt'){let n=hurt(t,2);latest='招雷！ '+names[t.id]+'に'+n+'ダメージ'+(n?'':'（守護で0）');t.lastDmg=n;settle(d)}else{t.ward=true;latest='守護！ '+names[t.id]+'が次に受けるダメージは0'}}
+function spellEffect(f,k,t){let d=f===p?c:p;if(k==='bolt'){let n=hurt(t,2);latest='招雷！ '+names[t.id]+'に'+n+'ダメージ'+(n?'':'（招雷で0）');t.lastDmg=n;settle(d)}else{t.ward=true;latest='守護！ '+names[t.id]+'が次に受けるダメージは0'}}
 function startSpell(i){let k=p.hand[i];if(!legal(p,k))return;skillMode={spell:k,i,name:moves[k][0],cost:costOf(k),side:k==='bolt'?'foe':'ally'};attacker=-1;sel=-1;render()}
 async function castSpell(f,i,t){let k=f.hand[i],el=document.getElementById('u'+t.uid),r=el&&body(el,.45);skillMode=null;play(f,i,t);let d=f===p?c:p;
  if(r&&!calm()){if(k==='bolt'){let n=t.lastDmg||0;sfx('hit');burst('bolt',r.x,r.y);struck(el);pop(n?'−'+n:'守護',r.x,body(el,.2).y,Math.max(1,n),n?'':'guard');drain(el,t);if(t.hp<=0)el.classList.add('ko');await pause(t.hp<=0?560:420)}
@@ -90,7 +90,7 @@ function closeHandZoom(){document.querySelectorAll('.handzoom:not(.ask):not(.bre
 function handZoom(i){if(document.querySelector('.handzoom.ask,.handzoom.breach'))return;document.querySelectorAll('.handzoom').forEach(x=>x.remove());let k=p.hand[i];if(!k)return;
  let g=isSum(k),key=g?sumId(k):k,isHero=g&&typeof key==='number'&&!!GOD_CARDS[key],full=isHero?stageText(key,p.stage):g?cardFull(key):cardFull(k),why=whyNot(p,k),name=g?titles[key]+' '+names[key]:spellName(k);
  let o=document.createElement('div');o.className='handzoom';o.setAttribute('role','dialog');o.setAttribute('aria-label',name+'の拡大表示');
- o.innerHTML='<div class="hz-in"><div class="hz-card">'+ucard(k,{showCost:true,cost:costOf(k),cantPay:p.mp<costOf(k)})+'</div><div class="hz-text"><p class="hz-kind">'+(isHero?'主神':g?'仲間':'呪文')+' ／ '+(colorOf(key)||'色なし')+' ／ コスト'+costOf(k)+'　<small>いまの神力 '+p.mp+'</small></p><p class="hz-eff">'+full+'</p>'+(termList(full+(g?'仲間':''))?'<details class="hz-terms"><summary>用語の説明</summary>'+termList(full+(g?'仲間':''))+'</details>':'')+'</div>'
+ o.innerHTML='<div class="hz-in"><div class="hz-card">'+ucard(k,{showCost:true,cost:costOf(k),cantPay:p.mp<costOf(k)})+'</div><div class="hz-text"><p class="hz-kind">'+(isHero?'主神':g?'仲間':'呪文')+' ／ '+(colorOf(key)||'色なし')+' ／ コスト'+(k==='scroll'?'X':costOf(k))+'　<small>いまの神力 '+p.mp+'</small></p><p class="hz-eff">'+full+'</p>'+(termList(full+(g?'仲間':''))?'<details class="hz-terms"><summary>用語の説明</summary>'+termList(full+(g?'仲間':''))+'</details>':'')+'</div>'
  +'<div class="hz-acts"><button class="hz-btn gold" data-a="use"'+(why?' disabled':'')+'>'+(g?'召喚する':'使う')+'</button>'+(why?'<small class="hz-why">'+why+'</small>':'')
  +'<button class="hz-btn" data-a="charge"'+(p.charged?' disabled':'')+'>'+(p.charged?'置いた（1ターン1枚）':'神力に置く')+'</button><button class="hz-btn ghost" data-a="close">閉じる</button></div></div>';
  o.onclick=e=>{if(e.target===o){closeHandZoom();return}let b=e.target.closest('button');if(!b||b.disabled)return;let a=b.dataset.a;o.remove();
@@ -111,10 +111,10 @@ function endTurnUI(){if(turn!==p||busy||ending)return;if(!canAttackAny()){enemyT
 function resolveStrike(f,u,d,v){let x=fxOf(f,u),wasWeak=v&&weakened(v)?Math.min(v.weak,v.atk):0;u.att=(u.att||0)+1;u.used=u.att>=maxAttacks(f,u)||!v||!!v.hero;let bonus=f.burst?1:0;f.burst=false;f.overflowHit=null;let hit=false;
  let pow=atkOf(u)+bonus+(u.id==='earth-1'&&u.hp>=u.max?1:0)-(u.att===2&&x.second?x.second:0);pow=Math.max(0,pow);
  if(v){let dmg=pow+(x.extra||0),note='';
-  if(v.shadow){v.shadow=false;dmg=0;note='（影分身で0）'}else if(v.ward&&dmg>0){v.ward=false;dmg=0;note='（守護で0）'}
+  if(v.shadow){v.shadow=false;dmg=0;note='（影分身で0）'}else if(v.ward&&dmg>0){v.ward=false;dmg=0;note='（招雷で0）'}
   let before=v.hp;v.hp-=dmg;hit=dmg>0;if(dmg>0)v.hitThisTurn=true;
   if(x.overflow&&v.hp<0&&!v.hero){let hh=heroOf(d);if(hh){let over=hurt(hh,-v.hp);f.overflowHit={uid:hh.uid,n:over};note+='　余り'+over+'が'+names[hh.id]+'へ'}}
-  let ca=hurt(u,atkOf(v));if(!ca&&atkOf(v)>0)note+='（守護で反撃0）';latest=names[u.id]+' → '+names[v.id]+'　'+dmg+'ダメージ・反撃 '+ca+note;f.hitInfo={v:dmg,u:ca};if(ca>0)u.hitThisTurn=true;settle(d,f)}
+  let ca=hurt(u,atkOf(v));if(!ca&&atkOf(v)>0)note+='（招雷で反撃0）';latest=names[u.id]+' → '+names[v.id]+'　'+dmg+'ダメージ・反撃 '+ca+note;f.hitInfo={v:dmg,u:ca};if(ca>0)u.hitThisTurn=true;settle(d,f)}
  else{if(d.shrines.length){let lost=d.shrines.splice(0,1+bonus);d.broken=lost;d.shrineBroken=true;hit=true;latest=names[u.id]+'が神殿を破壊！';shrineLost(d)}
  else{ending=f===p?'勝利':'敗北';hit=true;lastReward=grantReward(f===p)}}
  if(u.hero&&hit&&f.stage===0)f.gauge=Math.min(ASCEND.evolve.gauge,f.gauge+1);if(!ending)afterStrike(f,u,d,v,wasWeak);attacker=u.used||u.hp<=0?-1:attacker}
@@ -242,7 +242,7 @@ function soldiers(f){return f.units.map(u=>{let ally=f===p,mine=turn===p&&!endin
  let face=hero?gcard(u.id,f.stage,{atk:atkOf(u),hp:u.hp,max:u.max,weak:u.weak},'',true).replace(/<\/span>$/,costBadge({cost:1})+'</span>')
   :ucard(u.id,{live:{atk:atkOf(u),hp:u.hp,max:u.max,weak:u.weak}});
  let tagline=hero?'<span class="gtag'+(f.gaugeFlash&&Date.now()-f.gaugeFlash<1600?' flash':'')+'">'+(f.stage===0?'進化 '+Array.from({length:ASCEND.evolve.gauge},(_,i)=>'<i class="'+(i<f.gauge?'on':'')+(f.gaugeFlash&&Date.now()-f.gaugeFlash<1600&&i===f.gauge-1?' new':'')+'"></i>').join(''):f.stage===1?'覚醒 <i class="'+(f.shrineBroken?'on':'')+'"></i>'+(f.shrineBroken?'可':'神殿待ち'):'最終')+'</span>':'';
- return '<button id="u'+u.uid+'" aria-label="'+(hero?stageOf(u.id,f.stage).name:titles[u.id]+' '+names[u.id])+' 攻撃'+atkOf(u)+' 体力'+u.hp+(st==='picked'?' 選択中':st==='target'?' 対象にする':st==='used'?' 行動済み':'')+'" class="unit '+st+' herocard'+(arrived===u.uid?' summon':'')+(awake?' awake':'')+(fresh?' awaking':'')+(hero&&f.burst?' charged':'')+(u.ward?' warded':'')+'" onclick="'+(ally?'pick':'target')+'('+u.uid+')"><span class="mark m-'+st+'">'+(st==='target'?marks.target:'')+'</span>'+face+(u.ward?'<em class="ribbon ward">守護</em>':'')+(ally&&mine&&sickOf(f,u)&&!u.used?'<em class="sickmark">召喚酔い</em>':'')+(u.hero?'<span class="lives'+(f.shrines.length?'':' none')+'" title="命＝神殿の残り" aria-label="命（神殿）残り'+f.shrines.length+'">'+(f.shrines.length?Array.from({length:f.shrines.length},()=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5c6 1.5 14 1.5 20 0v2.6c-1 .3-2 .5-3 .6V10h-2V8.4c-1.3.1-2.7.2-4 .2s-2.7-.1-4-.2V10H7V8.2c-1-.1-2-.3-3-.6zM4 10h16v2h-2.5v9h-2.2v-9H8.7v9H6.5v-9H4z" fill="currentColor"/></svg>').join(''):'命なし')+'</span>':'')+tagline+(fresh?'<i class="lightburst"></i>':'')+'</button>'}).join('')}
+ return '<button id="u'+u.uid+'" aria-label="'+(hero?stageOf(u.id,f.stage).name:titles[u.id]+' '+names[u.id])+' 攻撃'+atkOf(u)+' 体力'+u.hp+(st==='picked'?' 選択中':st==='target'?' 対象にする':st==='used'?' 行動済み':'')+'" class="unit '+st+' herocard'+(arrived===u.uid?' summon':'')+(awake?' awake':'')+(fresh?' awaking':'')+(hero&&f.burst?' charged':'')+(u.ward?' warded':'')+'" onclick="'+(ally?'pick':'target')+'('+u.uid+')"><span class="mark m-'+st+'">'+(st==='target'?marks.target:'')+'</span>'+face+(u.ward?'<em class="ribbon ward">招雷</em>':'')+(ally&&mine&&sickOf(f,u)&&!u.used?'<em class="sickmark">召喚酔い</em>':'')+(u.hero?'<span class="lives'+(f.shrines.length?'':' none')+'" title="命＝神殿の残り" aria-label="命（神殿）残り'+f.shrines.length+'">'+(f.shrines.length?Array.from({length:f.shrines.length},()=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5c6 1.5 14 1.5 20 0v2.6c-1 .3-2 .5-3 .6V10h-2V8.4c-1.3.1-2.7.2-4 .2s-2.7-.1-4-.2V10H7V8.2c-1-.1-2-.3-3-.6zM4 10h16v2h-2.5v9h-2.2v-9H8.7v9H6.5v-9H4z" fill="currentColor"/></svg>').join(''):'命なし')+'</span>':'')+tagline+(fresh?'<i class="lightburst"></i>':'')+'</button>'}).join('')}
 function costOf(k){return isSum(k)?1:(moves[k]?moves[k][1]:1)}
 function heroActs(){if(turn!==p||busy||ending||!heroOf(p))return '';let o='',k=skillOf(p);
  if(k)o+=btn(p.skillUsed?k.name+'（使用済み）':k.name+' · 神力'+k.cost,'skillMode=skillOf(p);attacker=-1;render()',!canSkill(p));
@@ -422,7 +422,7 @@ async function freeUse(f,k,t){let before=snap();f.hand.push(k);let i=f.hand.leng
  if(!ok){f.mp-=costOf(k);return false}latest='破殿解放！ '+latest;render();await diffFx(before);render();return true}
 function breachBox(f,k){let o=document.createElement('div');o.className='handzoom breach';o.setAttribute('role','dialog');o.setAttribute('aria-label','破殿解放 '+cardLabel(k));
  let mine=f===p,full=isSum(k)?cardFull(sumId(k)):cardFull(k);
- o.innerHTML='<div class="hz-in"><p class="breach-head"><b>破殿解放</b><small>'+(mine?'自分':'相手')+'の神殿が割れた</small></p><div class="hz-card">'+ucard(k,{})+'<i class="curtain" aria-hidden="true"></i></div><div class="hz-text"><p class="hz-kind">'+(isSum(k)?'仲間':'呪文')+' ／ '+(colorOf(isSum(k)?sumId(k):k)||'色なし')+' ／ コスト'+costOf(k)+'</p><p class="hz-eff">'+full+'</p></div><div class="hz-acts"></div></div>';
+ o.innerHTML='<div class="hz-in"><p class="breach-head"><b>破殿解放</b><small>'+(mine?'自分':'相手')+'の神殿が割れた</small></p><div class="hz-card">'+ucard(k,{})+'<i class="curtain" aria-hidden="true"></i></div><div class="hz-text"><p class="hz-kind">'+(isSum(k)?'仲間':'呪文')+' ／ '+(colorOf(isSum(k)?sumId(k):k)||'色なし')+' ／ コスト'+(k==='scroll'?'X':costOf(k))+'</p><p class="hz-eff">'+full+'</p></div><div class="hz-acts"></div></div>';
  document.body.appendChild(o);return o}
 async function breachOne(f,k){await gaugeUp(f);let mine=f===p&&!window.__autoP,can=freeLegal(f,k);
  if(!mine){let t;if(can&&SP[k]&&SP[k].tgt){t=aiTarget(f,k);if(!t||t==='none')t=spTargets(f,k)[0]}
@@ -457,7 +457,7 @@ function walled(f,u,d){return heroLocked(f,u,d)}
 // ---- 場のカードの拡大表示：タップで大きく。今の攻撃力・体力・状態・効果の全文・用語。自分の神なら「この神で攻撃する」 ----
 function unitStatus(f,u){let t=[],mine=f===p;if(u.hero&&f.stage===0)t.push('進化ゲージ '+f.gauge+'/'+ASCEND.evolve.gauge);
  if(sickOf(f,u)&&turn===f)t.push('召喚酔い（次の自分のターンから攻撃できる）');if(u.used&&turn===f)t.push('このターンは攻撃済み');
- if(u.ward)t.push('守護：次に受けるダメージは0');if(u.shadow)t.push('影分身：次に受けるダメージは0');if(weakened(u))t.push('攻撃力−'+u.weak+'（弱っている）');
+ if(u.ward)t.push('招雷：次に受けるダメージは0');if(u.shadow)t.push('影分身：次に受けるダメージは0');if(weakened(u))t.push('攻撃力−'+u.weak+'（弱っている）');
  if(u.dodge)t.push('空蝉：敵の仲間の攻撃対象にならない');if(t_pierce(f,u))t.push('すり抜け：仲間を無視して主神・神殿を攻撃できる');
  if((u.tmpAtk||0)>0)t.push('このターン攻撃力+'+u.tmpAtk);if(u.setAtk!=null)t.push('このターン攻撃力は'+u.setAtk);if((u.extraAtt||0)>0)t.push('このターンもう1回攻撃できる');
  if(u.hero)t.push('命（神殿）残り'+f.shrines.length);return t}
@@ -690,17 +690,17 @@ let zeroWhy='';
 {const h0=hurt;hurt=function(v,n){if(n>0){let cut=dmgCut(v);if(cut){let b=n;n=Math.max(0,n-cut);if(n===0){zeroWhy=cutName(v);return 0}}}return h0.call(this,v,n)}}
 // 攻撃の解決（軽減・天守・獅子王を入れた版。それ以外は元の処理と同じ）
 resolveStrike=function(f,u,d,v){let x=fxOf(f,u),wasWeak=v&&weakened(v)?Math.min(v.weak,v.atk):0;u.att=(u.att||0)+1;u.used=u.att>=maxAttacks(f,u)||!v||!!v.hero;let bonus=f.burst?1:0;f.burst=false;f.overflowHit=null;let hit=false;
- let pow=atkOf(u)+bonus+(u.id==='earth-1'&&u.hp>=u.max?1:0)-(u.att===2&&x.second?x.second:0);pow=Math.max(0,pow);
+ let pow=atkOf(u)+bonus+(u.exileBonus||0)-(u.att===2&&x.second?x.second:0);pow=Math.max(0,pow);u.exileBonus=0;
  // 獅子王：2回目の攻撃では、相手の『攻撃されたとき』に発動する効果を受けない（今のカードに該当する効果はない。追加されたら pure の間は発動させない）
  const pure=!!(x.pureSecond&&u.att===2);f.pureHit=pure;
  if(v){let dmg=pow+(x.extra||0),note='';zeroWhy='';
   let cut=dmg>0?dmgCut(v):0;if(cut){let b=dmg;dmg=Math.max(0,dmg-cut);note='（'+cutName(v)+'で−'+(b-dmg)+'）';if(!dmg)zeroWhy=cutName(v)}
-  if(v.shadow&&dmg>0){v.shadow=false;dmg=0;note='（影分身で0）'}else if(v.ward&&dmg>0){v.ward=false;dmg=0;note='（守護で0）';zeroWhy='守護'}
+  if(v.shadow&&dmg>0){v.shadow=false;dmg=0;note='（影分身で0）'}else if(v.ward&&dmg>0){v.ward=false;dmg=0;note='（招雷で0）';zeroWhy='招雷'}
   v.hp-=dmg;hit=dmg>0;if(dmg>0)v.hitThisTurn=true;
-  let ca=hurt(u,atkOf(v));if(!ca&&atkOf(v)>0)note+=dmgCut(u)>=atkOf(v)?'（'+cutName(u)+'で反撃0）':'（守護で反撃0）';latest=names[u.id]+' → '+names[v.id]+'　'+dmg+'ダメージ・反撃 '+ca+note;f.hitInfo={v:dmg,u:ca};if(ca>0)u.hitThisTurn=true;settle(d,f)}
- else{if(d.shrines.length){let sw=heroFx(d).shrineWall||0;
-   if(sw&&pow-sw<=0){zeroWhy='天守';latest='天守！ '+names[u.id]+'の攻撃（'+pow+'）を、神殿が受け止めた（−'+sw+'）'}
-   else{let lost=d.shrines.splice(0,1+bonus);d.broken=lost;d.shrineBroken=true;hit=true;latest=names[u.id]+'が神殿を破壊！'+(sw?'（天守−'+sw+'）':'');shrineLost(d)}}
+  let ca=hurt(u,atkOf(v));if(!ca&&atkOf(v)>0)note+=dmgCut(u)>=atkOf(v)?'（'+cutName(u)+'で反撃0）':'（招雷で反撃0）';latest=names[u.id]+' → '+names[v.id]+'　'+dmg+'ダメージ・反撃 '+ca+note;f.hitInfo={v:dmg,u:ca};if(ca>0)u.hitThisTurn=true;settle(d,f)}
+ else{if(d.shrines.length){let sw=shrineCut(d);
+   if(sw&&pow-sw<=0){zeroWhy=shrineCutName(d);latest=zeroWhy+'！ '+names[u.id]+'の攻撃（'+pow+'）を、神殿が受け止めた（−'+sw+'）'}
+   else{let lost=d.shrines.splice(0,1+bonus);d.broken=lost;d.shrineBroken=true;hit=true;latest=names[u.id]+'が神殿を破壊！'+(sw?'（'+shrineCutName(d)+'−'+sw+'）':'');shrineLost(d)}}
   else{ending=f===p?'勝利':'敗北';hit=true;lastReward=grantReward(f===p)}}
  if(u.hero&&hit&&f.stage===0)f.gauge=Math.min(ASCEND.evolve.gauge,f.gauge+1);if(!ending)afterStrike(f,u,d,v,wasWeak);attacker=u.used||u.hp<=0?-1:attacker}
 // 0ダメージの吹き出し：理由（結界・雷壁・天守・守護）を出す
@@ -735,13 +735,13 @@ function sumKeyId(k){let m=/^g(\d+)$/.exec(k);return m?+m[1]:k}
 async function skillFx(el,kind,label,cls,n){if(!el||calm())return;let r=body(el,.45);burst(kind,r.x,r.y);if(label)pop(label,r.x,body(el,.2).y,n||1,cls||'');await pause(420)}
 async function runSkill(f,k,P){let d=foeOf(f);f.mp-=k.cost;f.skillUsed=true;skillMode=null;let wasBusy=busy;busy=true;render();
  const el=u=>u&&document.getElementById('u'+u.uid);
- if(k.kind==='barrier'){let t=P.t;t.barrierN=Math.max(t.barrierN||0,k.n);latest='結界！ '+names[t.id]+'は次の相手のターンまで、受けるダメージ−'+k.n;sfx('summon');await skillFx(el(t),'guard','結界 −'+k.n,'guard')}
- else if(k.kind==='bind'){let t=P.t;t.bindNext=true;latest=k.name+'！ '+names[t.id]+'は次の相手のターンに攻撃できない';await skillFx(el(t),'water','水縛り','guard')}
+ if(k.kind==='barrier'){let t=P.t;addBarrier(t,'raiga',k.n);latest='結界！ '+names[t.id]+'は次の相手のターンまで、受けるダメージ−'+k.n;sfx('summon');await skillFx(el(t),'guard','結界 −'+k.n,'guard')}
+ else if(k.kind==='bind'){let t=P.t;bindFoe(f,t);latest=k.name+'！ '+names[t.id]+'は次の相手のターンに攻撃できない';await skillFx(el(t),'water','水縛り','guard')}
  else if(k.kind==='grow'){let h=heroOf(f);f.max+=k.n;f.mp+=k.n;let b=h.hp;if(k.heal)h.hp=Math.min(h.max,h.hp+k.heal);let up=h.hp-b;if(up>0)healed(f);
   latest=k.name+'！ 神力の最大値+'+k.n+'（'+f.max+'）'+(up>0?'　'+names[h.id]+'の体力を'+up+'回復':'');sfx('summon');await skillFx(el(h),'leaf','神力 +'+k.n,'heal');if(up>0&&!calm()){let r=body(el(h),.3);pop('+'+up,r.x,r.y,1,'heal');drain(el(h),h);await pause(300)}}
  else if(k.kind==='sac'){let m=P.mate,t=P.t,e1=el(m),e2=el(t);let n1=hurt(m,k.n),w1=zeroWhy;zeroWhy='';let n2=hurt(t,k.n),w2=zeroWhy;zeroWhy='';
   latest=k.name+'！ '+names[m.id]+'に'+n1+'、'+names[t.id]+'に'+n2+'ダメージ';
-  if(!calm()){sfx('hit');for(const [e,n,u,w] of [[e1,n1,m,w1],[e2,n2,t,w2]])if(e){let r=body(e,.45);burst('bolt',r.x,r.y);struck(e);pop(n?'−'+n:(w||'守護'),r.x,body(e,.2).y,Math.max(1,n),n?'':'guard');drain(e,u);if(u.hp<=0&&!(u.hero&&ownerOf(u)&&ownerOf(u).shrines.length))e.classList.add('ko')}await pause(560)}
+  if(!calm()){sfx('hit');for(const [e,n,u,w] of [[e1,n1,m,w1],[e2,n2,t,w2]])if(e){let r=body(e,.45);burst('bolt',r.x,r.y);struck(e);pop(n?'−'+n:(w||'招雷'),r.x,body(e,.2).y,Math.max(1,n),n?'':'guard');drain(e,u);if(u.hp<=0&&!(u.hero&&ownerOf(u)&&ownerOf(u).shrines.length))e.classList.add('ko')}await pause(560)}
   settle(f,d);await subFx()}
  else if(k.kind==='doom'){let t=P.t,e=el(t);t.ward=false;t.hp=0;let back=graveBest(f);
   if(!calm()&&e){sfx('hit');let r=body(e,.45);burst('water',r.x,r.y);struck(e);pop('破壊',r.x,body(e,.2).y,3);e.classList.add('ko');await pause(560)}
@@ -770,10 +770,10 @@ function aiSkillPlan(f,k,ph){let d=foeOf(f),foeAtk=d.units.some(u=>atkOf(u)>0);
 function threat(u){return atkOf(u)*2+u.hp+(cardCost(typeof u.id==='number'?u.id:u.id)||0)}
 let startNotes=[];
 {const ts=turnStart;turnStart=function(f){let r=ts.apply(this,arguments),x=heroFx(f),o=foeOf(f);if(!heroOf(f)||!o)return r;
- if(x.swirl){let t=mates(o).filter(u=>!u.bindNext).sort((a,b)=>atkOf(b)-atkOf(a))[0];if(t){t.bindNext=true;startNotes.push({uid:t.uid,label:'渦巻',text:'渦巻：'+names[t.id]+'は次の相手のターンに攻撃できない'})}}
- if(x.tide){let t=mates(o).sort((a,b)=>threat(b)-threat(a))[0];if(t){o.units=o.units.filter(u=>u!==t);o.hand.push(handKey(t.id));startNotes.push({side:o,label:'手札へ',text:'天潮：'+names[t.id]+'を'+(o===p?'あなた':'相手')+'の手札に戻した'})}}
+ if(x.swirl){let t=mates(o).filter(u=>!u.bindNext).sort((a,b)=>atkOf(b)-atkOf(a))[0];if(t){bindFoe(f,t);startNotes.push({uid:t.uid,label:'渦巻',text:'渦巻：'+names[t.id]+'は次の相手のターンに攻撃できない'})}}
+ if(x.tide){let t=mates(o).sort((a,b)=>threat(b)-threat(a))[0];if(t){o.units=o.units.filter(u=>u!==t);o.hand.push(handKey(t.id));f.ctrl=(f.ctrl||0)+1;startNotes.push({side:o,label:'手札へ',text:'天潮：'+names[t.id]+'を'+(o===p?'あなた':'相手')+'の手札に戻した'})}}
  return r}}
-{const b2=begin;begin=function(f){if(f&&f.units)for(const u of f.units)u.barrierN=0;let o=foeOf(f);if(o)for(const u of o.units)u.bound=false;
+{const b2=begin;begin=function(f){if(f&&f.units)for(const u of f.units){u.barrierN=0;u.bar=null}if(f)f.shrineBar=0;let o=foeOf(f);if(o)for(const u of o.units)u.bound=false;
  let r=b2.apply(this,arguments);for(const u of f.units)if(u.bindNext){u.bindNext=false;u.used=true;u.bound=true}
  if(startNotes.length){let N=startNotes;startNotes=[];queueMicrotask(()=>{latest+=(latest?'　':'')+N.map(n=>n.text).join('　')});
   if(!calm())setTimeout(()=>{for(const n of N){let e=n.uid?document.getElementById('u'+n.uid):document.getElementById('shrine'+(n.side&&n.side.id));if(e){let r=body(e,.4);pop(n.label,r.x,r.y,1,'guard')}}},120)}
@@ -787,3 +787,173 @@ let startNotes=[];
   // 対象にできない主神は「対象」表示を外す（生贄の冥火の1体目・幽冥）
   if(skillMode&&!skillMode.spell&&(skillMode.kind==='doom'||(skillMode.kind==='sac'&&!skillMode.sacUid))){let side=skillMode.kind==='doom'?c:p,h=heroOf(side),e=h&&document.getElementById('u'+h.uid);if(e){e.classList.remove('target');let m=e.querySelector('.mark');if(m)m.innerHTML=''}}
  }catch(e){console.warn(e)}return r}}
+
+// ==== 仲間27種・呪文28種の新しい効果（2026-11-28）：仕組み ====
+// 天象＝守り／烈火＝バトル（変更なし）／奔流＝場のコントロール／大地＝神力ブースト／神秘＝墓地
+const graveAllies=f=>(f&&f.grave||[]).filter(k=>isSum(k));
+function subaruBonus(u){let s=ownerOf(u);return s?Math.min(3,graveAllies(s).length):0}
+const baseOf=k=>{let id=sumId(k);return gods[id]||[0,1]};
+// 軽減（結界）：出どころごとに記録。違うカードの軽減は足し合わせ、同じカードの軽減は大きい方だけ（重ねがけで増え続けないように）
+function addBarrier(u,src,n){u.bar=u.bar||{};u.bar[src]=Math.max(u.bar[src]||0,n);u.barrierN=Object.values(u.bar).reduce((a,b)=>a+b,0)}
+// 神殿の軽減：天守（主神ライガSR）＋陽神アカツキ（晴れの間）＋天柱落とし
+function shrineCut(d){if(!d)return 0;let n=heroFx(d).shrineWall||0;if(weather==='晴れ'&&d.units.some(u=>u.id===8&&u.hp>0))n+=1;return n+(d.shrineBar||0)}
+function shrineCutName(d){let L=[];if(heroFx(d).shrineWall)L.push('天守');if(weather==='晴れ'&&d.units.some(u=>u.id===8&&u.hp>0))L.push('陽神アカツキ');if(d.shrineBar)L.push('天柱落とし');return L.join('・')||'軽減'}
+// 攻撃できなくする（次の相手のターン）：奔流の「場のコントロール」。航跡を読むの条件にも使う
+function bindFoe(f,t){if(!t)return;t.bindNext=true;f.ctrl=(f.ctrl||0)+1}
+// 神力の回復（そのターンだけ。供給量＝最大値は増えない）。古根の角王・実りの分け前の「神力が増えた」もここで記録
+function manaUpHook(f){f.manaUp=true;if(turn!==f)return;for(const u of f.units)if(u.id==='earth-2'&&u.hp>0&&!u.trig3){u.trig3=true;u.tmpAtk=(u.tmpAtk||0)+2;latest+='　古根の角王の攻撃力+2（このターン）'}}
+function gainMana(f,n,src){if(n<=0||!f)return;f.mp+=n;latest+='　'+src+'：神力を'+n+'回復';manaUpHook(f)}
+{const ch=charge;charge=function(f,i){let b=f.max,r=ch.apply(this,arguments);if(f.max>b)manaUpHook(f);return r}}
+{const rs2=runSkill;runSkill=async function(f,k){let r=rs2.apply(this,arguments);if(k&&k.kind==='grow')manaUpHook(f);return r}}
+{const rt=resetTurn;resetTurn=function(f){let r=rt.apply(this,arguments);f.manaUp=false;f.ctrl=0;return r}}
+healed=function(){};// 古根の角王は「体力の回復」ではなく「神力が増えた」で発動するようになった
+// 蘇生（墓地→場）：体力の指定があればその値。出たターンは召喚と同じく攻撃できない。登場時の効果は起きない
+function revive(f,key,hp){let i=(f.grave||[]).lastIndexOf(key);if(i<0||f.units.length>=3)return null;f.grave.splice(i,1);let u=mk(f,sumId(key));if(hp!=null){u.hp=Math.max(1,Math.min(u.max,hp))}u.bornTurn=f.turns;u.summonedTurn=round;u.side=f.id;f.units.push(u);arrived=u.uid;return u}
+// 除外（墓地→ゲームの外）
+function exile(f,key){let i=(f.grave||[]).lastIndexOf(key);if(i<0)return false;f.grave.splice(i,1);f.exiled=(f.exiled||[]).concat(key);return true}
+// 生贄・墓地に送る：その仲間を倒す（守護がついていれば手札へ）
+function sacrifice(m){if(!m)return;m.ward=false;m.hp=0}
+// 倒れた仲間の行き先：守護（次に場を離れるとき手札に戻る）がついていれば手札、それ以外は墓地
+settle=function(...sides){let all=new Set(sides);
+ for(let k=0;k<6&&!ending;k++){let any=false;for(const s of [...all])for(const u of s.units)if(u.id==='fire-6'&&u.hp<=0&&!u.boomed){u.boomed=true;any=true;let d=foeOf(s);all.add(d);
+  let t=[...d.units].filter(x=>x.hp>0&&!x.ward).sort((a,b)=>(a.hero?1:0)-(b.hero?1:0)||(a.hp<=2?-1:0)-(b.hp<=2?-1:0)||a.hp-b.hp)[0]||d.units.find(x=>x.hp>0);
+  if(t){let n=hurt(t,2);latest+='　爆炎の剣神が倒れ、'+names[t.id]+'に'+n+'ダメージ'}}if(!any)break}
+ for(const x of all)substitute(x);
+ for(const x of all){for(const y of x.units)if(y.hp<=0&&!y.hero){if(y.saveToHand){x.hand.push(handKey(y.id));latest+='　守護：'+names[y.id]+'は手札に戻った'}else{x.grave=x.grave||[];x.grave.push(handKey(y.id))}}x.units=x.units.filter(y=>y.hp>0||(y.hero&&ending))}};
+// 手札に戻す（追い潮・引き潮・天潮）
+bounce=function(d,t){d.units=d.units.filter(x=>x!==t);d.hand.push(handKey(t.id));latest+='　'+names[t.id]+'は持ち主の手札に戻った'};
+// 速攻・攻撃回数・すり抜け
+hasteOf=function(f,u){if(u.haste)return true;if(u.hero)return !!heroFx(f).haste;return u.id==='fire-1'||u.id==='water-7'};
+maxAttacks=function(f,u){return (fxOf(f,u).attacks||1)+(u&&u.extraAtt||0)};
+t_pierce=function(f,u){return !!u&&((u.id==='water-2'&&weather==='雨')||u.id==='water-6'||(u.id==='water-1'&&(f.spells||0)>0)||!!u.pierce)};
+// 自分の神殿が割れたとき：不動の山神＝神力3回復
+shrineLost=function(side){for(const u of side.units)if(u.id==='earth-6'&&u.hp>0)gainMana(side,3,'不動の山神')};
+// 攻撃のあと：雨神シズク・飛沫神＝攻撃した敵は次の相手のターンに攻撃できない／石臼の荒神＝神力1回復（双炉・イタチは変更なし）
+afterStrike=function(f,u,d,v){f.atkCount=(f.atkCount||0)+1;if(v&&v.hero&&!u.hero)f.heroHit=true;
+ if((u.id===1||u.id==='water-7')&&v&&v.hp>0&&d.units.includes(v)){bindFoe(f,v);latest+='　'+names[v.id]+'は次の相手のターンに攻撃できない'}
+ if(u.id==='earth-1')gainMana(f,1,'石臼の荒神');
+ if(u.att===2)for(const x of f.units)if(x.id==='fire-2'&&x.hp>0)dmgHero(d,1,'双炉の鍛冶神');
+ if(u.id==='fire-1'&&u.hp>0){hurt(u,1);latest+='　火走りのイタチ神は自分に1ダメージ'}
+ settle(d,f)};
+// 自分のターンの終了時：潮神ナギ（攻撃しなかったら、敵の仲間1体を次の相手のターン攻撃不可に）
+turnEndFx=function(f){if(!f||ending)return;let o=foeOf(f);for(const u of f.units)if(u.id===7&&u.hp>0&&!(u.att>0)){let t=mates(o).filter(x=>!x.bindNext).sort((a,b)=>atkOf(b)-atkOf(a))[0];if(t){bindFoe(f,t);latest+='　潮神ナギ：'+names[t.id]+'は次の相手のターンに攻撃できない'}}};
+// 自分のターン開始時：岩神ガンザ（神力1回復）／空蝉の歩法で墓地に送った仲間が戻る
+{const ts2=turnStart;turnStart=function(f){let r=ts2.apply(this,arguments);if(!f||ending)return r;
+ for(const u of f.units)if(u.id===6&&u.hp>0)gainMana(f,1,'岩神ガンザ');
+ if(f.utsusemi&&f.utsusemi.length){let L=f.utsusemi;f.utsusemi=[];for(const k of L){let u=revive(f,k);if(u)startNotes.push({uid:u.uid,label:'空蝉',text:'空蝉の歩法：'+names[u.id]+'が場に戻った'})}}
+ return r}}
+
+// ---- 選ぶ画面（あなたの番だけ。AIは自動で選ぶ）----
+const autoSide=f=>f!==p||!!window.__autoP;
+function askChoice(title,msg,opts,skip){return new Promise(res=>{if(ending||!opts.length){res(null);return}let o=document.createElement('div');o.className='handzoom confirm ask';o.setAttribute('role','dialog');o.setAttribute('aria-label',title);
+ o.innerHTML='<div class="hz-in"><div class="hz-text"><h3>'+title+'</h3><p class="hz-eff">'+msg+'</p></div><div class="hz-acts">'+opts.map((x,i)=>'<button class="hz-btn gold tgt" data-i="'+i+'">'+x.label+'</button>').join('')+(skip?'<button class="hz-btn ghost" data-i="-1">'+skip+'</button>':'')+'</div></div>';
+ o.onclick=e=>{let b=e.target.closest('button');if(!b)return;o.remove();let i=+b.dataset.i;res(i>=0?opts[i].value:null)};document.body.appendChild(o);try{fitHandZoom(o)}catch(er){}})}
+const unitOpt=u=>({label:names[u.id]+'　<small>攻'+atkOf(u)+' / 体'+Math.max(0,u.hp)+'</small>',value:u});
+const keyOpt=k=>({label:cardLabel(k)+(isSum(k)?'　<small>攻'+baseOf(k)[0]+' / 体'+baseOf(k)[1]+'</small>':'　<small>呪文</small>'),value:k});
+const uniq=L=>[...new Set(L)];
+// 墓地から選ぶ（AI用）：コストの高い仲間 → 攻撃力の高い仲間
+function graveRank(f,L){return [...L].sort((a,b)=>(isSum(b)?1:0)-(isSum(a)?1:0)||costOf(b)-costOf(a)||baseOf(b)[0]-baseOf(a)[0])}
+function threatenedUnit(f){let d=foeOf(f),mx=Math.max(0,...d.units.map(u=>atkOf(u))),h=heroOf(f);if(!f.shrines.length&&h)return h;let L=mates(f).filter(u=>u.hp<=mx).sort((a,b)=>threat(b)-threat(a));return L[0]||mates(f).sort((a,b)=>threat(b)-threat(a))[0]||h}
+async function runAsk(fn){pendingAsk=new Promise(r=>setTimeout(async()=>{try{await fn()}catch(e){console.error(e)}pendingAsk=null;render();r()},0))}
+
+// ==== 仲間27種・呪文28種の新しい効果：登場時・呪文・AI ====
+// 登場時の効果（書き換えたカードのみ。登場時の効果がなくなったカードはここに無い）
+onEnter=function(f,u){let d=foeOf(f),auto=autoSide(f);
+ // 雲紡ぎのアヤ：天候を変えてもよい。変えたら、味方1体の受けるダメージ−1（次の相手のターンまで）
+ if(u.id==='sky-1'){const after=(w,t)=>{if(!w)return;sky(w);latest+='　天候を'+w+'にした';t=t||threatenedUnit(f);if(t){addBarrier(t,'sky-1',1);latest+='　'+names[t.id]+'は受けるダメージ−1'}};
+  if(auto){let want=weatherWant(f);after(want)}
+  else runAsk(async()=>{let w=await askChoice('雲紡ぎのアヤ（登場時）','天候を変えますか？　いまは「'+weather+'」<br><small>変えたら、味方1体は次の相手のターンまで受けるダメージ−1</small>',[{label:'☀ 晴れにする',value:'晴れ'},{label:'☂ 雨にする',value:'雨'}].filter(x=>x.value!==weather),'変えない');if(!w)return;
+   let t=await askChoice('雲紡ぎのアヤ','受けるダメージを1減らす味方を選ぶ',f.units.filter(x=>x.hp>0).map(unitOpt));after(w,t)})}
+ // 月神ツクヨ：自分の墓地の仲間1体を手札に戻す
+ if(u.id===9){let L=uniq(graveAllies(f));if(!L.length)latest+='　月神ツクヨ：墓地に仲間がいない';
+  else{const go=k=>{let i=f.grave.lastIndexOf(k);if(i<0)return;f.grave.splice(i,1);f.hand.push(k);latest+='　月神ツクヨ：墓地の'+cardLabel(k)+'を手札に戻した'};
+   if(auto||L.length===1)go(auto?graveRank(f,L)[0]:L[0]);else runAsk(async()=>{let k=await askChoice('月神ツクヨ（登場時）','手札に戻す墓地の仲間を選ぶ',L.map(keyOpt));go(k||graveRank(f,L)[0])})}}
+ // 苗神：神力を2回復
+ if(u.id==='earth-7')gainMana(f,2,'苗神');
+ // 面削りの童神：自分の他の仲間1体を生贄にしてもよい。したら敵の仲間1体に3ダメージ
+ if(u.id==='mystic-1'){let own=mates(f).filter(x=>x!==u),foes=mates(d);
+  if(own.length&&foes.length){const go=(m,t)=>{if(!m||!t)return;sacrifice(m);let n=hurt(t,3);latest+='　面削りの童神：'+names[m.id]+'を生贄に、'+names[t.id]+'に'+n+'ダメージ';settle(f,d)};
+   if(auto){let t=foes.filter(x=>!x.ward&&x.hp<=3-dmgCut(x)).sort((a,b)=>threat(b)-threat(a))[0],m=[...own].sort((a,b)=>threat(a)-threat(b))[0];if(t&&m&&threat(t)>=threat(m))go(m,t)}
+   else runAsk(async()=>{let m=await askChoice('面削りの童神（登場時）','生贄にする自分の仲間を選ぶ（しなくてもよい）',own.map(unitOpt),'生贄にしない');if(!m)return;let t=await askChoice('面削りの童神','3ダメージを与える敵の仲間を選ぶ',mates(d).map(unitOpt));if(t){let before=snap();go(m,t);render();await diffFx(before)}})}}
+ // 薄暮の呪い手：自分の墓地の仲間1体を、体力半分（切り上げ）で場に戻す
+ if(u.id==='mystic-6'){let L=uniq(graveAllies(f));if(!L.length)latest+='　薄暮の呪い手：墓地に仲間がいない';else if(f.units.length>=3)latest+='　薄暮の呪い手：場がいっぱいで戻せない';
+  else{const go=k=>{let r=revive(f,k,Math.ceil(baseOf(k)[1]/2));if(r)latest+='　薄暮の呪い手：'+names[r.id]+'を体力'+r.hp+'で場に戻した'};
+   if(auto||L.length===1)go(auto?graveRank(f,L)[0]:L[0]);else runAsk(async()=>{let k=await askChoice('薄暮の呪い手（登場時）','場に戻す墓地の仲間を選ぶ（体力は半分）',L.map(keyOpt));go(k||L[0])})}}
+ // 写し神：自分の墓地の仲間1体を選び、その攻撃力と体力になる
+ if(u.id==='mystic-7'){let L=uniq(graveAllies(f));if(!L.length)latest+='　写し神：墓地に仲間がいないので、攻撃力0・体力3のまま';
+  else{const go=k=>{let [a,h]=baseOf(k);u.atk=a;u.max=h;u.hp=h;u.copyOf=sumId(k);latest+='　写し神：'+cardLabel(k)+'を写した（攻'+a+' / 体'+h+'）'};
+   if(auto||L.length===1)go(auto?[...L].sort((a,b)=>(baseOf(b)[0]*2+baseOf(b)[1])-(baseOf(a)[0]*2+baseOf(a)[1]))[0]:L[0]);else runAsk(async()=>{let k=await askChoice('写し神（登場時）','写す墓地の仲間を選ぶ（攻撃力と体力が同じになる）',L.map(keyOpt));go(k||L[0])})}}};
+// 天候を変えたいか（AI）：天候で守りが働く仲間がいる／招雷・雲間の返照を持っているとき
+function weatherWant(f){let trig=f.units.some(u=>(u.id==='sky-2'&&!u.trig2)||(u.id==='sky-6'&&!u.trigS6)||u.id==='sky-7');
+ if(weather!=='雨'&&(f.hand.includes('bolt')||f.hand.includes('sky-4')||f.hand.includes('sky-8')))return '雨';
+ if(weather==='雨'&&f.units.some(u=>u.id===8))return '晴れ';
+ return trig?(weather==='雨'?'晴れ':'雨'):null}
+// 天候が変わったとき：霹靂を喰う天狗（味方すべて−1・各ターン初回）／嵐呼の雷獣（主神−2・各ターン初回）／霙神（自身−2）
+sky=function(value){let changed=value!==weather;weather=value;if(!changed||!turn||ending)return;
+ for(const s2 of [p,c]){if(!s2)continue;for(const u of s2.units){if(u.hp<=0)continue;
+  if(u.id==='sky-7'){addBarrier(u,'sky-7',2);latest+='　霙神は受けるダメージ−2'}
+  if(u.id==='sky-2'&&!u.trig2){u.trig2=true;s2.units.forEach(x=>addBarrier(x,'sky-2',1));latest+='　霹靂を喰う天狗：味方すべて受けるダメージ−1'}
+  if(u.id==='sky-6'&&!u.trigS6){u.trigS6=true;let h=heroOf(s2);if(h){addBarrier(h,'sky-6',2);latest+='　嵐呼の雷獣：'+names[h.id]+'は受けるダメージ−2'}}}}};
+{const rt2=resetTurn;resetTurn=function(f){let r=rt2.apply(this,arguments);for(const s of [p,c])if(s)for(const u of s.units){u.trig2=false;u.trigS6=false}return r}}
+
+// ---- 呪文 ----
+moves.scroll[1]=1;// 神位継承の巻：表示はX。使うには神力1以上、使うと残りもすべて消費
+const best=(L,fn)=>[...L].sort((a,b)=>fn(b)-fn(a))[0]||null;
+Object.assign(SP,{
+ // 天象：守り（直接ダメージはなし）
+ bolt:{tgt:'ally',can:f=>weather==='雨',ok:(f,t)=>!t.ward,run:(f,t)=>{t.ward=true;latest+='　'+names[t.id]+'が次に受けるダメージは0'},why:'天候が「雨」のときだけ使える',ai:f=>{let t=threatenedUnit(f);return t&&!t.ward&&foeOf(f).units.some(u=>atkOf(u)>0)?t:null}},
+ 'sky-3':{tgt:'ally',run:(f,t)=>{sky('雨');addBarrier(t,'sky-3',1);latest+='　雨になった・'+names[t.id]+'は受けるダメージ−1'},ai:f=>foeOf(f).units.some(u=>atkOf(u)>0)||weatherWant(f)==='雨'?threatenedUnit(f):null},
+ 'sky-8':{tgt:'ally',run:(f,t)=>{let n=weather==='雨'?2:1;addBarrier(t,'sky-8',n);latest+='　'+names[t.id]+'は受けるダメージ−'+n},ai:f=>foeOf(f).units.some(u=>atkOf(u)>0)?threatenedUnit(f):null},
+ 'sky-4':{can:f=>weather==='雨',run:f=>{sky('晴れ');f.units.forEach(u=>addBarrier(u,'sky-4',1));latest+='　晴れになった・味方すべて受けるダメージ−1'},why:'天候が「雨」のときだけ使える',ai:f=>foeOf(f).units.some(u=>atkOf(u)>0)?'none':null},
+ 'sky-5':{can:f=>f.shrines.length>0,run:f=>{f.shrineBar=2;latest+='　自分の神殿は次の相手のターンまで受けるダメージ−2'},why:'神殿が残っているときだけ使える',ai:f=>f.shrines.length&&foeOf(f).units.some(u=>atkOf(u)>0&&atkOf(u)<=2+shrineCut(f))?'none':null},
+ rain:{can:f=>true,run:f=>sky('雨'),ai:f=>weatherWant(f)==='雨'?'none':null},
+ sun:{can:f=>true,run:f=>sky('晴れ'),ai:f=>weatherWant(f)==='晴れ'?'none':null},
+ // 大地：神力ブースト
+ 'earth-3':{tgt:'allyMate',run:(f,t)=>{t.tmpAtk=(t.tmpAtk||0)+f.max;latest+='　'+names[t.id]+'の攻撃力+'+f.max+'（このターン）'},ai:f=>best(mates(f).filter(u=>!u.used&&!sickOf(f,u)),u=>atkOf(u))},
+ 'earth-4':{can:f=>!!f.manaUp&&f.deck.length>0,run:f=>drawN(f,1),why:'このターンに自分の神力が増えていれば使える'},
+ 'earth-5':{can:f=>f.max>=5&&mates(f).length>0,run:f=>{let L=mates(f);L.forEach(u=>u.tmpAtk=(u.tmpAtk||0)+2);latest+='　'+L.length+'体の攻撃力+2（このターン）'},why:'神力の供給量（最大値）が5以上のときだけ使える',ai:f=>mates(f).some(u=>!u.used&&!sickOf(f,u))?'none':null},
+ scroll:{tgt:'allyMate',run:(f,t)=>{let n=1+f.mp;f.mp=0;t.atk+=n;t.max+=n;t.hp+=n;latest+='　神力を'+n+'消費し、'+names[t.id]+'の攻撃力と体力+'+n},post:true,ai:f=>f.mp>=3?best(mates(f),u=>threat(u)):null},
+ // 奔流：場のコントロール
+ 'water-3':{tgt:'allyMate',run:(f,t)=>{bounce(f,t)},ai:f=>{let left=f.mp-1;let L=mates(f).filter(u=>left>=costOf(handKey(u.id)));
+   let reuse=L.filter(u=>ENTER_VALUE(f,u)>0).sort((a,b)=>ENTER_VALUE(f,b)-ENTER_VALUE(f,a))[0];if(reuse)return reuse;
+   let mx=Math.max(0,...foeOf(f).units.map(atkOf));return L.filter(u=>u.hp<u.max&&u.hp<=mx&&u.max>mx).sort((a,b)=>threat(b)-threat(a))[0]||null}},
+ 'water-5':{can:f=>(f.ctrl||0)>0&&f.deck.length>0,run:f=>drawN(f,2),why:'このターンに、敵の仲間が手札に戻るか攻撃できなくなっていれば使える',post:true},
+ 'water-8':{tgt:'foeMate',run:(f,t)=>{bounce(foeOf(f),t);f.ctrl=(f.ctrl||0)+1},ai:f=>best(mates(foeOf(f)),u=>threat(u))},
+ // 神秘：墓地
+ guard:{tgt:'allyMate',ok:(f,t)=>!t.saveToHand,run:(f,t)=>{t.saveToHand=true;latest+='　'+names[t.id]+'は次に場を離れるとき手札に戻る'},ai:f=>{let mx=Math.max(0,...foeOf(f).units.map(atkOf));return best(mates(f).filter(u=>!u.saveToHand&&(u.hp<=mx||ENTER_VALUE(f,u)>0)),u=>threat(u)+ENTER_VALUE(f,u)*3)}},
+ 'mystic-3':{tgt:'allyMate',can:f=>mates(foeOf(f)).length>0,run:(f,t)=>{let d=foeOf(f),n0=atkOf(t),tg=f.pick2&&d.units.includes(f.pick2)?f.pick2:best(mates(d).filter(x=>x.hp<=n0-dmgCut(x)),x=>threat(x))||best(mates(d),x=>atkOf(x));f.pick2=null;sacrifice(t);settle(f);let n=tg?hurt(tg,n0):0;latest+='　'+names[t.id]+'を墓地に送り、'+(tg?names[tg.id]+'に'+n+'ダメージ':'')},why:'敵の仲間がいるときだけ使える',
+   ai:f=>{let d=foeOf(f);let pick=null;for(const m of [...mates(f)].sort((a,b)=>threat(a)-threat(b))){let n=atkOf(m),t=best(mates(d).filter(x=>!x.ward&&x.hp<=n-dmgCut(x)),x=>threat(x));if(t&&threat(t)>threat(m)){pick=m;break}}return pick}},
+ 'mystic-4':{tgt:'allyMate',run:(f,t)=>{let k=handKey(t.id);sacrifice(t);settle(f);if((f.grave||[]).includes(k)){f.utsusemi=(f.utsusemi||[]).concat(k);latest+='　'+names[t.id]+'を墓地に送った（次の自分のターン開始時に戻る）'}},
+   ai:f=>{let mx=Math.max(0,...foeOf(f).units.map(atkOf));return best(mates(f).filter(u=>u.hp<=Math.ceil(u.max/2)&&u.hp<=mx),u=>threat(u))}},
+ 'mystic-8':{can:f=>(f.grave||[]).length>0,run:f=>{let L=f.grave||[],k=f.pick2&&L.includes(f.pick2)?f.pick2:graveRank(f,L)[0];f.pick2=null;let i=L.lastIndexOf(k);if(i>=0){L.splice(i,1);f.hand.push(k);latest+='　墓地の'+cardLabel(k)+'を手札に戻した'}},why:'墓地にカードがあるときだけ使える',ai:f=>graveAllies(f).length?'none':null},
+ 'mystic-5':{tgt:'foeMate',can:f=>graveAllies(f).length>0,run:(f,t)=>{let n=hurt(t,Math.min(5,graveAllies(f).length));latest+='　'+names[t.id]+'に'+n+'ダメージ'},why:'墓地に仲間がいるときだけ使える',ai:f=>{let n=Math.min(5,graveAllies(f).length);return best(mates(foeOf(f)),u=>(u.hp<=n-dmgCut(u)?100:0)+threat(u))}}
+});
+{const sd=SP.seed.run;SP.seed.run=function(f){let b=f.mp;sd.apply(this,arguments);if(f.mp>b)manaUpHook(f)}}
+// もう一度出すと得をする登場時の効果（追い潮・守護のAI判断用）
+function ENTER_VALUE(f,u){let d=foeOf(f);if(u.id===9)return graveAllies(f).length?3:0;if(u.id==='mystic-6')return graveAllies(f).length?4:0;if(u.id==='mystic-1')return mates(d).some(x=>x.hp<=3)&&mates(f).length>1?3:0;
+ if(u.id==='mystic-7')return graveAllies(f).some(k=>baseOf(k)[0]>atkOf(u))?2:0;if(u.id==='earth-7')return 1;if(u.id==='sky-1')return 1;return 0}
+// 2つ目の対象を選ぶ呪文（影の縫い返しの敵・心読みの墓地のカード）：あなたの番だけ、使う前に選ぶ
+{const cs=castSpell;castSpell=async function(f,i,t){let k=f.hand[i];
+ if(!autoSide(f)&&k==='mystic-3'){let L=mates(foeOf(f));if(L.length>1){let t2=await askChoice('影の縫い返し','ダメージを与える敵の仲間を選ぶ（'+names[t.id]+'の攻撃力'+atkOf(t)+'）',L.map(unitOpt),'やめる');if(!t2){skillMode=null;render();return}f.pick2=t2}else f.pick2=L[0]}
+ return cs.apply(this,arguments)}}
+{const dp=doPlay;doPlay=async function(f,i,t){let k=f.hand[i];
+ if(!autoSide(f)&&k==='mystic-8'){let L=uniq(f.grave||[]);if(L.length>1){let k2=await askChoice('心読み','手札に戻す墓地のカードを選ぶ',L.map(keyOpt),'やめる');if(!k2)return false;f.pick2=k2}}
+ return dp.apply(this,arguments)}}
+// 逆夢の獏神：攻撃するとき、墓地の仲間1体を取り除いてもよい（その攻撃力だけダメージが増える）
+{const sk=strike;strike=async function(f,u,d,v){if(u&&u.id==='mystic-2'&&v&&graveAllies(f).length&&!ending){let L=uniq(graveAllies(f)),k=null;
+  if(autoSide(f)){let top=[...L].sort((a,b)=>baseOf(b)[0]-baseOf(a)[0])[0],n=atkOf(u)-dmgCut(v);if(v.hero||(v.hp>n&&v.hp<=n+baseOf(top)[0]))k=top}
+  else k=await askChoice('逆夢の獏神','墓地の仲間1体をゲームから取り除きますか？<br><small>取り除いた仲間の攻撃力だけ、この攻撃のダメージが増える</small>',L.map(keyOpt),'取り除かない');
+  if(k&&exile(f,k)){u.exileBonus=baseOf(k)[0];latest='逆夢の獏神：'+cardLabel(k)+'を取り除いた（ダメージ+'+u.exileBonus+'）';render()}}
+ return sk.apply(this,arguments)}}
+
+// ---- AIの標準デッキ：その色の全カードを1枚ずつ → 仲間から2枚目 → 呪文の2枚目（20枚）。足りなければ色なし → 他の色の安い仲間 ----
+standardDeck=function(id){let col=GOD_CARDS[id].type,own=k=>save.cards.filter(x=>x[0]===k).length,ally=k=>typeof k==='number'||isSum(k);
+ let pool=[...SET_ALL.allies,...SET_ALL.spells].filter(battleReady).filter(k=>own(k)>0),mine=pool.filter(k=>colorOf(k)===col),order=[...mine.filter(ally),...mine.filter(k=>!ally(k))];
+ let deck=[],cnt=k=>deck.filter(x=>x===handKey(k)).length,add=k=>{if(deck.length<20&&cnt(k)<Math.min(2,own(k)))deck.push(handKey(k))};
+ order.forEach(add);order.forEach(add);pool.filter(k=>!colorOf(k)).forEach(k=>{add(k);add(k)});pool.filter(k=>colorOf(k)&&colorOf(k)!==col&&ally(k)).sort((a,b)=>costOf(handKey(a))-costOf(handKey(b))).forEach(k=>{add(k);add(k)});return deck};
+
+// ---- 状態の表示：守護（手札に戻る）・神殿の軽減 ----
+{const us2=unitStatus;unitStatus=function(f,u){let t=us2.apply(this,arguments);if(u.saveToHand)t.unshift('守護：次に場を離れるとき、墓地に行かず手札に戻る');if(u.id===11)t.push('墓地の仲間'+graveAllies(f).length+'体：攻撃力+'+subaruBonus(u));return t}}
+{const rr2=render;render=function(){let r=rr2.apply(this,arguments);try{for(const s of [p,c]){if(!s)continue;
+  for(const u of s.units)if(u.saveToHand){let e=document.getElementById('u'+u.uid);if(e&&!e.querySelector('.ribbon.keep')){let box=e.querySelector('.ribbons2');if(!box){e.insertAdjacentHTML('beforeend','<span class="ribbons2"></span>');box=e.querySelector('.ribbons2')}box.insertAdjacentHTML('beforeend','<em class="ribbon keep">守護</em>')}}
+  let n=shrineCut(s),row=document.getElementById('shrine'+s.id);if(row&&n>0&&!row.querySelector('.shrinecut'))row.insertAdjacentHTML('beforeend','<em class="shrinecut" title="'+shrineCutName(s)+'">神殿 −'+n+'</em>')}}catch(e){console.warn(e)}return r}}

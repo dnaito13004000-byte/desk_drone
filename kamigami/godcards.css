@@ -577,3 +577,6 @@ small.al-ruby{margin:0 0 1px}
 .duel .ribbons2 .ribbon{position:static}
 .duel .ribbon.barrier{background:#c9a227;color:#1b1406}
 .duel .ribbon.bind{background:#2b8fa8}
+.duel .ribbon.keep{background:#7a4fc0}
+.duel .shrinecut{position:absolute;right:4px;bottom:-14px;font-style:normal;font-size:10.5px;font-weight:900;color:#1b1406;background:#e8c65a;border-radius:8px;padding:0 6px;pointer-events:none;z-index:3}
+.handzoom.ask .hz-btn.gold small{color:#4a3104;font-weight:700}
