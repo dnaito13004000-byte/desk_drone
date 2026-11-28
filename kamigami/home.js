@@ -72,9 +72,9 @@ function home(){if(save.starterPending){starter();return}tag.textContent='';choo
  +'<header class="h4-head"><div class="h4-brand">'+TORII+'<i></i><span>雷鳴の社</span></div>'
  +'<div class="h4-chips"><span class="h4-chip">'+TICKET+'<small>チケット</small><b>'+packLabel()+'</b></span><span class="h4-chip sh">'+SHARD+'<small>神の欠片</small><b>'+save.shards+'</b></span></div></header>'
  // 2. メインビジュアル（5人の集合絵。ロゴは絵に含まれている）
- +'<div class="h4-visual" id="h4visual"><img class="h4-fill" src="art/home-hero.webp" alt="" aria-hidden="true"><img class="h4-art" id="h4art" src="art/home-hero.webp" alt="神々の一手　5人の神子"></div>'
+ +'<div class="h4-visual" id="h4visual"><img class="h4-art" id="h4art" src="art/home-hero.webp" alt="神々の一手　5人の神子"><p class="h4-wins">通算勝利 <b>'+save.wins+'</b></p></div>'
  // 3. メイン操作
- +'<div class="h4-main"><p class="h4-wins">通算勝利 <b>'+save.wins+'</b></p>'
+ +'<div class="h4-main">'
  +'<button class="h4-duel" onclick="chooseGod()"><b>対戦する</b><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
  +'<div class="h4-subs"><button onclick="storyMenu()">'+IC_BOOK+'<span>ストーリー</span></button><button onclick="deckEdit()">'+IC_CARDS+'<span>デッキ編成</span></button><button onclick="howto()">'+IC_HELP+'<span>遊び方</span></button></div>'
  +(warning?'<small class="warn">'+warning+'</small>':'')+'</div>'
@@ -188,14 +188,15 @@ function closeZoom(){zoom=null;let z=document.querySelectorAll('.albumscreen .al
 function zoomHtml(){let {id}=zoom,r=cardRarity(id);
  return '<div class="al-zoom" onclick="if(event.target===this){closeZoom()}">'+card([id],'big')+'<p class="zt"><b>'+cardName(id)+'</b>　<i class="rr r-'+r+'">'+RANK_NAME(r)+'</i>　'+colorChip(id)+(GOD_CARDS[id]?'':'<small class="zcost">コスト'+cardCost(id)+'</small>')+'<br><em>'+cardShort(id)+'</em><br>'+cardText(id)+'</p>'+termList(cardText(id)+(isGod(id)&&!GOD_CARDS[id]?'仲間':''))
  +'<button class="btn-navy" onclick="closeZoom()">閉じる</button></div>'}
-// メインビジュアルの収まり：上の2人の頭（上から7.5%）からロゴの下端（99.5%）までは必ず見せる。
-// 入るときは横幅いっぱい（はみ出す分は上の空から切る）。入らないときだけ縮めて、左右は同じ絵のぼかしで埋める
+// メインビジュアルの収まり（2026-11-28 改）：表示エリアを全面で覆う（cover）。左右の余白は出さない
+// 主人公の顔・カード・ロゴが切れないよう、ロゴの文字の下端（絵の97.5%）を「通算勝利」のすぐ上にそろえ、上ははみ出した分を切る。
+// エリアが絵より縦長なら、さらに拡大して左右を切る。絵の下端は濃紺へグラデーションで溶け込む
 function fitHomeArt(){let box=document.getElementById('h4visual'),img=document.getElementById('h4art');if(!box||!img)return;
- let W=box.clientWidth,H=box.clientHeight,IW=1024,IH=1536,TOP=.075*IH,BOT=.995*IH,BAND=BOT-TOP;if(!W||!H)return;
- let s=Math.max(W/IW,H/IH),w,h,x,y;
- if(H/s>=BAND||(H/BAND)/s>.96){w=IW*s;h=IH*s;x=(W-w)/2;y=Math.min(0,Math.max(H-h,H-BOT*s))}  // 横幅いっぱい。ロゴの下端を下にそろえ、余る分は上の空を切る（縮める必要が4%未満ならこちら）
- else{s=H/BAND;w=IW*s;h=IH*s;x=(W-w)/2;y=-TOP*s}        // 頭〜ロゴが入るように縮める（左右は同じ絵のぼかし）
- img.style.cssText='width:'+w+'px;height:'+h+'px;left:'+x+'px;top:'+y+'px';box.classList.toggle('narrow',w<W-1)}
+ let W=box.clientWidth,H=box.clientHeight,IW=1024,IH=1536,LOGO=.975,GAP=34;if(!W||!H)return;
+ let s=W/IW,h=IH*s,y=H-GAP-LOGO*h;
+ if(y>0){s=(H-GAP)/(LOGO*IH);h=IH*s;y=0}             // 縦長のエリア：拡大して上まで覆う（左右ははみ出す）
+ let w=IW*s,x=(W-w)/2;
+ img.style.cssText='width:'+w+'px;height:'+h+'px;left:'+x+'px;top:'+y+'px'}
 window.addEventListener('resize',()=>requestAnimationFrame(fitHomeArt));
 {const h0=home;home=function(){let r=h0.apply(this,arguments);let img=document.getElementById('h4art');if(img){if(img.complete)fitHomeArt();else img.addEventListener('load',fitHomeArt,{once:true});requestAnimationFrame(fitHomeArt)}return r}}
 home();
@@ -210,6 +211,7 @@ function howto(){tag.textContent='';
  +sec('ターンの流れ','<ol><li>ターン開始：神力が回復し、山札から1枚引く。</li><li>手札を1枚まで神力に置ける。</li><li>仲間を召喚したり、呪文を使ったりする。</li><li>自分の神で攻撃する（1体につき1回）。場に出たターンは攻撃できません（速攻を持つカードは例外です）。主神もおたがい1ターン目は攻撃できない。相手の仲間か、中央の相手の神殿をねらう（神殿がなくなったら相手の主神）。神どうしは、おたがいに攻撃力ぶんのダメージを与える。</li><li>「ターン終了」を押すと相手の番。</li></ol>')
  +sec('進化と覚醒','<ul><li><b>進化</b>：主神が通常攻撃を当てるたびに進化ゲージが1増える。自分の神殿が割れたときも、進化ゲージが1増えます。'+ASCEND.evolve.gauge+'たまると、神力'+ASCEND.evolve.cost+'を払って進化できる。</li><li><b>覚醒</b>：進化した主神は、自分の神殿が1枚でも割られたあと（身代わりで割れた場合も含む）、神力'+ASCEND.awaken.cost+'を払って覚醒できる。</li><li>形が変わると攻撃力・体力が上がり、スキルも強くなる。</li><li><b>主神の技</b>（神力を払って使うもの）は、どの主神も<b>1ターンに1回まで</b>。ターン開始時に自動で起きる効果は技ではない。</li><li>先攻の1ターン目だけは、大地の神力を増やす・回復する効果（主神コダマの技を含む）は使えない。</li></ul>')
  +sec('天候','<p>場全体の天気で、おたがい共通。対戦は「晴れ」から始まる。対戦中は、まん中の天候表示をタップすると説明が出る。</p><ul><li><b>☀ 晴れ</b>：陽神アカツキがいると、自分のターン開始時に、自分の神殿すべてに「次に受けるダメージ−1」が付く。</li><li><b>☂ 雨</b>：呪文「招雷」「雲間の返照」が使えるようになる。「稲光」の軽減が2になる。</li><li>「雨乞い」「雨脚の矢」で雨、「雲払い」「雲間の返照」で晴れに変わる。天候が変わると、天象の仲間の守りが働く。</li></ul>')
+ +sec('断末魔','<p><b>断末魔</b>＝その仲間が<b>墓地に送られたとき</b>に発動する効果。</p><ul><li>戦闘や効果で破壊されたとき、生贄にされたとき、自分の効果で墓地に送ったときに発動する。</li><li>手札に戻ったとき（手札に戻す効果・守護）と、ゲームから取り除かれたときは発動しない。</li></ul>')
  +sec('軽減','<p>「<b>次に受けるダメージ−N</b>」を付ける効果（盾の印と数字で表示）。仲間・主神・神殿に付く。</p><ul><li>次にダメージを受けたとき（攻撃・効果・呪文どれでも）、その分だけ減って<b>消える</b>。受けるまでは、ターンが終わっても残る。</li><li>1体に付けられる軽減は1つだけ。別の軽減が付いたら、大きい方に置き換わる（小さい方では上書きしない）。</li><li>雷壁・天守・陽神アカツキは、自分のターン開始時に付け直す。</li><li>招雷の「次に受けるダメージを0」も同じく、受けたら消える。</li></ul>')
  +sec('用語集','<dl class="terms">'+TERMS.map(([w,d])=>'<dt>'+w+'</dt><dd>'+d.replace(/^天候「.+?」：/,'')+'</dd>').join('')+'</dl>')
  +'<button class="btn-navy" onclick="home()">ホームへもどる</button></div></div>'}
