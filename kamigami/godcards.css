@@ -585,3 +585,4 @@ small.al-ruby{margin:0 0 1px}
 .duel .shieldmark svg{color:#5b3d07}
 .duel .shrinecut{display:flex;align-items:center;gap:2px}
 .duel .shrinecut svg{color:#5b3d07}
+.duel .shieldmark.off,.duel .shrinecut.off{filter:grayscale(1) brightness(.7);opacity:.6}

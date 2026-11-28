@@ -27,7 +27,7 @@ async function subFx(){let list=subLog;subLog=[];if(calm())return;
   await pause(650)}}
 function heroFx(f){return GOD_CARDS[f.id]?stageOf(f.id,f.stage).fx:{}}
 function fxOf(f,u){return u&&u.hero?heroFx(f):{}}
-const atkOf=u=>Math.max(0,(u.setAtk!=null?u.setAtk:u.atk+(u.tmpAtk||0)+(u.id===11?subaruBonus(u):0))-(u.weak||0));// 2026-11-28：ナギ・アカツキの天候ボーナスは廃止。星神スバル＝墓地の仲間の数（最大+3）
+const atkOf=u=>Math.max(0,(u.setAtk!=null?u.setAtk:u.atk+(u.tmpAtk||0)+(u.id===11?subaruBonus(u):0)+(typeof sunAura==='function'?sunAura(u):0))-(u.weak||0));// 2026-11-28：ナギ・アカツキの天候ボーナスは廃止。星神スバル＝墓地の仲間の数（最大+3）
 function maxAttacks(f,u){return (fxOf(f,u).attacks||(u&&u.id==='water-7'?2:1))+(u&&u.extraAtt||0)}
 function canEvolve(f){let h=heroOf(f);return !!h&&f.stage===0&&f.gauge>=ASCEND.evolve.gauge&&f.mp>=ASCEND.evolve.cost}
 function canAwaken(f){let h=heroOf(f);return !!h&&f.stage===1&&f.shrineBroken&&f.mp>=ASCEND.awaken.cost}
@@ -1088,3 +1088,60 @@ SP['mystic-3'].ai=f=>{let d=foeOf(f);for(const m of [...mates(f)].sort((a,b)=>fo
    let ok=v=>!v.dodge&&atkOf(v)>=u.hp,gain=u.id==='mystic-2'?(v=>foes.some(o=>o!==v&&o.hp<=3-dmgCut(o)&&!o.ward)||v.hp-eff(v)<=3-0):(()=>graveAllies(f).length>0);
    let trade=best(foes.filter(v=>ok(v)&&gain(v)),v=>threat(v));if(trade)await strike(f,u,d,trade)}
   return aa3.apply(this,arguments)}}
+
+// ==== 天象の立て直し（2026-11-28 BQ）：晴れは攻め、雨は守り ====
+// シールドを付けるのは3種だけ（すべて雨のとき）：主神ライガ（結界・雷壁・天守）／霹靂を喰う天狗（登場時）／招雷（変更なし）
+// ライガの軽減は「雨のときだけ」：晴れの間は効かない（消えもしない。雨に戻るとまた効く）
+const shieldOn=v=>!!v&&(v.shield||0)>0&&!(v.shieldRain&&weather!=='雨');
+dmgCut=function(v){return shieldOn(v)?v.shield:0};
+addBarrier=function(u,src,n){if(!u||!(n>0))return;if(n>(u.shield||0)||((u.shield||0)===n&&u.shieldRain&&src!=='raiga'&&src!=='wall')){u.shield=n;u.shieldRain=(src==='raiga'||src==='wall')}};
+{const h2=hurt;hurt=function(v,n){if(v&&v.shield>0&&!shieldOn(v)){let s0=v.shield;v.shield=0;try{return h2.call(this,v,n)}finally{v.shield=s0}}return h2.call(this,v,n)}}
+{const rs3=resolveStrike;resolveStrike=function(f,u,d,v){let hid=null,shr=null;if(v&&v.shield>0&&!shieldOn(v)){hid=v.shield;v.shield=0}
+  if(!v&&d.shrineShRain&&weather!=='雨'&&d.shrineSh){shr=d.shrineSh;d.shrineSh=d.shrineSh.map(()=>0)}
+  try{return rs3.apply(this,arguments)}finally{if(hid!=null&&v)v.shield=hid;if(shr&&d.shrineSh){let n=d.shrineSh.length;d.shrineSh=shr.slice(shr.length-n)}}}}
+shrineCut=function(d){return d&&d.shrineSh&&!(d.shrineShRain&&weather!=='雨')?d.shrineSh[0]||0:0};
+// 雷壁・天守の付け直しは雨のときだけ（陽神アカツキの神殿シールドはなくなった）
+{const ts4=turnStart;turnStart=function(f){let x=heroFx(f),keep=null;
+  // 前の版の付け直し（雷壁・天守・アカツキ）をいったん止めてから、雨のときだけ行う
+  let w0=weather;let r;let units=f?f.units:[];let before=units.map(u=>[u.shield,u.shieldRain]),sb=f&&f.shrineSh?f.shrineSh.slice():null,sbr=f&&f.shrineShRain;
+  r=ts4.apply(this,arguments);
+  if(f){units.forEach((u,i)=>{if(before[i]){u.shield=before[i][0];u.shieldRain=before[i][1]}});if(f.units.length!==units.length){}f.shrineSh=sb;f.shrineShRain=sbr;
+   if(!ending&&weather==='雨'&&(x.wall||x.shrineWall)){f.units.forEach(u=>addBarrier(u,'wall',x.wall));if(x.shrineWall){addShrineShield(f,x.shrineWall);f.shrineShRain=true}}}
+  return r}}
+// 結界（ライガの技）：雨のときだけ使える
+{const cs3=canSkill;canSkill=function(f){let k=skillOf(f);if(k&&k.kind==='barrier'&&weather!=='雨')return false;return cs3.apply(this,arguments)}}
+{const ha3=heroActs;heroActs=function(){let o=ha3.apply(this,arguments),k=skillOf(p);if(k&&k.kind==='barrier'&&weather!=='雨'&&!p.skillUsed)o=o.replace(k.name+' · 神力'+k.cost,k.name+'（雨のときだけ）');return o}}
+// 陽神アカツキ：晴れの間、味方全体の攻撃力+1（常駐）
+function sunAura(u){if(weather!=='晴れ'||typeof p==='undefined'||!p)return 0;let s=[p,c].find(x=>x&&x.units&&x.units.includes(u));return s&&s.units.some(x=>x.id===8&&x.hp>0)?1:0}
+// 天候が変わったとき：雷獣（このターン攻撃力+2）。稲光・雲間の返照の条件も記録する
+sky=function(value){let from=weather,changed=value!==weather;weather=value;if(!changed||!turn||ending)return;
+ turn.weatherChanged=true;if(from==='雨'&&value==='晴れ')turn.rainToSun=true;
+ for(const s2 of [p,c])if(s2)for(const u of s2.units)if(u.id==='sky-6'&&u.hp>0){u.tmpAtk=(u.tmpAtk||0)+2;latest+='　嵐呼の雷獣：このターン攻撃力+2'}};
+{const rt3=resetTurn;resetTurn=function(f){let r=rt3.apply(this,arguments);f.weatherChanged=false;f.rainToSun=false;return r}}
+const flip=()=>weather==='雨'?'晴れ':'雨';
+// 登場時：アヤ（天気を変え、1枚引く）／霙神（天気を変え、雨なら攻撃力+2、晴れなら1枚引く）／天狗（雨のときだけ、味方全体に−1）
+{const oe5=onEnter;onEnter=function(f,u){if(!u)return;
+ if(u.id==='sky-1'){let w=flip();sky(w);latest+='　雲紡ぎのアヤ：天候を'+w+'にした';let n=f.hand.length;drawN(f,1);if(f.hand.length>n)latest+='・1枚引いた';return}
+ if(u.id==='sky-7'){let w=flip();sky(w);latest+='　霙神：天候を'+w+'にした';if(w==='雨'){u.atk+=2;latest+='・攻撃力+2（この試合の間）'}else{let n=f.hand.length;drawN(f,1);if(f.hand.length>n)latest+='・1枚引いた'}return}
+ if(u.id==='sky-2'){if(weather==='雨'){f.units.forEach(x=>addBarrier(x,'sky-2',1));latest+='　霹靂を喰う天狗：味方全体に「次に受けるダメージ−1」'}else latest+='　霹靂を喰う天狗：雨ではないので軽減なし';return}
+ return oe5.apply(this,arguments)}}
+// 呪文
+Object.assign(SP,{
+ 'sky-3':{tgt:'allyMate',run:(f,t)=>{sky('雨');t.tmpAtk=(t.tmpAtk||0)+2;latest+='　雨になった・'+names[t.id]+'の攻撃力+2（このターン）'},ai:f=>weatherWant(f)!=='晴れ'?best(mates(f).filter(u=>!u.used&&!sickOf(f,u)),u=>atkOf(u)):null},
+ 'sky-8':{can:f=>!!f.weatherChanged&&f.deck.length>0,run:f=>drawN(f,2),why:'このターンに天候を変えていれば使える',post:true,ai:f=>'none'},
+ 'sky-4':{can:f=>!!f.rainToSun&&f.deck.length>0,run:f=>drawN(f,1),why:'このターンに天候を雨から晴れに変えていれば使える',post:true,ai:f=>'none'},
+ 'sky-5':{can:f=>mates(foeOf(f)).length>0,run:f=>{sky('雨');let d=foeOf(f),n=0;for(const u of mates(d)){hurt(u,1);n++}latest+='　雨になった・敵の仲間'+n+'体に1ダメージ';settle(d,f)},why:'敵の仲間がいるときだけ使える',
+  ai:f=>{let L=mates(foeOf(f));return (L.length>=2||L.some(u=>u.hp<=1+dmgCut(u)-0&&u.hp<=1))&&weatherWant(f)!=='晴れ'?'none':null}},
+ rain:{can:f=>true,run:f=>sky('雨'),ai:f=>weather!=='雨'&&weatherWant(f)==='雨'?'none':null},
+ sun:{can:f=>true,run:f=>sky('晴れ'),ai:f=>weather!=='晴れ'&&weatherWant(f)==='晴れ'?'none':null}});
+// AIの天気：晴れ＝攻める、雨＝守る
+weatherWant=function(f){let d=foeOf(f),mx=Math.max(0,...d.units.map(u=>atkOf(u))),threatened=f.units.some(u=>u.hp>0&&u.hp<=mx)||!f.shrines.length;
+ let raiga=f.id===2&&heroOf(f),needRain=(raiga&&(mx>0&&(threatened||f.stage>=1)))||(f.hand.includes('bolt')&&threatened)||(f.hand.includes('sky-2')&&mx>0);
+ let canAttack=mates(f).some(u=>!u.used&&!sickOf(f,u)),sunny=f.units.some(u=>u.id===8)&&canAttack;
+ if(needRain&&!(sunny&&!threatened))return '雨';if(sunny)return '晴れ';
+ if(f.units.some(u=>u.id==='sky-6'&&canAttack)||f.hand.includes('sky-8'))return weather==='雨'?'晴れ':'雨';
+ if(f.hand.includes('sky-4')&&weather==='雨')return '晴れ';return null};
+// 表示：晴れで効いていないライガの軽減は、印を薄く
+{const rr4=render;render=function(){let r=rr4.apply(this,arguments);try{for(const s of [p,c]){if(!s)continue;for(const u of s.units){let e=document.getElementById('u'+u.uid),m=e&&e.querySelector('.shieldmark');if(m)m.classList.toggle('off',!shieldOn(u))}
+  let row=document.getElementById('shrine'+s.id),b=row&&row.querySelector('.shrinecut');if(b&&s.shrineShRain&&weather!=='雨')b.classList.add('off')}}catch(e){}return r}}
+{const us5=unitStatus;unitStatus=function(f,u){let t=us5.apply(this,arguments);if(u.shield>0&&!shieldOn(u))t=t.map(x=>/^軽減：/.test(x)?'軽減：次に受けるダメージ−'+u.shield+'（雨のときだけ効く。いまは晴れなので効かない）':x);return t}}

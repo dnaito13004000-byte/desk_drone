@@ -227,7 +227,7 @@ function cardInfo(k){let m=/^g(\d+)$/.exec(k);if(m)k=+m[1];if(typeof k==='number
  d.onclick=e=>{if(e.target===d)closeGodDetail()};document.body.appendChild(d)}
 // 対戦中：天候表示をタップ → 今の天候の効果と、変わると何が起きるか
 function weatherInfo(){closeGodDetail();let now=typeof weather!=='undefined'?weather:'晴れ',other=now==='雨'?'晴れ':'雨';
- let eff={'晴れ':['陽神アカツキがいると、自分のターン開始時に、自分の神殿すべてに「次に受けるダメージ−1」が付く。','呪文「招雷」「雲間の返照」は使えない。'],'雨':['呪文「招雷」「雲間の返照」が使える。','呪文「稲光」の軽減が2になる。']};
+ let eff={'晴れ':['攻めの天気。陽神アカツキがいると味方全体の攻撃力+1。','主神ライガの軽減は働かない。呪文「招雷」は使えない。'],'雨':['守りの天気。主神ライガの結界・雷壁・天守と、霹靂を喰う天狗の軽減が働く。','呪文「招雷」が使える。']};
  let d=document.createElement('div');d.className='gdetail wdetail';d.setAttribute('role','dialog');d.setAttribute('aria-label','天候の説明');
  d.innerHTML='<div class="gd-in"><div class="gd-text"><p class="gd-rank">天候（おたがい共通）</p><h3>'+(now==='雨'?'☂ いまは「雨」':'☀ いまは「晴れ」')+'</h3>'
  +'<ul class="wlist">'+eff[now].map(x=>'<li>'+x+'</li>').join('')+'</ul>'
@@ -482,3 +482,26 @@ NEW_TEXT[9]='断末魔：自分の墓地の仲間1体を手札に戻す。';NEW_
 NEW_TEXT['mystic-2']=EXP_CARDS['mystic-2'].text=CARD_TABLE['mystic-2'].short=CARD_TABLE['mystic-2'].full='断末魔：敵の仲間1体に3ダメージ。';                                    // 逆夢の獏神：コスト5→2
 NEW_TEXT['mystic-7']=EXP_CARDS['mystic-7'].text=CARD_TABLE['mystic-7'].short=CARD_TABLE['mystic-7'].full='断末魔：自分の主神を2回復する。';EXP_CARDS['mystic-7'].cost=1;      // 写し神：コスト2→1
 TERMS.push(['断末魔','その仲間が墓地に送られたときに発動する効果。戦闘や効果で破壊されたとき・生贄にされたとき・自分の効果で墓地に送ったときに発動する。手札に戻ったときと、ゲームから取り除かれたときは発動しない。']);
+
+// ==== 天象の立て直し（2026-11-28 BQ）：晴れは攻め、雨は守り。シールドは主神ライガ・霹靂を喰う天狗・招雷の3種（すべて雨のとき）====
+(()=>{let R=GOD_CARDS[2].stages;
+ R[0].text='結界（神力{cost}）：雨のときだけ使える。味方1体に「次に受けるダメージ−{barrier}」を付ける';
+ R[1].text='雷壁：雨なら、自分のターン開始時に味方全員に「次に受けるダメージ−{wall}」を付ける。結界（神力{cost}・雨のときだけ）は−{barrier}。晴れの間、軽減は働かない';
+ R[2].text='天守：雨なら、自分のターン開始時に味方全員と自分の神殿すべてに「次に受けるダメージ−{wall}」を付ける。結界（神力{cost}・雨のときだけ）は−{barrier}。晴れの間、軽減は働かない';})();
+Object.assign(NEW_TEXT,{
+ 'sky-2':'雨のときだけ。登場したとき、味方全体に「次に受けるダメージ−1」を付ける。',
+ 'sky-1':'登場したとき、天気を変える。天気を変えたとき、1枚引く。',
+ 'sky-7':'登場したとき、天気を変える。雨に変えたら、この仲間は攻撃力+2（この試合の間）。晴れに変えたら、1枚引く。',
+ 'sky-6':'天気が変わったとき、このターンの間だけ攻撃力+2。',
+ 8:'晴れの間、味方全体の攻撃力+1。',
+ 'sky-3':'天気を雨に変える。自分の仲間1体は、このターンの間、攻撃力+2。',
+ 'sky-8':'天気を変えたターンに使える。山札から2枚引く。',
+ 'sky-4':'天気を雨から晴れに変えたときだけ使える。1枚引く。',
+ 'sky-5':'天気を雨に変える。敵の仲間全てに1ダメージ。'});
+NEW_SHORT[8]='晴れの間 味方全体の攻撃力+1';
+for(const k of ['sky-2','sky-1','sky-7','sky-6',8,'sky-3','sky-8','sky-4','sky-5']){let t=NEW_TEXT[k],e=EXP_CARDS[k];if(e){e.text=t;CARD_TABLE[k].short=t;CARD_TABLE[k].full=t}else{CARD_TABLE[k].full=t;CARD_TABLE[k].short=NEW_SHORT[k]||t}}
+for(const t of TERMS){
+ if(t[0]==='雨')t[1]='天候「雨」：守りの天気。主神ライガの結界・雷壁・天守、霹靂を喰う天狗の登場時の軽減、呪文「招雷」が使える・働く。';
+ if(t[0]==='晴れ')t[1]='天候「晴れ」：攻めの天気。陽神アカツキがいると味方全体の攻撃力+1。晴れの間、主神ライガの軽減は働かない。';
+ if(t[0]==='軽減')t[1]='「次に受けるダメージ−N」の効果。次にダメージを受けたとき、その分だけ減って消える。受けるまではターンが終わっても残る。1体に付けられる軽減は1つだけで、大きい方に置き換わる。主神ライガの軽減は雨のときだけ効く（晴れの間は効かず、雨に戻るとまた効く）。';
+ if(t[0]==='結界')t[1]='主神ライガの技。雨のときだけ使える。味方1体に「次に受けるダメージ−N」を付ける（軽減）。'}
